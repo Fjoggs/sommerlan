@@ -1,34 +1,88 @@
-interface LAN {
-  year: number;
+type LAN = {
   description: string;
-  event: Era;
-  participants: Particpant[];
+  endDate: string;
+  event: Event;
   games: Game[];
-}
+  participants: Participant[];
+  startDate: string;
+};
 
-type Era = "pre" | "main" | "side";
+type Event = "pre" | "main" | "side";
 
-type Particpant =
-  | "ulfos"
-  | "PekkyD"
-  | "Torp"
-  | "Sid"
-  | "Nabi"
-  | "Jubb"
-  | "Taxi"
+type Participant =
+  | "biten"
+  | "dun"
   | "FN"
   | "gody"
-  | "dun"
-  | "biten";
+  | "Jubb"
+  | "nwbi"
+  | "Nuppe"
+  | "PekkyD"
+  | "Sid"
+  | "Taxi"
+  | "Torp"
+  | "ulfos";
 
 type Game = {
   name: string;
 };
 
-const LAN_2011: LAN = {
-  year: 2011,
-  description: "Laptop-LAN som rippa pcen til PekkyD",
-  participants: ["ulfos", "PekkyD", "Torp"],
+const fetchData = async () => {
+  const res = await fetch("http://localhost:8080/api/lan");
+  const lans: LAN[] = await res.json();
+  const preContainer = document.getElementById("pre");
+  const mainContainer = document.getElementById("main");
+
+  lans.forEach((lan) => {
+    if (lan.event === "pre") {
+      const entry = buildEntry(lan);
+      preContainer?.appendChild(entry);
+    }
+  });
 };
 
-const timeline: LAN[] = [LAN_2011];
+const buildEntry = (lan: LAN) => {
+  const startDate = new Date(lan.startDate);
+  const container = createElement("div", `id-${startDate}`);
+  container.className = "timeline-event";
+
+  const header = createElement("h3");
+  header.textContent = startDate.getFullYear().toString();
+
+  const list = createElement("ul");
+
+  const participants = createElement("li");
+  participants.textContent = "Deltakere: ";
+  for (const participant of lan.participants) {
+    participants.textContent += `${participant} `;
+  }
+  list.appendChild(participants);
+
+  const description = createElement("li");
+  description.textContent = `Highlights: ${lan.description}`;
+  list.appendChild(description);
+
+  const games = createElement("li");
+  games.textContent = "Spill: ";
+  for (const game of lan.games) {
+    games.textContent += `${game} `;
+  }
+  list.appendChild(games);
+
+  container.appendChild(header);
+  container.appendChild(list);
+  return container;
+};
+
+export const createElement = (
+  tagName: keyof HTMLElementTagNameMap,
+  id?: string,
+) => {
+  const element = document.createElement(tagName);
+  if (id) {
+    element.setAttribute("id", id);
+  }
+  return element;
+};
+
+fetchData();
