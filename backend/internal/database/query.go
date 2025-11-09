@@ -6,16 +6,6 @@ import (
 	"log"
 )
 
-type User struct {
-	id   int
-	name string
-}
-
-type Game struct {
-	id   int
-	name string
-}
-
 type Lan struct {
 	Id          int
 	Start_date  string
@@ -37,6 +27,7 @@ type LanEvent struct {
 	End_date     string   `json:"endDate"`
 	Event        string   `json:"event"`
 	Games        []string `json:"games"`
+	Id           int      `json:"lanId"`
 	Participants []string `json:"participants"`
 	Start_date   string   `json:"startDate"`
 }
@@ -45,10 +36,6 @@ func GetLans(db *sql.DB) ([]LanEvent, error) {
 	var events []LanEvent
 
 	lanQuery := "SELECT id FROM lan;"
-
-	type Result struct {
-		Id int
-	}
 
 	lanRows, err := doQuery(db, lanQuery)
 	if err != nil {
@@ -92,28 +79,22 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		FROM lan
 		WHERE id = ?;
 	`
-	lanRows, err := doQueryWithId(db, lanQuery, id)
-	if err != nil {
-		return event, err
-	}
-	defer lanRows.Close()
+	lanRow := queryLanWithId(db, lanQuery, id)
 
 	var lan Lan
 
-	for lanRows.Next() {
-		err := lanRows.Scan(
-			&lan.Description,
-			&lan.End_date,
-			&lan.Event,
-			&lan.Id,
-			&lan.Start_date,
-		)
-		if err != nil {
-			return event, err
-		}
+	err := lanRow.Scan(
+		&lan.Description,
+		&lan.End_date,
+		&lan.Event,
+		&lan.Id,
+		&lan.Start_date,
+	)
+	if err != nil {
+		return event, err
 	}
 
-	err = lanRows.Err()
+	err = lanRow.Err()
 	if err != nil {
 		return event, err
 	}
@@ -187,9 +168,11 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		End_date:     lan.End_date,
 		Event:        lan.Event,
 		Games:        lanGames,
+		Id:           lan.Id,
 		Participants: participants,
 		Start_date:   lan.Start_date,
 	}
+	fmt.Println(event)
 	return event, nil
 }
 
@@ -200,6 +183,10 @@ func doQuery(db *sql.DB, query string) (*sql.Rows, error) {
 	}
 
 	return rows, err
+}
+
+func queryLanWithId(db *sql.DB, query string, lanId int) *sql.Row {
+	return db.QueryRow(query, lanId)
 }
 
 func doQueryWithId(db *sql.DB, query string, id int) (*sql.Rows, error) {

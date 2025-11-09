@@ -3,6 +3,7 @@ type LAN = {
   endDate: string;
   event: Event;
   games: Game[];
+  lanId: number;
   participants: Participant[];
   startDate: string;
 };
@@ -27,7 +28,7 @@ type Game = {
   name: string;
 };
 
-const fetchData = async () => {
+const fetchLans = async () => {
   const res = await fetch("http://localhost:8080/api/lan");
   const lans: LAN[] = await res.json();
   const preContainer = document.getElementById("pre");
@@ -41,10 +42,18 @@ const fetchData = async () => {
   });
 };
 
+const fetchLanById = async (id: number) => {
+  const res = await fetch(`http://localhost:8080/api/lan/${id}`);
+  const lan: LAN = await res.json();
+  console.log("lan by id", lan);
+};
+
 const buildEntry = (lan: LAN) => {
   const startDate = new Date(lan.startDate);
-  const container = createElement("div", `id-${startDate}`);
+  const id = `id-${lan.lanId}`;
+  const container = createElement("button", id);
   container.className = "timeline-event";
+  container.addEventListener("click", () => fetchLanById(lan.lanId));
 
   const header = createElement("h3");
   header.textContent = startDate.getFullYear().toString();
@@ -85,4 +94,4 @@ export const createElement = (
   return element;
 };
 
-fetchData();
+fetchLans();

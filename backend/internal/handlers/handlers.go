@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"backend/internal/database"
 )
@@ -13,12 +14,6 @@ import (
 type HealthResponse struct {
 	Message string `json:"message"`
 }
-
-type Game struct {
-	Name string `json:"name"`
-}
-
-const APPLICATION_JSON = "application/json"
 
 type Handlers struct {
 	db *sql.DB
@@ -31,7 +26,7 @@ func NewHandlers(db *sql.DB) *Handlers {
 }
 
 func (h *Handlers) HealthHandler(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("Content-Type", APPLICATION_JSON)
+	writer.Header().Set("Content-Type", "application/json")
 
 	response := HealthResponse{
 		Message: "OK",
@@ -43,8 +38,33 @@ func (h *Handlers) HealthHandler(writer http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func (h *Handlers) LanHandlerById(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	idPath := req.PathValue("id")
+
+	id, err := strconv.Atoi(idPath)
+	if err != nil {
+		log.Fatalf("Id to int failed: %v", err)
+	}
+
+	lan, err := database.GetLanById(h.db, id)
+	fmt.Println("lan now", lan)
+	if err != nil {
+		fmt.Printf("No lan with %v found in db", id)
+		return
+	}
+
+	fmt.Println(lan)
+
+	err = json.NewEncoder(writer).Encode(lan)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
 func (h *Handlers) LanHandler(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("Content-Type", APPLICATION_JSON)
+	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetLans(h.db)
 	if err != nil {

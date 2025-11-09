@@ -21,10 +21,11 @@ func main() {
 
 	h := handlers.NewHandlers(db)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/health", handlers.EnableCORS(h.HealthHandler))
-	mux.HandleFunc("GET /api/lan", handlers.EnableCORS(h.LanHandler))
+	router := http.NewServeMux()
+	router.HandleFunc("GET /api/health", handlers.EnableCORS(h.HealthHandler))
+	router.HandleFunc("GET /api/lan", handlers.EnableCORS(h.LanHandler))
+	router.HandleFunc("GET /api/lan/{id}", handlers.EnableCORS(h.LanHandlerById))
 
 	log.Println("Server listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
