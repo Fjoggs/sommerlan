@@ -18,14 +18,6 @@ type Game struct {
 	Name string `json:"name"`
 }
 
-type LhanResponse struct {
-	Description  string   `json:"description"`
-	Event        string   `json:"event"`
-	Games        []Game   `json:"games"`
-	Participants []string `json:"participants"`
-	Year         int      `json:"year"`
-}
-
 const APPLICATION_JSON = "application/json"
 
 type Handlers struct {

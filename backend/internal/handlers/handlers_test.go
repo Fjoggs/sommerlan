@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"backend/internal/database"
 )
 
 func Test_healthHandler(t *testing.T) {
@@ -17,8 +19,18 @@ func Test_healthHandler(t *testing.T) {
 	// Create a ResponseRecorder to record the response
 	rr := httptest.NewRecorder()
 
+	// Connect to db
+	db, err := database.InitDB("../../sommerlan.db")
+	if err != nil {
+		t.Fatal("Failed to initialise database:", err)
+	}
+
+	defer db.Close()
+
+	h := NewHandlers(db)
+
 	// Call the handler with our request and recorder
-	HealthHandler(rr, req)
+	h.HealthHandler(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("Handler returned wrong status: got %v want %v", rr.Code, http.StatusOK)
@@ -44,32 +56,41 @@ func Test_lanHandler(t *testing.T) {
 	// Create a ResponseRecorder to record the response
 	rr := httptest.NewRecorder()
 
+	// Connect to db
+	db, err := database.InitDB("../../sommerlan.db")
+	if err != nil {
+		t.Fatal("Failed to initialise database:", err)
+	}
+
+	defer db.Close()
+
+	h := NewHandlers(db)
+
 	// Call the handler with our request and recorder
-	LanHandler(rr, req)
+	h.LanHandler(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("Handler returned wrong status: got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	var response Lan
+	var response []database.LanEvent
 	err = json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Errorf("Handler failed to unmarshal response %v", err)
 	}
 
-	expectedGame := Game{
-		Name: "CS",
+	event := database.LanEvent{
+		Description:  "Første lan",
+		End_date:     "2011-01-01",
+		Event:        "pre",
+		Games:        []string{"CS"},
+		Participants: []string{"PekkyD"},
+		Start_date:   "2011-01-01",
 	}
 
-	expected := Lan{
-		Description:  "Laptop-LAN som rippa pcen til PekkyD",
-		Event:        "main",
-		Games:        []Game{expectedGame},
-		Participants: []string{"ulfos", "PekkyD", "Torp"},
-		Year:         2011,
-	}
+	expected := []database.LanEvent{event}
 
 	if !reflect.DeepEqual(response, expected) {
-		t.Errorf("Handler returned wrong message: got %v want %v", response, expected)
+		t.Errorf("Handler returned wrong message: got %v want %v", response, event)
 	}
 }
