@@ -15,17 +15,17 @@ type HealthResponse struct {
 	Message string `json:"message"`
 }
 
-type Handlers struct {
+type LanHandlers struct {
 	db *sql.DB
 }
 
-func NewHandlers(db *sql.DB) *Handlers {
-	return &Handlers{
+func NewLanHandlers(db *sql.DB) *LanHandlers {
+	return &LanHandlers{
 		db: db,
 	}
 }
 
-func (h *Handlers) HealthHandler(writer http.ResponseWriter, _ *http.Request) {
+func (h *LanHandlers) HealthHandler(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	response := HealthResponse{
@@ -38,7 +38,7 @@ func (h *Handlers) HealthHandler(writer http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (h *Handlers) LanHandlerById(writer http.ResponseWriter, req *http.Request) {
+func (h *LanHandlers) LanHandlerById(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")
@@ -55,15 +55,13 @@ func (h *Handlers) LanHandlerById(writer http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	fmt.Println(lan)
-
 	err = json.NewEncoder(writer).Encode(lan)
 	if err != nil {
 		log.Fatalf("Encoding response blew up: %v", err)
 	}
 }
 
-func (h *Handlers) LanHandler(writer http.ResponseWriter, _ *http.Request) {
+func (h *LanHandlers) AddLanHandler(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetLans(h.db)
@@ -72,26 +70,23 @@ func (h *Handlers) LanHandler(writer http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	fmt.Println(lans)
-
 	err = json.NewEncoder(writer).Encode(lans)
 	if err != nil {
 		log.Fatalf("Encoding response blew up: %v", err)
 	}
 }
 
-func EnableCORS(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+func (h *LanHandlers) LanHandler(writer http.ResponseWriter, _ *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
 
-		// Handle preflight requests
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	lans, err := database.GetLans(h.db)
+	if err != nil {
+		fmt.Println("No lans found in db")
+		return
+	}
 
-		next(w, r)
+	err = json.NewEncoder(writer).Encode(lans)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
 	}
 }

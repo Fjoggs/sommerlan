@@ -27,7 +27,7 @@ func Test_healthHandler(t *testing.T) {
 
 	defer db.Close()
 
-	h := NewHandlers(db)
+	h := NewLanHandlers(db)
 
 	// Call the handler with our request and recorder
 	h.HealthHandler(rr, req)
@@ -64,7 +64,7 @@ func Test_lanHandler(t *testing.T) {
 
 	defer db.Close()
 
-	h := NewHandlers(db)
+	h := NewLanHandlers(db)
 
 	// Call the handler with our request and recorder
 	h.LanHandler(rr, req)

@@ -19,7 +19,7 @@ func main() {
 
 	defer db.Close()
 
-	h := handlers.NewHandlers(db)
+	h := handlers.NewLanHandlers(db)
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health", handlers.EnableCORS(h.HealthHandler))
