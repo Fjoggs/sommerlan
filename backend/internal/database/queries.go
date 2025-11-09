@@ -197,3 +197,80 @@ func doQueryWithId(db *sql.DB, query string, id int) (*sql.Rows, error) {
 
 	return rows, err
 }
+
+func AddLan(
+	db *sql.DB,
+	description string,
+	end_date string,
+	event string,
+	start_date string,
+) (int64, error) {
+	query := `
+	INSERT INTO lan(
+	description,
+	end_date,
+	event, 
+	start_date)
+	VALUES (?	?,?	?);
+`
+
+	result, err := db.Exec(query, description, end_date, event, start_date)
+	if err != nil {
+		return 0, fmt.Errorf("INSERT ERROR: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("INSERT ERRROR: %v", err)
+	}
+
+	return id, nil
+}
+
+func AddGame(db *sql.DB, name string) (int64, error) {
+	query := "INSERT INTO game(name) VALUES (?)"
+
+	result, err := db.Exec(query, name)
+	if err != nil {
+		return 0, fmt.Errorf("GAME INSERT ERROR: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("GAME INSERT ERRROR: %v", err)
+	}
+
+	return id, nil
+}
+
+func AddLanGame(db *sql.DB, lanId int, gameId int) (int64, error) {
+	query := "INSERT INTO lan_games(lan_id, game_id) VALUES (?, ?)"
+
+	result, err := db.Exec(query, lanId, gameId)
+	if err != nil {
+		return 0, fmt.Errorf("GAME INSERT ERROR: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("GAME INSERT ERRROR: %v", err)
+	}
+
+	return id, nil
+}
+
+func AddLanParticipant(db *sql.DB, lanId int, userId int) (int64, error) {
+	query := "INSERT INTO lan_participants(lan_id, user_id) VALUES (?, ?)"
+
+	result, err := db.Exec(query, lanId, userId)
+	if err != nil {
+		return 0, fmt.Errorf("PARTICIPANT INSERT ERROR: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("PARTICIPANT INSERT ERRROR: %v", err)
+	}
+
+	return id, nil
+}
