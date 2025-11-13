@@ -4,10 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"strings"
 
 	"backend/internal/database"
 )
@@ -40,18 +38,32 @@ func (a *AdminHandlers) AddGameHandler(writer http.ResponseWriter, req *http.Req
 	writer.Header().Set("Content-Type", "application/json")
 
 	var game AddGameBody
-	// Add this to your handler for debugging
-	body, _ := io.ReadAll(req.Body)
-	fmt.Printf("Raw body: %s\n", string(body))
-	req.Body = io.NopCloser(strings.NewReader(string(body))) // Reset body for decoder
 
-	err := json.NewDecoder(req.Body).Decode(&game)
+	fmt.Println("Parsing form")
+	err := req.ParseForm()
+	if err != nil {
+		fmt.Println("Parseform no likey", err)
+	}
+
+	fmt.Println("Looping PostForm")
+	for key, value := range req.PostForm {
+		fmt.Printf("%s = %s\n", key, value)
+	}
+
+	fmt.Println("Looping Form")
+	for key, value := range req.Form {
+		fmt.Printf("%s = %s\n", key, value)
+	}
+
+	fmt.Println("Decoder")
+	err = json.NewDecoder(req.Body).Decode(&game)
 	if err != nil {
 		fmt.Println("error", err)
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	fmt.Println("Adding game")
 	Admins, err := database.AddGame(a.db, game.Name)
 	if err != nil {
 		fmt.Println("No Admins found in db")
