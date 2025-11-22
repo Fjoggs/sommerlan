@@ -1,4 +1,4 @@
-type LAN = {
+export type LAN = {
   description: string;
   endDate: string;
   event: Event;

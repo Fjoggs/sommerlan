@@ -58,14 +58,9 @@ type AddGameResponse struct {
 func (a *AdminHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseForm()
+	err := req.ParseMultipartForm(0)
 	if err != nil {
-		fmt.Println("Parseform no likey", err)
-	}
-
-	err = req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parseform no likey", err)
+		fmt.Println("Parsing game form failed", err)
 	}
 
 	gameName := req.FormValue("gameName")
@@ -76,7 +71,7 @@ func (a *AdminHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	fmt.Println("Adding game")
 	gameId, err := database.AddGame(a.db, game.Name)
 	if err != nil {
-		fmt.Println("Failed to add game")
+		fmt.Println("Failed to add game", err)
 		return
 	}
 
@@ -91,7 +86,7 @@ func (a *AdminHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *AdminHandlers) DeleteGame(writer http.ResponseWriter, req *http.Request) {
+func (h *AdminHandlers) DeleteGameWithId(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")
@@ -101,7 +96,7 @@ func (h *AdminHandlers) DeleteGame(writer http.ResponseWriter, req *http.Request
 		log.Fatalf("Id to int failed: %v", err)
 	}
 
-	rowsDeleted, err := database.DeleteGame(h.db, id)
+	rowsDeleted, err := database.DeleteGameWithId(h.db, id)
 	if err != nil {
 		fmt.Println("No games found in db", err)
 		return

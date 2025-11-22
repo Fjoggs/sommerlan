@@ -61,16 +61,42 @@ func (h *LanHandlers) GetLanById(writer http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (h *LanHandlers) AddLan(writer http.ResponseWriter, _ *http.Request) {
+type Lan struct {
+	Start_date  string
+	End_date    string
+	Event       string
+	Description string
+}
+
+func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
-	lans, err := database.GetLans(h.db)
+	err := req.ParseMultipartForm(0)
 	if err != nil {
-		fmt.Println("No lans found in db")
+		fmt.Println("Parsing lan form failed", err)
+	}
+
+	startDate := req.FormValue("startDate")
+	endDate := req.FormValue("endDate")
+	event := req.FormValue("event")
+	description := req.FormValue("description")
+
+	lanId, err := database.AddLan(h.db, description, endDate, event, startDate)
+	if err != nil {
+		fmt.Println("Failed to add lan", err)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(lans)
+	res := database.Lan{
+		Id:          int(lanId),
+		Start_date:  startDate,
+		End_date:    endDate,
+		Event:       event,
+		Description: description,
+	}
+
+	fmt.Println("Added LAN to db", res)
+	err = json.NewEncoder(writer).Encode(res)
 	if err != nil {
 		log.Fatalf("Encoding response blew up: %v", err)
 	}
@@ -89,4 +115,24 @@ func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		log.Fatalf("Encoding response blew up: %v", err)
 	}
+}
+
+func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	idPath := req.PathValue("id")
+
+	id, err := strconv.Atoi(idPath)
+	if err != nil {
+		log.Fatalf("Id to int failed: %v", err)
+	}
+
+	rowsDeleted, err := database.DeleteLanWithId(h.db, id)
+	if err != nil {
+		fmt.Println("No lan found in db", err)
+		return
+	}
+
+	fmt.Println("Deleted rows", rowsDeleted)
+	writer.WriteHeader(http.StatusNoContent)
 }

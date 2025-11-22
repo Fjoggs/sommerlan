@@ -6,7 +6,7 @@ const renderGames = async () => {
 
   const tbody = document.getElementById("gameTable");
   games.forEach((game: Game) => {
-    if (game.name) {
+    if (game.id) {
       const row = createGame(game);
       tbody?.appendChild(row);
     }
@@ -30,8 +30,6 @@ const deleteGame = async (id: number) => {
     method: "DELETE",
   });
   if (response.status === 204) {
-    console.log("id", id);
-
     const gameRow = document.getElementById(`game-row-${id}`);
     console.log("gameRow", gameRow);
 

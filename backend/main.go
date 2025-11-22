@@ -27,6 +27,13 @@ func main() {
 	router.HandleFunc("GET /api/lan/", handlers.EnableCORS(lan.GetLan))
 	router.HandleFunc("POST /api/lan/", handlers.EnableCORS(lan.AddLan))
 	router.HandleFunc("GET /api/lan/{id}/", handlers.EnableCORS(lan.GetLanById))
+	router.HandleFunc(
+		"OPTIONS /api/lan/{id}/",
+		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {
+			// Empty handler - EnableCORS will handle the response
+		}),
+	)
+	router.HandleFunc("DELETE /api/lan/{id}/", handlers.EnableCORS(lan.DeleteLanWithId))
 
 	// Admin routes
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(admin.GetGames))
@@ -37,7 +44,7 @@ func main() {
 			// Empty handler - EnableCORS will handle the response
 		}),
 	)
-	router.HandleFunc("DELETE /api/game/{id}/", handlers.EnableCORS(admin.DeleteGame))
+	router.HandleFunc("DELETE /api/game/{id}/", handlers.EnableCORS(admin.DeleteGameWithId))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

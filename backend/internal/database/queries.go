@@ -7,11 +7,11 @@ import (
 )
 
 type Lan struct {
-	Id          int
-	Start_date  string
-	End_date    string
-	Event       string
-	Description string
+	Id          int    `json:"lanId"`
+	Start_date  string `json:"startDate"`
+	End_date    string `json:"endDate"`
+	Event       string `json:"event"`
+	Description string `json:"description"`
 }
 
 type LanGame struct {
@@ -59,8 +59,19 @@ func GetGames(db *sql.DB) ([]Game, error) {
 	return games, nil
 }
 
-func DeleteGame(db *sql.DB, id int) (int64, error) {
+func DeleteGameWithId(db *sql.DB, id int) (int64, error) {
 	query := "DELETE FROM game where id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
+}
+
+func DeleteLanWithId(db *sql.DB, id int) (int64, error) {
+	query := "DELETE FROM lan where id = ?"
 
 	result, err := db.Exec(query, id)
 	if err != nil {
@@ -249,7 +260,7 @@ func AddLan(
 	end_date,
 	event, 
 	start_date)
-	VALUES (?	?,?	?);
+	VALUES (?,?,?,?);
 `
 
 	result, err := db.Exec(query, description, end_date, event, start_date)
