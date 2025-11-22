@@ -1,3 +1,6 @@
+import { createGame } from "./game.js";
+import { Game } from "./lan.js";
+
 const lanForm = document.getElementById("lanForm");
 
 const onSubmitGame = async (event: SubmitEvent) => {
@@ -14,6 +17,16 @@ const onSubmitGame = async (event: SubmitEvent) => {
     body: formData,
   });
   console.log("res.status", res.status);
+  if (res.status === 200) {
+    const body: Game = await res.json();
+    const gameTable = document.getElementById("gameTable");
+    const game: Game = {
+      id: body.id,
+      name: body.name,
+    };
+    const row = createGame(game);
+    gameTable?.appendChild(row);
+  }
 };
 
 const gameForm: HTMLFormElement = document.getElementById(

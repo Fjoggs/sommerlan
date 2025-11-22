@@ -32,6 +32,44 @@ type LanEvent struct {
 	Start_date   string   `json:"startDate"`
 }
 
+type Game struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func GetGames(db *sql.DB) ([]Game, error) {
+	var games []Game
+
+	gameQuery := "SELECT id, name FROM game;"
+
+	gameRows, err := doQuery(db, gameQuery)
+	if err != nil {
+		return games, err
+	}
+	defer gameRows.Close()
+
+	for gameRows.Next() {
+		var game Game
+		err := gameRows.Scan(&game.Id, &game.Name)
+		if err != nil {
+			return games, err
+		}
+		games = append(games, game)
+	}
+	return games, nil
+}
+
+func DeleteGame(db *sql.DB, id int) (int64, error) {
+	query := "DELETE FROM game where id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
+}
+
 func GetLans(db *sql.DB) ([]LanEvent, error) {
 	var events []LanEvent
 

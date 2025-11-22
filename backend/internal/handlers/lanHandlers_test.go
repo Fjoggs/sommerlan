@@ -67,7 +67,7 @@ func Test_lanHandler(t *testing.T) {
 	h := NewLanHandlers(db)
 
 	// Call the handler with our request and recorder
-	h.LanHandler(rr, req)
+	h.GetLan(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Errorf("Handler returned wrong status: got %v want %v", rr.Code, http.StatusOK)

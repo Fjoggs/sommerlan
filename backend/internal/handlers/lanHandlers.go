@@ -38,7 +38,7 @@ func (h *LanHandlers) HealthHandler(writer http.ResponseWriter, _ *http.Request)
 	}
 }
 
-func (h *LanHandlers) LanHandlerById(writer http.ResponseWriter, req *http.Request) {
+func (h *LanHandlers) GetLanById(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")
@@ -61,7 +61,7 @@ func (h *LanHandlers) LanHandlerById(writer http.ResponseWriter, req *http.Reque
 	}
 }
 
-func (h *LanHandlers) AddLanHandler(writer http.ResponseWriter, _ *http.Request) {
+func (h *LanHandlers) AddLan(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetLans(h.db)
@@ -76,7 +76,7 @@ func (h *LanHandlers) AddLanHandler(writer http.ResponseWriter, _ *http.Request)
 	}
 }
 
-func (h *LanHandlers) LanHandler(writer http.ResponseWriter, _ *http.Request) {
+func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetLans(h.db)

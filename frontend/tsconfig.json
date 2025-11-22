@@ -8,6 +8,6 @@
     "target": "ESNext",
     "outDir": "./dist"
   },
-  "files": ["index.ts", "ts/admin.ts"]
+  "files": ["index.ts", "ts/admin.ts", "ts/lan.ts", "ts/game.ts"]
 }
 

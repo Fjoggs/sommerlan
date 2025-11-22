@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SommerLAN</title>
+    <link href="../style.css" rel="stylesheet" />
+    <script type="module" src="../dist/ts/admin.js"></script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/admin">Admin</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1>Admin</h1>
+
+      <nav>
+        <ul>
+          <li><a href="/admin/game.html">Spill</a></li>
+          <li>
+            <a href="/admin/lan.html"><b>Lan</b></a>
+          </li>
+        </ul>
+      </nav>
+      <section>
+        <h2>Lan</h2>
+        <form id="lanForm">
+          <label>
+            Startdato
+            <input type="date" />
+          </label>
+          <label>
+            Sluttdato
+            <input type="date" />
+          </label>
+          <label>
+            Beskrivelse
+            <input type="number" placeholder="XXXX" />
+          </label>
+          <label>
+            Pre
+            <input type="radio" value="pre" name="event" />
+          </label>
+          <label>
+            Main
+            <input type="radio" value="main" name="event" />
+          </label>
+          <label>
+            Side
+            <input type="radio" value="side" name="event" />
+          </label>
+          <button type="submit">Submit</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

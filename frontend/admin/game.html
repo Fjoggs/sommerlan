@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SommerLAN</title>
+    <link href="../style.css" rel="stylesheet" />
+    <script type="module" src="../dist/ts/admin.js"></script>
+    <script type="module" src="../dist/ts/game.js"></script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/admin">Admin</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1>Admin</h1>
+
+      <nav>
+        <ul>
+          <li>
+            <a href="/admin/game.html"><b>Spill</b></a>
+          </li>
+          <li><a href="/admin/lan.html">Lan</a></li>
+        </ul>
+      </nav>
+      <section>
+        <h2>Spill</h2>
+        <form id="gameForm">
+          <label>
+            Spillnavn
+            <input type="text" name="gameName" />
+          </label>
+          <button type="submit">Submit</button>
+        </form>
+      </section>
+      <table>
+        <thead>
+          <tr>
+            <th>Navn</th>
+          </tr>
+        </thead>
+        <tbody id="gameTable"></tbody>
+      </table>
+    </main>
+  </body>
+</html>

@@ -69,3 +69,8 @@ label {
 }
 
 /* dun-mode; skru av all styling og effekter */
+
+tr {
+  display: flex;
+  justify-content: space-between;
+}

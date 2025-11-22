@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"backend/internal/database"
 )
@@ -34,46 +35,80 @@ func NewAdminHandlers(db *sql.DB) *AdminHandlers {
 	}
 }
 
-func (a *AdminHandlers) AddGameHandler(writer http.ResponseWriter, req *http.Request) {
+func (h *AdminHandlers) GetGames(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
-	var game AddGameBody
+	lans, err := database.GetGames(h.db)
+	if err != nil {
+		fmt.Println("No games found in db", err)
+		return
+	}
 
-	fmt.Println("Parsing form")
+	err = json.NewEncoder(writer).Encode(lans)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
+type AddGameResponse struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func (a *AdminHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
 	err := req.ParseForm()
 	if err != nil {
 		fmt.Println("Parseform no likey", err)
 	}
 
-	fmt.Println("Looping PostForm")
-	for key, value := range req.PostForm {
-		fmt.Printf("%s = %s\n", key, value)
-	}
-
-	fmt.Println("Looping Form")
-	for key, value := range req.Form {
-		fmt.Printf("%s = %s\n", key, value)
-	}
-
-	fmt.Println("Decoder")
-	err = json.NewDecoder(req.Body).Decode(&game)
+	err = req.ParseMultipartForm(0)
 	if err != nil {
-		fmt.Println("error", err)
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+		fmt.Println("Parseform no likey", err)
+	}
+
+	gameName := req.FormValue("gameName")
+	game := AddGameBody{
+		Name: gameName,
 	}
 
 	fmt.Println("Adding game")
-	Admins, err := database.AddGame(a.db, game.Name)
+	gameId, err := database.AddGame(a.db, game.Name)
 	if err != nil {
-		fmt.Println("No Admins found in db")
+		fmt.Println("Failed to add game")
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(Admins)
+	res := AddGameResponse{
+		Id:   int(gameId),
+		Name: gameName,
+	}
+
+	err = json.NewEncoder(writer).Encode(res)
 	if err != nil {
 		log.Fatalf("Encoding response blew up: %v", err)
 	}
+}
+
+func (h *AdminHandlers) DeleteGame(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	idPath := req.PathValue("id")
+
+	id, err := strconv.Atoi(idPath)
+	if err != nil {
+		log.Fatalf("Id to int failed: %v", err)
+	}
+
+	rowsDeleted, err := database.DeleteGame(h.db, id)
+	if err != nil {
+		fmt.Println("No games found in db", err)
+		return
+	}
+
+	fmt.Println("Deleted rows", rowsDeleted)
+	writer.WriteHeader(http.StatusNoContent)
 }
 
 func (a *AdminHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) {
@@ -100,7 +135,7 @@ func (a *AdminHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request
 	}
 }
 
-func (a *AdminHandlers) AddParticipantHandler(writer http.ResponseWriter, req *http.Request) {
+func (a *AdminHandlers) AddParticipant(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	var lanParticipant AddParticipantBody
