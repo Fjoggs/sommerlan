@@ -6,10 +6,14 @@ import (
 	"net/http"
 )
 
+type healthResponse struct {
+	Message string `json:"message"`
+}
+
 func HealthHandler(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
-	response := HealthResponse{
+	response := healthResponse{
 		Message: "OK",
 	}
 

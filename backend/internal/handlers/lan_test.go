@@ -36,7 +36,7 @@ func Test_healthHandler(t *testing.T) {
 		t.Errorf("Handler returned wrong status: got %v want %v", rr.Code, http.StatusOK)
 	}
 
-	var response HealthResponse
+	var response healthResponse
 	err = json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Errorf("Handler failed to unmarshal response %v", err)

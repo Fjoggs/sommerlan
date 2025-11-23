@@ -21,8 +21,11 @@ type addParticipantBody struct {
 	userId int
 }
 
-type HealthResponse struct {
-	Message string `json:"message"`
+type lan struct {
+	Start_date  string
+	End_date    string
+	Event       string
+	Description string
 }
 
 type LanHandlers struct {
@@ -56,13 +59,6 @@ func (h *LanHandlers) GetLanById(writer http.ResponseWriter, req *http.Request) 
 	if err != nil {
 		log.Fatalf("Encoding response blew up: %v", err)
 	}
-}
-
-type Lan struct {
-	Start_date  string
-	End_date    string
-	Event       string
-	Description string
 }
 
 func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
