@@ -11,6 +11,16 @@ import (
 	"backend/internal/database"
 )
 
+type addLanGame struct {
+	lanId  int
+	gameId int
+}
+
+type addParticipantBody struct {
+	lanId  int
+	userId int
+}
+
 type HealthResponse struct {
 	Message string `json:"message"`
 }
@@ -22,19 +32,6 @@ type LanHandlers struct {
 func NewLanHandlers(db *sql.DB) *LanHandlers {
 	return &LanHandlers{
 		db: db,
-	}
-}
-
-func (h *LanHandlers) HealthHandler(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-
-	response := HealthResponse{
-		Message: "OK",
-	}
-
-	err := json.NewEncoder(writer).Encode(response)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
 	}
 }
 
@@ -66,6 +63,21 @@ type Lan struct {
 	End_date    string
 	Event       string
 	Description string
+}
+
+func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	lans, err := database.GetLans(h.db)
+	if err != nil {
+		fmt.Println("No lans found in db")
+		return
+	}
+
+	err = json.NewEncoder(writer).Encode(lans)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
 }
 
 func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
@@ -102,21 +114,6 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-
-	lans, err := database.GetLans(h.db)
-	if err != nil {
-		fmt.Println("No lans found in db")
-		return
-	}
-
-	err = json.NewEncoder(writer).Encode(lans)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
-	}
-}
-
 func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
@@ -135,4 +132,52 @@ func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Requ
 
 	fmt.Println("Deleted rows", rowsDeleted)
 	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (a *LanHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	var lanGame addLanGame
+
+	err := json.NewDecoder(req.Body).Decode(&lanGame)
+	if err != nil {
+		fmt.Println("error", err)
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rows, err := database.AddLanGame(a.db, lanGame.lanId, lanGame.gameId)
+	if err != nil {
+		fmt.Println("Blew up:", err)
+		return
+	}
+
+	err = json.NewEncoder(writer).Encode(rows)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
+func (a *LanHandlers) AddParticipant(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	var lanParticipant addParticipantBody
+
+	err := json.NewDecoder(req.Body).Decode(&lanParticipant)
+	if err != nil {
+		fmt.Println("error", err)
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	rows, err := database.AddLanParticipant(a.db, lanParticipant.lanId, lanParticipant.userId)
+	if err != nil {
+		fmt.Println("Blew up:", err)
+		return
+	}
+
+	err = json.NewEncoder(writer).Encode(rows)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
 }
