@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SommerLAN</title>
     <link href="../style.css" rel="stylesheet" />
-    <script type="module" src="../dist/ts/game.js"></script>
+    <script type="module" src="../dist/ts/admin.js"></script>
+    <script type="module" src="../dist/ts/user.js"></script>
   </head>
   <body>
     <header>
@@ -21,18 +22,20 @@
       <nav>
         <ul>
           <li>
-            <a href="/admin/game.html"><b>Spill</b></a>
+            <a href="/admin/game.html">Spill</a>
           </li>
           <li><a href="/admin/lan.html">Lan</a></li>
-          <li><a href="/admin/user.html">Deltaker</a></li>
+          <li>
+            <a href="/admin/user.html"><b>Deltaker</b></a>
+          </li>
         </ul>
       </nav>
       <section>
-        <h2>Spill</h2>
-        <form id="gameForm">
+        <h2>Deltaker</h2>
+        <form id="userForm">
           <label>
-            Spillnavn
-            <input type="text" name="gameName" />
+            Navn
+            <input type="text" name="userName" />
           </label>
           <button type="submit">Submit</button>
         </form>
@@ -43,7 +46,7 @@
             <th>Navn</th>
           </tr>
         </thead>
-        <tbody id="gameTable"></tbody>
+        <tbody id="userTable"></tbody>
       </table>
     </main>
   </body>

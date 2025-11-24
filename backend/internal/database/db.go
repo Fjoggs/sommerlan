@@ -29,12 +29,71 @@ type GameResponse struct {
 	Name string `json:"name"`
 }
 
+type UserResponse struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 type LanGame struct {
 	Lan_game string
 }
 
 type LanParticipant struct {
 	Participant string
+}
+
+func GetUsers(db *sql.DB) ([]UserResponse, error) {
+	var users []UserResponse
+
+	userQuery := "SELECT id, name FROM user;"
+
+	userRows, err := doQuery(db, userQuery)
+	if err != nil {
+		return users, err
+	}
+	defer userRows.Close()
+
+	for userRows.Next() {
+		var user UserResponse
+		err := userRows.Scan(&user.Id, &user.Name)
+		if err != nil {
+			return users, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+func GetUserWithId(db *sql.DB, userId int) (UserResponse, error) {
+	var user UserResponse
+
+	userQuery := "SELECT id, name FROM user WHERE id = ?;"
+
+	userRow, err := doQueryWithId(db, userQuery, userId)
+	if err != nil {
+		return user, err
+	}
+	defer userRow.Close()
+
+	for userRow.Next() {
+		var user UserResponse
+		err := userRow.Scan(&user.Id, &user.Name)
+		if err != nil {
+			return user, err
+		}
+	}
+	return user, nil
+}
+
+func DeleteUserWithId(db *sql.DB, id int) (int64, error) {
+	query := "DELETE FROM user where id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
 }
 
 func GetGames(db *sql.DB) ([]GameResponse, error) {
@@ -59,19 +118,29 @@ func GetGames(db *sql.DB) ([]GameResponse, error) {
 	return games, nil
 }
 
-func DeleteGameWithId(db *sql.DB, id int) (int64, error) {
-	query := "DELETE FROM game where id = ?"
+func GetGameWithId(db *sql.DB, gameId int) (GameResponse, error) {
+	var game GameResponse
 
-	result, err := db.Exec(query, id)
+	userQuery := "SELECT id, name FROM game WHERE id = ?;"
+
+	gameRow, err := doQueryWithId(db, userQuery, gameId)
 	if err != nil {
-		return 0, err
+		return game, err
 	}
+	defer gameRow.Close()
 
-	return result.RowsAffected()
+	for gameRow.Next() {
+		var user GameResponse
+		err := gameRow.Scan(&user.Id, &user.Name)
+		if err != nil {
+			return user, err
+		}
+	}
+	return game, nil
 }
 
-func DeleteLanWithId(db *sql.DB, id int) (int64, error) {
-	query := "DELETE FROM lan where id = ?"
+func DeleteGameWithId(db *sql.DB, id int) (int64, error) {
+	query := "DELETE FROM game where id = ?"
 
 	result, err := db.Exec(query, id)
 	if err != nil {
@@ -225,6 +294,17 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 	return event, nil
 }
 
+func DeleteLanWithId(db *sql.DB, id int) (int64, error) {
+	query := "DELETE FROM lan where id = ?"
+
+	result, err := db.Exec(query, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.RowsAffected()
+}
+
 func doQuery(db *sql.DB, query string) (*sql.Rows, error) {
 	rows, err := db.Query(query)
 	if err != nil {
@@ -234,10 +314,6 @@ func doQuery(db *sql.DB, query string) (*sql.Rows, error) {
 	return rows, err
 }
 
-func queryLanWithId(db *sql.DB, query string, lanId int) *sql.Row {
-	return db.QueryRow(query, lanId)
-}
-
 func doQueryWithId(db *sql.DB, query string, id int) (*sql.Rows, error) {
 	rows, err := db.Query(query, id)
 	if err != nil {
@@ -245,6 +321,10 @@ func doQueryWithId(db *sql.DB, query string, id int) (*sql.Rows, error) {
 	}
 
 	return rows, err
+}
+
+func queryLanWithId(db *sql.DB, query string, lanId int) *sql.Row {
+	return db.QueryRow(query, lanId)
 }
 
 func AddLan(
@@ -271,6 +351,22 @@ func AddLan(
 	id, err := result.LastInsertId()
 	if err != nil {
 		return 0, fmt.Errorf("INSERT ERRROR: %v", err)
+	}
+
+	return id, nil
+}
+
+func AddUser(db *sql.DB, name string) (int64, error) {
+	query := "INSERT INTO game(name) VALUES (?)"
+
+	result, err := db.Exec(query, name)
+	if err != nil {
+		return 0, fmt.Errorf("GAME INSERT ERROR: %v", err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("GAME INSERT ERRROR: %v", err)
 	}
 
 	return id, nil

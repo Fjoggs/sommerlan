@@ -8,6 +8,14 @@
     "target": "ESNext",
     "outDir": "./dist"
   },
-  "files": ["index.ts", "ts/admin.ts", "ts/lan.ts", "ts/game.ts"]
+  "files": [
+    "index.ts", 
+    "ts/admin.ts",
+    "ts/game.ts",
+    "ts/lan.ts",
+    "ts/user.ts",
+    "ts/utils.ts",
+    "ts/types.ts"
+  ]
 }
 

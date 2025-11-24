@@ -1,4 +1,32 @@
-import { createElement, Game } from "./lan.js";
+import { Game } from "./types.js";
+import { createElement } from "./utils.js";
+
+const onSubmitGame = async (event: SubmitEvent) => {
+  const gameForm = document.getElementById("gameForm") as HTMLFormElement;
+  event.preventDefault();
+
+  const formData = new FormData(gameForm);
+  console.log("formDAta", formData);
+
+  const res = await fetch("http://localhost:8080/api/game/", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (res.status === 200) {
+    const body: Game = await res.json();
+    const gameTable = document.getElementById("gameTable");
+    const game: Game = {
+      id: body.id,
+      name: body.name,
+    };
+    const row = createGame(game);
+    gameTable?.appendChild(row);
+  }
+};
+
+const gameForm = document.getElementById("gameForm");
+gameForm?.addEventListener("submit", onSubmitGame);
 
 const renderGames = async () => {
   const response = await fetch("http://localhost:8080/api/game/");

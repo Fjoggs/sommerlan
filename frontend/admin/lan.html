@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SommerLAN</title>
     <link href="../style.css" rel="stylesheet" />
-    <script type="module" src="../dist/ts/admin.js"></script>
+    <script type="module" src="../dist/ts/lan.js"></script>
   </head>
   <body>
     <header>
@@ -18,13 +18,13 @@
     </header>
     <main>
       <h1>Admin</h1>
-
       <nav>
         <ul>
           <li><a href="/admin/game.html">Spill</a></li>
           <li>
             <a href="/admin/lan.html"><b>Lan</b></a>
           </li>
+          <li><a href="/admin/user.html">Deltaker</a></li>
         </ul>
       </nav>
       <section>
@@ -58,6 +58,14 @@
           <label>
             Side
             <input type="radio" value="side" name="event" required />
+          </label>
+          <label>
+            Deltakere
+            <div>
+              <div id="removeUserButtons"></div>
+              <input type="hidden" id="userListInput" disabled />
+              <div id="addUserButtons"></div>
+            </div>
           </label>
           <button type="submit">Submit</button>
         </form>

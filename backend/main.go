@@ -21,6 +21,7 @@ func main() {
 
 	lan := handlers.NewLanHandlers(db)
 	game := handlers.NewGameHandlers(db)
+	user := handlers.NewUserHandlers(db)
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
@@ -47,6 +48,17 @@ func main() {
 		}),
 	)
 	router.HandleFunc("DELETE /api/game/{id}/", handlers.EnableCORS(game.DeleteGameWithId))
+
+	// User routes
+	router.HandleFunc("GET /api/user/", handlers.EnableCORS(user.GetUsers))
+	router.HandleFunc("POST /api/user/", handlers.EnableCORS(user.AddUser))
+	router.HandleFunc(
+		"OPTIONS /api/user/{id}/",
+		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {
+			// Empty handler - EnableCORS will handle the response
+		}),
+	)
+	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
