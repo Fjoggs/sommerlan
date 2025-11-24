@@ -6,20 +6,12 @@ import (
 	"log"
 )
 
-type Lan struct {
+type LanResponse struct {
 	Id          int    `json:"lanId"`
 	Start_date  string `json:"startDate"`
 	End_date    string `json:"endDate"`
 	Event       string `json:"event"`
 	Description string `json:"description"`
-}
-
-type LanGame struct {
-	Lan_game string
-}
-
-type LanParticipant struct {
-	Participant string
 }
 
 type LanEvent struct {
@@ -32,13 +24,21 @@ type LanEvent struct {
 	Start_date   string   `json:"startDate"`
 }
 
-type Game struct {
+type GameResponse struct {
 	Id   int    `json:"id"`
 	Name string `json:"name"`
 }
 
-func GetGames(db *sql.DB) ([]Game, error) {
-	var games []Game
+type LanGame struct {
+	Lan_game string
+}
+
+type LanParticipant struct {
+	Participant string
+}
+
+func GetGames(db *sql.DB) ([]GameResponse, error) {
+	var games []GameResponse
 
 	gameQuery := "SELECT id, name FROM game;"
 
@@ -49,7 +49,7 @@ func GetGames(db *sql.DB) ([]Game, error) {
 	defer gameRows.Close()
 
 	for gameRows.Next() {
-		var game Game
+		var game GameResponse
 		err := gameRows.Scan(&game.Id, &game.Name)
 		if err != nil {
 			return games, err
@@ -130,7 +130,7 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 	`
 	lanRow := queryLanWithId(db, lanQuery, id)
 
-	var lan Lan
+	var lan LanResponse
 
 	err := lanRow.Scan(
 		&lan.Description,

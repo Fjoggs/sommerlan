@@ -21,13 +21,6 @@ type addParticipantBody struct {
 	userId int
 }
 
-type lan struct {
-	Start_date  string
-	End_date    string
-	Event       string
-	Description string
-}
-
 type LanHandlers struct {
 	db *sql.DB
 }
@@ -95,7 +88,7 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := database.Lan{
+	res := database.LanResponse{
 		Id:          int(lanId),
 		Start_date:  startDate,
 		End_date:    endDate,

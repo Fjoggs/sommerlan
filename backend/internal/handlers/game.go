@@ -11,15 +11,6 @@ import (
 	"backend/internal/database"
 )
 
-type addGameRequest struct {
-	Name string
-}
-
-type addGameResponse struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
-
 type GameHandlers struct {
 	db *sql.DB
 }
@@ -54,18 +45,13 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	gameName := req.FormValue("gameName")
-	game := addGameRequest{
-		Name: gameName,
-	}
-
-	fmt.Println("Adding game")
-	gameId, err := database.AddGame(a.db, game.Name)
+	gameId, err := database.AddGame(a.db, gameName)
 	if err != nil {
 		fmt.Println("Failed to add game", err)
 		return
 	}
 
-	res := addGameResponse{
+	res := database.GameResponse{
 		Id:   int(gameId),
 		Name: gameName,
 	}
