@@ -1,35 +1,81 @@
 :root {
-  --bg-dark: oklch(0.92 0.055 312);
-  --bg: oklch(0.96 0.055 312);
-  --bg-light: oklch(1 0.055 312);
-  --text: oklch(0.15 0.11 312);
-  --text-muted: oklch(0.4 0.11 312);
-  --highlight: oklch(1 0.11 312);
-  --border: oklch(0.6 0.11 312);
-  --border-muted: oklch(0.7 0.11 312);
-  --primary: oklch(0.4 0.11 312);
-  --secondary: oklch(0.4 0.11 132);
-  --danger: oklch(0.5 0.11 30);
-  --warning: oklch(0.5 0.11 100);
-  --success: oklch(0.5 0.11 160);
-  --info: oklch(0.5 0.11 260);
+  /* light mode */
+  /* --bg-dark: oklch(0.92 0.055 312); */
+  /* --bg: oklch(0.96 0.055 312); */
+  /* --bg-light: oklch(1 0.055 312); */
+  /* --text: oklch(0.15 0.11 312); */
+  /* --text-muted: oklch(0.4 0.11 312); */
+  /* --highlight: oklch(1 0.11 312); */
+  /* --border: oklch(0.6 0.11 312); */
+  /* --border-muted: oklch(0.7 0.11 312); */
+  /* --primary: oklch(0.4 0.11 312); */
+  /* --secondary: oklch(0.4 0.11 132); */
+  /* --danger: oklch(0.5 0.11 30); */
+  /* --warning: oklch(0.5 0.11 100); */
+  /* --success: oklch(0.5 0.11 160); */
+  /* --info: oklch(0.5 0.11 260); */
+
+  /* muted light mode */
+  --bg-dark: oklch(0.92 0.015 236);
+  --bg: oklch(0.96 0.015 236);
+  --bg-light: oklch(1 0.015 236);
+  --text: oklch(0.15 0.03 236);
+  --text-muted: oklch(0.4 0.03 236);
+  --highlight: oklch(1 0.03 236);
+  --border: oklch(0.6 0.03 236);
+  --border-muted: oklch(0.7 0.03 236);
+  --primary: oklch(0.4 0.1 236);
+  --secondary: oklch(0.4 0.1 56);
+  --danger: oklch(0.5 0.05 30);
+  --warning: oklch(0.5 0.05 100);
+  --success: oklch(0.5 0.05 160);
+  --info: oklch(0.5 0.05 260);
+
+  /* dark mode */
+  /* --bg-dark: oklch(0.1 0.065 325); */
+  /* --bg: oklch(0.15 0.065 325); */
+  /* --bg-light: oklch(0.2 0.065 325); */
+  /* --text: oklch(0.96 0.1 325); */
+  /* --text-muted: oklch(0.76 0.1 325); */
+  /* --highlight: oklch(0.5 0.13 325); */
+  /* --border: oklch(0.4 0.13 325); */
+  /* --border-muted: oklch(0.3 0.13 325); */
+  /* --primary: oklch(0.76 0.13 325); */
+  /* --secondary: oklch(0.76 0.13 145); */
+  /* --danger: oklch(0.7 0.13 30); */
+  /* --warning: oklch(0.7 0.13 100); */
+  /* --success: oklch(0.7 0.13 160); */
+  /* --info: oklch(0.7 0.13 260); */
 
   --shadow: 0px 2px 2px oklch(0 0 0 / 0.2), 0px 4px 4px oklch(0 0 0 / 0.1);
 }
 
-body {
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
-  background-color: var(--bg-dark);
+* {
   color: var(--text-muted);
+}
+
+body {
+  font-family: "Manrope", sans-serif;
+  background-color: var(--bg-dark);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
+a {
+  text-decoration: none;
+}
+
 h1,
 h2,
-h3 {
+h3,
+h4 {
   color: var(--text);
+}
+
+h4 {
+  margin: 0;
+  margin-bottom: 5px;
 }
 
 form {
@@ -60,12 +106,38 @@ label {
 }
 
 .timeline-event {
-  width: 100%;
-  max-width: 50vw;
   border-radius: 15px;
   padding: 1rem 2rem;
   background-color: var(--bg);
   box-shadow: var(--shadow);
+  border: 0;
+  border-top: 1px solid var(--highlight);
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+}
+
+.timeline-event-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.edit-button {
+  background-color: var(--bg);
+  border: 0;
+  font-size: 30px;
+  cursor: pointer;
+  transform: scale(-1, 1);
+}
+
+.edit-button:hover {
+  color: var(--info);
+}
+
+ul {
+  text-align: left;
 }
 
 /* dun-mode; skru av all styling og effekter */
@@ -73,4 +145,50 @@ label {
 tr {
   display: flex;
   justify-content: space-between;
+}
+
+.pill-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background-color: var(--bg-light);
+  border-top: 1px solid var(--highlight);
+  color: var(--text);
+  height: 25px;
+}
+
+.menu {
+  display: flex;
+  justify-content: space-between;
+  width: 200px;
+}
+
+.menu-item:hover {
+  border-bottom: 3px solid var(--success);
+}
+.menu-item {
+  border-bottom: 3px solid var(--text);
+}
+
+.editing {
+  border-radius: 15px;
+  padding: 1rem 2rem;
+  background-color: var(--bg);
+  box-shadow: var(--shadow);
+  border: 0;
+  outline: dotted 3px;
+
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+
+  border-style: dotted;
 }

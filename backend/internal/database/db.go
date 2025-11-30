@@ -153,7 +153,7 @@ func DeleteGameWithId(db *sql.DB, id int) (int64, error) {
 func GetLans(db *sql.DB) ([]LanEvent, error) {
 	var events []LanEvent
 
-	lanQuery := "SELECT id FROM lan;"
+	lanQuery := "SELECT id FROM lan order by end_date;"
 
 	lanRows, err := doQuery(db, lanQuery)
 	if err != nil {

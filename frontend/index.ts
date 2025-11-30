@@ -5,10 +5,16 @@ const fetchLans = async () => {
   const res = await fetch("http://localhost:8080/api/lan/");
   const lans: LAN[] = await res.json();
   const preContainer = document.getElementById("pre");
+  const mainContainer = document.getElementById("main");
+  const sideContainer = document.getElementById("side");
 
   lans.forEach((lan) => {
     if (lan.event === "pre") {
       preContainer?.appendChild(buildEntry(lan));
+    } else if (lan.event === "main") {
+      mainContainer?.appendChild(buildEntry(lan));
+    } else if (lan.event === "side") {
+      sideContainer?.appendChild(buildEntry(lan));
     }
   });
 };
@@ -19,6 +25,37 @@ const fetchLanById = async (id: number) => {
   console.log("lan", lan);
 };
 
+const editLan = async (id: number) => {
+  console.log(`edit-button-${id}`);
+
+  const editButton = document.getElementById(
+    `edit-button-${id}`,
+  ) as HTMLButtonElement;
+  editButton.textContent = "✔";
+  editButton.style.transform = "scale(1,1)";
+  const container = document.getElementById(`id-${id}`);
+  if (container) {
+    container.className = "editing";
+  }
+  editButton.removeEventListener("click", () => editLan(id));
+  editButton.addEventListener("click", () => finishedEditing(id));
+};
+
+const finishedEditing = (id: number) => {
+  const editButton = document.getElementById(
+    `edit-button-${id}`,
+  ) as HTMLButtonElement;
+  editButton.textContent = "✎";
+  editButton.style.transform = "scale(-1,1)";
+  const container = document.getElementById(`id-${id}`);
+  if (container) {
+    container.className = "timeline-event";
+  }
+
+  editButton.removeEventListener("click", () => finishedEditing(id));
+  editButton.addEventListener("click", () => editLan(id));
+};
+
 const buildEntry = (lan: LAN) => {
   const startDate = new Date(lan.startDate);
   const id = `id-${lan.lanId}`;
@@ -26,31 +63,48 @@ const buildEntry = (lan: LAN) => {
   container.className = "timeline-event";
   container.addEventListener("click", () => fetchLanById(lan.lanId));
 
+  const hContainer = createElement("div");
+  hContainer.className = "timeline-event-header";
   const header = createElement("h3");
   header.textContent = startDate.getFullYear().toString();
+  hContainer.appendChild(header);
+  const editButton = createElement("button", `edit-button-${lan.lanId}`);
+  editButton.textContent = "✎";
+  editButton.className = "edit-button";
+  editButton.addEventListener("click", () => editLan(lan.lanId));
+  hContainer.appendChild(editButton);
+  container.appendChild(hContainer);
 
-  const list = createElement("ul");
+  const description = createElement("p");
+  description.textContent = lan.description;
+  container.appendChild(description);
 
-  const participants = createElement("li");
-  participants.textContent = "Deltakere: ";
+  const participants = createElement("div");
+  participants.className = "pill-list";
+  const pHeader = createElement("h4");
+  pHeader.textContent = "Deltakere";
+  participants.appendChild(pHeader);
   for (const participant of lan.participants) {
-    participants.textContent += `${participant} `;
+    const pill = createElement("span");
+    pill.className = "pill";
+    pill.textContent += `${participant} `;
+    participants.appendChild(pill);
   }
-  list.appendChild(participants);
+  container.appendChild(participants);
 
-  const description = createElement("li");
-  description.textContent = `Highlights: ${lan.description}`;
-  list.appendChild(description);
-
-  const games = createElement("li");
-  games.textContent = "Spill: ";
+  const games = createElement("div");
+  games.className = "pill-list";
+  const gHeader = createElement("h4");
+  gHeader.textContent = "Spill";
+  games.appendChild(gHeader);
   for (const game of lan.games) {
-    games.textContent += `${game} `;
+    const pill = createElement("span");
+    pill.className = "pill";
+    pill.textContent += `${game} `;
+    games.appendChild(pill);
   }
-  list.appendChild(games);
+  container.appendChild(games);
 
-  container.appendChild(header);
-  container.appendChild(list);
   return container;
 };
 
