@@ -111,7 +111,20 @@ label {
   background-color: var(--bg);
   box-shadow: var(--shadow);
   border: 0;
-  border-top: 1px solid var(--highlight);
+  border-top: 3px solid var(--highlight);
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
+}
+
+.editing {
+  border-radius: 15px;
+  padding: 1rem 2rem;
+  background-color: var(--bg);
+  box-shadow: var(--shadow);
+
+  border-top: 3px solid var(--highlight);
   font-size: 16px;
   display: flex;
   flex-direction: column;
@@ -120,14 +133,16 @@ label {
 
 .timeline-event-header {
   display: flex;
-  justify-content: space-between;
+  /* justify-content: space-between; */
   width: 100%;
+  align-items: center;
 }
 
 .edit-button {
   background-color: var(--bg);
   border: 0;
-  font-size: 30px;
+  height: 100%;
+  font-size: 25px;
   cursor: pointer;
   transform: scale(-1, 1);
 }
@@ -175,20 +190,4 @@ tr {
 }
 .menu-item {
   border-bottom: 3px solid var(--text);
-}
-
-.editing {
-  border-radius: 15px;
-  padding: 1rem 2rem;
-  background-color: var(--bg);
-  box-shadow: var(--shadow);
-  border: 0;
-  outline: dotted 3px;
-
-  font-size: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: baseline;
-
-  border-style: dotted;
 }

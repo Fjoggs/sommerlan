@@ -25,43 +25,12 @@ const fetchLanById = async (id: number) => {
   console.log("lan", lan);
 };
 
-const editLan = async (id: number) => {
-  console.log(`edit-button-${id}`);
-
-  const editButton = document.getElementById(
-    `edit-button-${id}`,
-  ) as HTMLButtonElement;
-  editButton.textContent = "✔";
-  editButton.style.transform = "scale(1,1)";
-  const container = document.getElementById(`id-${id}`);
-  if (container) {
-    container.className = "editing";
-  }
-  editButton.removeEventListener("click", () => editLan(id));
-  editButton.addEventListener("click", () => finishedEditing(id));
-};
-
-const finishedEditing = (id: number) => {
-  const editButton = document.getElementById(
-    `edit-button-${id}`,
-  ) as HTMLButtonElement;
-  editButton.textContent = "✎";
-  editButton.style.transform = "scale(-1,1)";
-  const container = document.getElementById(`id-${id}`);
-  if (container) {
-    container.className = "timeline-event";
-  }
-
-  editButton.removeEventListener("click", () => finishedEditing(id));
-  editButton.addEventListener("click", () => editLan(id));
-};
-
 const buildEntry = (lan: LAN) => {
   const startDate = new Date(lan.startDate);
   const id = `id-${lan.lanId}`;
-  const container = createElement("button", id);
+  const container = createElement("div", id);
   container.className = "timeline-event";
-  container.addEventListener("click", () => fetchLanById(lan.lanId));
+  // container.addEventListener("click", () => fetchLanById(lan.lanId));
 
   const hContainer = createElement("div");
   hContainer.className = "timeline-event-header";
@@ -69,9 +38,27 @@ const buildEntry = (lan: LAN) => {
   header.textContent = startDate.getFullYear().toString();
   hContainer.appendChild(header);
   const editButton = createElement("button", `edit-button-${lan.lanId}`);
+
+  // Named function so that we can remove it
+  function handleEdit() {
+    editButton.textContent = "✔";
+    if (container) container.className = "editing";
+    editButton.removeEventListener("click", handleEdit);
+    editButton.addEventListener("click", handleFinish);
+    editButton.style.transform = "scale(1,1)";
+  }
+
+  function handleFinish() {
+    editButton.textContent = "✎";
+    if (container) container.className = "timeline-event";
+    editButton.removeEventListener("click", handleFinish);
+    editButton.addEventListener("click", handleEdit);
+    editButton.style.transform = "scale(-1,1)";
+  }
+
   editButton.textContent = "✎";
   editButton.className = "edit-button";
-  editButton.addEventListener("click", () => editLan(lan.lanId));
+  editButton.addEventListener("click", handleEdit);
   hContainer.appendChild(editButton);
   container.appendChild(hContainer);
 
