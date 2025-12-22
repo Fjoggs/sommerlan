@@ -5,7 +5,9 @@ import { create, deleteEntry, fetchAll } from "./crud.js";
 const onSubmitGame = async (event: SubmitEvent) => {
   event.preventDefault();
   const form = event.target as HTMLFormElement;
-  const game: Game = await create("game", new FormData(form));
+  const game: Game | undefined = await create("game", new FormData(form));
+  if (!game) return;
+
   const row = createGame(game);
   document.getElementById("gameTable")?.appendChild(row);
   form.reset();
@@ -15,7 +17,9 @@ const gameForm = document.getElementById("gameForm");
 gameForm?.addEventListener("submit", onSubmitGame);
 
 const renderGames = async () => {
-  const games: Game[] = await fetchAll("game");
+  const games: Game[] | undefined = await fetchAll("game");
+  if (!games) return;
+
   const tbody = document.getElementById("gameTable");
   games.forEach((game) => {
     if (game.id) {

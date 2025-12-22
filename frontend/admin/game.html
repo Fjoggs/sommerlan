@@ -11,18 +11,21 @@
     <header>
       <nav class="menu">
         <a class="menu-item" href="/">Home</a>
-        <a class="menu-item" href="/admin">Admin</a>
+        <a class="menu-item active" href="/admin">Admin</a>
       </nav>
     </header>
-    <main>
-      <h1>Admin</h1>
-      <nav>
-        <ul>
-          <li>
-            <a href="/admin/game.html"><b>Spill</b></a>
+    <main class="content-container">
+      <nav class="admin-nav">
+        <ul class="admin-nav-list">
+          <li class="admin-nav-item">
+            <a href="/admin/game.html" class="admin-nav-link active">Spill</a>
           </li>
-          <li><a href="/admin/lan.html">Lan</a></li>
-          <li><a href="/admin/user.html">Deltaker</a></li>
+          <li class="admin-nav-item">
+            <a href="/admin/lan.html" class="admin-nav-link">Lan</a>
+          </li>
+          <li class="admin-nav-item">
+            <a href="/admin/user.html" class="admin-nav-link">Deltaker</a>
+          </li>
         </ul>
       </nav>
       <section>
