@@ -1,39 +1,23 @@
 import { Game } from "./types.js";
 import { createElement } from "./utils.js";
+import { create, deleteEntry, fetchAll } from "./crud.js";
 
 const onSubmitGame = async (event: SubmitEvent) => {
-  const gameForm = document.getElementById("gameForm") as HTMLFormElement;
   event.preventDefault();
-
-  const formData = new FormData(gameForm);
-  console.log("formDAta", formData);
-
-  const res = await fetch("http://localhost:8080/api/game/", {
-    method: "POST",
-    body: formData,
-  });
-
-  if (res.status === 200) {
-    const body: Game = await res.json();
-    const gameTable = document.getElementById("gameTable");
-    const game: Game = {
-      id: body.id,
-      name: body.name,
-    };
-    const row = createGame(game);
-    gameTable?.appendChild(row);
-  }
+  const form = event.target as HTMLFormElement;
+  const game: Game = await create("game", new FormData(form));
+  const row = createGame(game);
+  document.getElementById("gameTable")?.appendChild(row);
+  form.reset();
 };
 
 const gameForm = document.getElementById("gameForm");
 gameForm?.addEventListener("submit", onSubmitGame);
 
 const renderGames = async () => {
-  const response = await fetch("http://localhost:8080/api/game/");
-  const games = await response.json();
-
+  const games: Game[] = await fetchAll("game");
   const tbody = document.getElementById("gameTable");
-  games.forEach((game: Game) => {
+  games.forEach((game) => {
     if (game.id) {
       const row = createGame(game);
       tbody?.appendChild(row);
@@ -54,17 +38,8 @@ export const createGame = (game: Game) => {
 };
 
 const deleteGame = async (id: number) => {
-  const response = await fetch(`http://localhost:8080/api/game/${id}/`, {
-    method: "DELETE",
-  });
-  if (response.status === 204) {
-    const gameRow = document.getElementById(`game-row-${id}`);
-    console.log("gameRow", gameRow);
-
-    if (gameRow?.parentNode) {
-      gameRow.parentNode.removeChild(gameRow);
-    }
-  }
+  await deleteEntry("game", id);
+  document.getElementById(`game-row-${id}`)?.remove();
 };
 
 renderGames();

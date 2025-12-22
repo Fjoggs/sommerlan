@@ -10,12 +10,7 @@
   },
   "files": [
     "index.ts", 
-    "ts/admin.ts",
-    "ts/game.ts",
-    "ts/lan.ts",
-    "ts/user.ts",
-    "ts/utils.ts",
-    "ts/types.ts"
-  ]
+  ],
+  "include": ["ts/**/*"],
 }
 
