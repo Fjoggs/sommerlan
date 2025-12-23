@@ -1,11 +1,12 @@
-import { LAN, User } from "./types.js";
+import { create, fetchAll, fetchById } from "./crud.js";
+import { Game, LAN, User } from "./types.js";
 import { createElement } from "./utils.js";
 
 export const fetchLans = async () => {
-  const res = await fetch("http://localhost:8080/api/lan/");
-  const lans: LAN[] = await res.json();
-  const preContainer = document.getElementById("pre");
+  const lans: LAN[] | undefined = await fetchAll("lan");
+  if (!lans) return;
 
+  const preContainer = document.getElementById("pre");
   lans.forEach((lan) => {
     if (lan.event === "pre") {
       const entry = buildEntry(lan);
@@ -15,8 +16,9 @@ export const fetchLans = async () => {
 };
 
 const fetchLanById = async (id: number) => {
-  const res = await fetch(`http://localhost:8080/api/lan/${id}`);
-  const lan: LAN = await res.json();
+  const lan: LAN | undefined = await fetchById("lan", id);
+  if (!lan) return;
+
   console.log("lan", lan);
 };
 
@@ -56,112 +58,78 @@ export const buildEntry = (lan: LAN) => {
 };
 
 const buildUserInputs = async () => {
-  const response = await fetch("http://localhost:8080/api/user/");
-  const users = await response.json();
-  const buttonRow = document.getElementById("addUserButtons") as HTMLDivElement;
+  const users: User[] | undefined = await fetchAll("user");
+  if (!users) return;
 
-  users.forEach((user: User) => {
-    buttonRow.appendChild(createAddUserButton(user));
+  users.forEach((user) => {
+    createUserCheckbox(user);
   });
 };
 
-const createAddUserButton = (user: User) => {
-  const button = createElement("button", `add-user-${user.id}`);
-  button.setAttribute("value", user.name);
-  button.setAttribute("type", "button");
-  button.textContent = `${user.name} +`;
-  button.addEventListener("click", () => onClickAddUserButton(user));
-  return button;
+const createUserCheckbox = (user: User) => {
+  const label = createElement("label");
+  label.textContent = user.name;
+  const checkbox = createElement("input", user.id.toString());
+  checkbox.setAttribute("type", "checkbox");
+  checkbox.setAttribute("name", "participants");
+  checkbox.setAttribute("value", user.id.toString());
+  label.appendChild(checkbox);
+  document.getElementById("user-list")?.appendChild(label);
+};
+
+const buildGameInputs = async () => {
+  const games: Game[] | undefined = await fetchAll("game");
+  if (!games) return;
+
+  games.forEach((game) => {
+    createGameCheckbox(game);
+  });
+};
+
+const createGameCheckbox = (game: Game) => {
+  const label = createElement("label");
+  label.textContent = game.name;
+  const checkbox = createElement("input", game.id.toString());
+  checkbox.setAttribute("type", "checkbox");
+  checkbox.setAttribute("name", "games");
+  checkbox.setAttribute("value", game.id.toString());
+  label.appendChild(checkbox);
+  document.getElementById("game-list")?.appendChild(label);
 };
 
 await buildUserInputs();
-
-const onClickAddUserButton = (user: User) => {
-  const addedUsers = document.getElementById(
-    "removeUserButtons",
-  ) as HTMLDivElement;
-  const userListInput = document.getElementById(
-    "userListInput",
-  ) as HTMLInputElement;
-  const currentUsers = userListInput?.textContent;
-
-  const removeButton = createElement("button", `remove-user-${user.id}`);
-  removeButton.textContent = `${user.name} -`;
-  removeButton.setAttribute("type", "button");
-  removeButton.addEventListener("click", () => onClickRemoveUserButton(user));
-  userListInput.value = `${currentUsers} ${user.name}`;
-  addedUsers.appendChild(removeButton);
-
-  const addButton = document.getElementById(
-    `add-user-${user.id}`,
-  ) as HTMLButtonElement;
-  const addUserList = document.getElementById(
-    "addUserButtons",
-  ) as HTMLDivElement;
-  addUserList.removeChild(addButton);
-};
-
-const onClickRemoveUserButton = (user: User) => {
-  const addedUsers = document.getElementById(
-    "removeUserButtons",
-  ) as HTMLDivElement;
-  const userListInput = document.getElementById(
-    "userListInput",
-  ) as HTMLInputElement;
-  const currentUsers = userListInput?.textContent;
-  const removeButton = document.getElementById(
-    `remove-user-${user.id}`,
-  ) as HTMLButtonElement;
-  addedUsers.removeChild(removeButton);
-  userListInput.value = `${currentUsers}`;
-
-  const addButton = createAddUserButton(user);
-  const addUserList = document.getElementById(
-    "addUserButtons",
-  ) as HTMLDivElement;
-  addUserList.appendChild(addButton);
-};
+await buildGameInputs();
 
 const renderLans = async () => {
-  const response = await fetch("http://localhost:8080/api/lan/");
-  const lans = await response.json();
+  const lans: LAN[] | undefined = await fetchAll("lan");
+  if (!lans) return;
 
   const tbody = document.getElementById("lanTable");
-  lans.forEach((lan: LAN) => {
-    if (lan) {
-      const row = createLAN(lan);
-      tbody?.appendChild(row);
-    }
+  lans.forEach((lan) => {
+    const row = createLAN(lan);
+    tbody?.appendChild(row);
   });
 };
 
 const onSubmitLAN = async (event: SubmitEvent) => {
-  const lanForm = document.getElementById("lanForm") as HTMLFormElement;
   event.preventDefault();
 
-  const formData = new FormData(lanForm);
-  console.log("formDAta", formData);
+  const form = event.target as HTMLFormElement;
 
-  const res = await fetch("http://localhost:8080/api/lan/", {
-    method: "POST",
-    body: formData,
-  });
-  console.log("res.status", res.status);
-  if (res.status === 200) {
-    const body: LAN = await res.json();
-    const lanTable = document.getElementById("lanTable");
-    const lan: LAN = {
-      description: body.description,
-      endDate: body.endDate,
-      event: body.event,
-      games: [],
-      lanId: body.lanId,
-      participants: [],
-      startDate: body.startDate,
-    };
-    const row = createLAN(lan);
-    lanTable?.appendChild(row);
-  }
+  const res: LAN | undefined = await create("lan", new FormData(form));
+  if (!res) return;
+
+  const lan: LAN = {
+    description: res.description,
+    endDate: res.endDate,
+    event: res.event,
+    games: res.games,
+    lanId: res.lanId,
+    participants: res.participants,
+    startDate: res.startDate,
+  };
+  const row = createLAN(lan);
+  document.getElementById("lanTable")?.appendChild(row);
 };
 
 const deleteLan = async (id: number) => {
@@ -179,6 +147,13 @@ const deleteLan = async (id: number) => {
 export const createLAN = (lan: LAN) => {
   const row = createElement("tr", `lan-row-${lan.lanId}`);
 
+  const deleteCell = createElement("td");
+  const deleteButton = createElement("button", `delete-lan-${lan.lanId}`);
+  deleteButton.addEventListener("click", () => deleteLan(lan.lanId));
+  deleteButton.textContent = "-";
+  deleteCell.appendChild(deleteButton);
+  row.appendChild(deleteCell);
+
   const startDate = createElement("td");
   startDate.textContent = lan.startDate;
   row.appendChild(startDate);
@@ -195,10 +170,15 @@ export const createLAN = (lan: LAN) => {
   era.textContent = lan.event;
   row.appendChild(era);
 
-  const deleteButton = createElement("button", `delete-lan-${lan.lanId}`);
-  deleteButton.addEventListener("click", () => deleteLan(lan.lanId));
-  deleteButton.textContent = "-";
-  row.appendChild(deleteButton);
+  const participants = createElement("td");
+  participants.textContent = lan.participants
+    .map((participant) => participant.name)
+    .join(", ");
+  row.appendChild(participants);
+
+  const games = createElement("td");
+  games.textContent = lan.games.map((game) => game.name).join(", ");
+  row.appendChild(games);
 
   return row;
 };

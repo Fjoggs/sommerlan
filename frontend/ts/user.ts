@@ -1,41 +1,28 @@
+import { create, deleteEntry, fetchAll } from "./crud.js";
 import { User } from "./types.js";
 import { createElement } from "./utils.js";
 
 const onSubmitUser = async (event: SubmitEvent) => {
-  const userForm = document.getElementById("userForm") as HTMLFormElement;
   event.preventDefault();
+  const form = event.target as HTMLFormElement;
+  const user: User | undefined = await create("user", new FormData(form));
+  if (!user) return;
 
-  const formData = new FormData(userForm);
-  console.log("formDAta", formData);
-
-  const res = await fetch("http://localhost:8080/api/user/", {
-    method: "POST",
-    body: formData,
-  });
-
-  console.log("res.status", res.status);
-  if (res.status === 200) {
-    const body: User = await res.json();
-    const userTable = document.getElementById("userTable");
-    const user: User = {
-      id: body.id,
-      name: body.name,
-    };
-    const row = createUser(user);
-    userTable?.appendChild(row);
-  }
+  const userTable = document.getElementById("userTable");
+  const row = createUser(user);
+  userTable?.appendChild(row);
+  form.reset();
 };
 
 const userForm = document.getElementById("userForm");
 userForm?.addEventListener("submit", onSubmitUser);
 
 const renderUsers = async () => {
-  const response = await fetch("http://localhost:8080/api/user/");
-
-  const users = await response.json();
+  const users: User[] | undefined = await fetchAll("user");
+  if (!users) return;
 
   const tbody = document.getElementById("userTable") as HTMLTableSectionElement;
-  users.forEach((user: User) => {
+  users.forEach((user) => {
     if (user.id) {
       const row = createUser(user);
       tbody.appendChild(row);
@@ -45,28 +32,22 @@ const renderUsers = async () => {
 
 export const createUser = (user: User) => {
   const row = createElement("tr", `user-row-${user.id}`);
-  const entry = createElement("span", `user-entry-${user.id}`);
-  entry.textContent = user.name;
+  const deleteCell = createElement("td");
   const deleteButton = createElement("button", `delete-user-${user.id}`);
   deleteButton.addEventListener("click", () => deleteUser(user.id));
   deleteButton.textContent = "-";
+  deleteCell.appendChild(deleteButton);
+  row.appendChild(deleteCell);
+
+  const entry = createElement("td", `user-entry-${user.id}`);
+  entry.textContent = user.name;
   row.appendChild(entry);
-  row.appendChild(deleteButton);
   return row;
 };
 
 const deleteUser = async (id: number) => {
-  const response = await fetch(`http://localhost:8080/api/user/${id}/`, {
-    method: "DELETE",
-  });
-  if (response.status === 204) {
-    const userRow = document.getElementById(`user-row-${id}`);
-    console.log("userRow", userRow);
-
-    if (userRow?.parentNode) {
-      userRow.parentNode.removeChild(userRow);
-    }
-  }
+  await deleteEntry("user", id);
+  document.getElementById(`user-row-${id}`)?.remove();
 };
 
 await renderUsers();

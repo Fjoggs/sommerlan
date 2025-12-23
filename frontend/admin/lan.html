@@ -48,7 +48,7 @@
               required
             ></textarea>
           </label>
-            <label> Kategori </label>
+          <label>Kategori</label>
           <div class="radio-group">
             <label>
               <input type="radio" name="type" value="pre" />
@@ -63,25 +63,23 @@
               Off Season
             </label>
           </div>
-          <label>
-            Deltakere
-            <div>
-              <div id="removeUserButtons"></div>
-              <input type="hidden" id="userListInput" disabled />
-              <div id="addUserButtons"></div>
-            </div>
-          </label>
+          <label>Deltakere</label>
+          <div id="user-list"></div>
+          <label>Spill</label>
+          <div id="game-list"></div>
           <button type="submit">Submit</button>
         </form>
       </section>
       <table>
         <thead>
           <tr>
+            <th></th>
             <th>Startdato</th>
             <th>Sluttdato</th>
             <th>Beskrivelse</th>
             <th>Era</th>
-            <th></th>
+            <th>Deltakere</th>
+            <th>Spill</th>
           </tr>
         </thead>
         <tbody id="lanTable"></tbody>

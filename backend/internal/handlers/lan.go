@@ -12,12 +12,12 @@ import (
 )
 
 type addLanGame struct {
-	lanId  int
+	lanId  int64
 	gameId int
 }
 
 type addParticipantBody struct {
-	lanId  int
+	lanId  int64
 	userId int
 }
 
@@ -88,12 +88,70 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := database.LanResponse{
-		Id:          int(lanId),
-		Start_date:  startDate,
-		End_date:    endDate,
-		Event:       event,
-		Description: description,
+	lanGames := []database.GameResponse{}
+	for _, lanGameId := range req.Form["games"] {
+		gameId, err := strconv.Atoi(lanGameId)
+		if err != nil {
+			// Handle error - invalid ID format
+			fmt.Println("Invalid participant ID:", lanGameId)
+			continue
+		}
+
+		_, err = database.AddLanGame(h.db, lanId, gameId)
+		if err != nil {
+			fmt.Println("Failed to add lan game", err)
+			return
+		}
+
+		game, err := database.GetGameWithId(h.db, gameId)
+		if err != nil {
+			fmt.Println("Failed to get lan game", err)
+			return
+		}
+
+		lanGame := database.GameResponse{
+			Id:   game.Id,
+			Name: game.Name,
+		}
+		lanGames = append(lanGames, lanGame)
+	}
+
+	participants := []database.UserResponse{}
+	for _, participantId := range req.Form["participants"] {
+		userId, err := strconv.Atoi(participantId)
+		if err != nil {
+			// Handle error - invalid ID format
+			fmt.Println("Invalid participant ID:", participantId)
+			continue
+		}
+
+		_, err = database.AddLanParticipant(h.db, lanId, userId)
+		if err != nil {
+			fmt.Println("Failed to add lan user", err)
+			return
+		}
+
+		user, err := database.GetUserWithId(h.db, userId)
+		if err != nil {
+			fmt.Println("Failed to get lan user", err)
+			return
+		}
+
+		participant := database.UserResponse{
+			Id:   user.Id,
+			Name: user.Name,
+		}
+		participants = append(participants, participant)
+	}
+
+	res := database.LanEvent{
+		Description:  description,
+		End_date:     endDate,
+		Event:        event,
+		Games:        lanGames,
+		Id:           int(lanId),
+		Participants: participants,
+		Start_date:   startDate,
 	}
 
 	fmt.Println("Added LAN to db", res)

@@ -6,22 +6,22 @@ import (
 	"log"
 )
 
-type LanResponse struct {
-	Id          int    `json:"lanId"`
-	Start_date  string `json:"startDate"`
-	End_date    string `json:"endDate"`
-	Event       string `json:"event"`
-	Description string `json:"description"`
+type Lan struct {
+	Id          int
+	Start_date  string
+	End_date    string
+	Event       string
+	Description string
 }
 
 type LanEvent struct {
-	Description  string   `json:"description"`
-	End_date     string   `json:"endDate"`
-	Event        string   `json:"event"`
-	Games        []string `json:"games"`
-	Id           int      `json:"lanId"`
-	Participants []string `json:"participants"`
-	Start_date   string   `json:"startDate"`
+	Description  string         `json:"description"`
+	End_date     string         `json:"endDate"`
+	Event        string         `json:"event"`
+	Games        []GameResponse `json:"games"`
+	Id           int            `json:"lanId"`
+	Participants []UserResponse `json:"participants"`
+	Start_date   string         `json:"startDate"`
 }
 
 type GameResponse struct {
@@ -32,14 +32,6 @@ type GameResponse struct {
 type UserResponse struct {
 	Id   int    `json:"id"`
 	Name string `json:"name"`
-}
-
-type LanGame struct {
-	Lan_game string
-}
-
-type LanParticipant struct {
-	Participant string
 }
 
 func GetUsers(db *sql.DB) ([]UserResponse, error) {
@@ -76,7 +68,6 @@ func GetUserWithId(db *sql.DB, userId int) (UserResponse, error) {
 	defer userRow.Close()
 
 	for userRow.Next() {
-		var user UserResponse
 		err := userRow.Scan(&user.Id, &user.Name)
 		if err != nil {
 			return user, err
@@ -130,10 +121,9 @@ func GetGameWithId(db *sql.DB, gameId int) (GameResponse, error) {
 	defer gameRow.Close()
 
 	for gameRow.Next() {
-		var user GameResponse
-		err := gameRow.Scan(&user.Id, &user.Name)
+		err := gameRow.Scan(&game.Id, &game.Name)
 		if err != nil {
-			return user, err
+			return game, err
 		}
 	}
 	return game, nil
@@ -199,7 +189,7 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 	`
 	lanRow := queryLanWithId(db, lanQuery, id)
 
-	var lan LanResponse
+	var lan Lan
 
 	err := lanRow.Scan(
 		&lan.Description,
@@ -219,29 +209,30 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	lanGamesQuery := `
 		SELECT
-    game.name AS lan_game
+    game.id, game.name
 		FROM lan
     JOIN lan_games ON lan.id = lan_games.lan_id
     JOIN game ON lan_games.game_id = game.id
     WHERE lan.id = ?;
 	`
-	var lanGames []string
+	var lanGames []GameResponse
 
-	lanGamesRows, err := doQueryWithId(db, lanGamesQuery, 1)
+	lanGamesRows, err := doQueryWithId(db, lanGamesQuery, id)
 	if err != nil {
 		return event, err
 	}
 	defer lanGamesRows.Close()
 
 	for lanGamesRows.Next() {
-		var lanGame LanGame
+		var lanGame GameResponse
 		err := lanGamesRows.Scan(
-			&lanGame.Lan_game,
+			&lanGame.Id,
+			&lanGame.Name,
 		)
 		if err != nil {
 			return event, err
 		}
-		lanGames = append(lanGames, lanGame.Lan_game)
+		lanGames = append(lanGames, lanGame)
 	}
 
 	err = lanGamesRows.Err()
@@ -251,29 +242,30 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	paricipantsQuery := `
 		SELECT
-		user.name AS participant
+    user.id, user.name
 		FROM lan
-		JOIN lan_participants ON lan.id = lan_participants.lan_id
-		JOIN user ON lan_participants.user_id = user.id
+    JOIN lan_participants ON lan.id = lan_participants.lan_id
+    JOIN user ON lan_participants.user_id = user.id
     WHERE lan.id = ?;
-	`
-	var participants []string
+`
+	var participants []UserResponse
 
-	participantRows, err := doQueryWithId(db, paricipantsQuery, 1)
+	participantRows, err := doQueryWithId(db, paricipantsQuery, id)
 	if err != nil {
 		return event, err
 	}
 	defer participantRows.Close()
 
 	for participantRows.Next() {
-		var participant LanParticipant
+		var participant UserResponse
 		err := participantRows.Scan(
-			&participant.Participant,
+			&participant.Id,
+			&participant.Name,
 		)
 		if err != nil {
 			return event, err
 		}
-		participants = append(participants, participant.Participant)
+		participants = append(participants, participant)
 	}
 
 	err = participantRows.Err()
@@ -290,7 +282,6 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		Participants: participants,
 		Start_date:   lan.Start_date,
 	}
-	fmt.Println(event)
 	return event, nil
 }
 
@@ -357,16 +348,16 @@ func AddLan(
 }
 
 func AddUser(db *sql.DB, name string) (int64, error) {
-	query := "INSERT INTO game(name) VALUES (?)"
+	query := "INSERT INTO user(name) VALUES (?)"
 
 	result, err := db.Exec(query, name)
 	if err != nil {
-		return 0, fmt.Errorf("GAME INSERT ERROR: %v", err)
+		return 0, fmt.Errorf("USER INSERT ERROR: %v", err)
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("GAME INSERT ERRROR: %v", err)
+		return 0, fmt.Errorf("USER INSERT ERRROR: %v", err)
 	}
 
 	return id, nil
@@ -388,7 +379,7 @@ func AddGame(db *sql.DB, name string) (int64, error) {
 	return id, nil
 }
 
-func AddLanGame(db *sql.DB, lanId int, gameId int) (int64, error) {
+func AddLanGame(db *sql.DB, lanId int64, gameId int) (int64, error) {
 	query := "INSERT INTO lan_games(lan_id, game_id) VALUES (?, ?)"
 
 	result, err := db.Exec(query, lanId, gameId)
@@ -404,7 +395,7 @@ func AddLanGame(db *sql.DB, lanId int, gameId int) (int64, error) {
 	return id, nil
 }
 
-func AddLanParticipant(db *sql.DB, lanId int, userId int) (int64, error) {
+func AddLanParticipant(db *sql.DB, lanId int64, userId int) (int64, error) {
 	query := "INSERT INTO lan_participants(lan_id, user_id) VALUES (?, ?)"
 
 	result, err := db.Exec(query, lanId, userId)

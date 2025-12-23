@@ -45,6 +45,12 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	gameName := req.FormValue("gameName")
+	if len(gameName) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println("gameform", gameName)
 	gameId, err := database.AddGame(a.db, gameName)
 	if err != nil {
 		fmt.Println("Failed to add game", err)

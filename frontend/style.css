@@ -351,13 +351,19 @@ tr {
   border-bottom-color: var(--primary);
 }
 
+.button-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .add-lan {
   cursor: pointer;
   border: 2px dashed var(--border);
   border-radius: 8px;
   background-color: transparent;
-  font-size: 1.2rem;
-  padding: 1rem 2rem;
+  font-size: 1.5rem;
+  padding: 0.5rem 1rem;
   color: var(--text-muted);
   transition: all 0.2s ease;
 }
@@ -582,4 +588,65 @@ label:has(input[type="radio"]) input[type="radio"] {
   width: 100%;
   max-width: 420px;
   margin: 0 auto;
+}
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--bg);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+thead {
+  background-color: var(--bg-light);
+  border-bottom: 2px solid var(--border-muted);
+}
+
+th {
+  padding: 1rem;
+  text-align: left;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border-muted);
+  transition: background-color 0.2s ease;
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background-color: var(--bg-light);
+}
+
+td {
+  padding: 1rem;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+/* Empty cell placeholder */
+td:empty::before {
+  content: "—";
+  color: var(--text-muted);
+  opacity: 0.3;
+}
+
+/* Fix tr display for table rows */
+tbody tr,
+thead tr {
+  display: table-row;
+}
+
+/* Delete button in table */
+tbody tr button {
+  margin-left: auto;
 }

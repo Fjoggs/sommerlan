@@ -31,13 +31,17 @@ const renderGames = async () => {
 
 export const createGame = (game: Game) => {
   const row = createElement("tr", `game-row-${game.id}`);
-  const entry = createElement("span", `game-entry-${game.id}`);
-  entry.textContent = game.name;
+
+  const deleteCell = createElement("td");
   const deleteButton = createElement("button", `delete-game-${game.id}`);
   deleteButton.addEventListener("click", () => deleteGame(game.id));
   deleteButton.textContent = "-";
+  deleteCell.appendChild(deleteButton);
+  row.appendChild(deleteCell);
+
+  const entry = createElement("td", `game-entry-${game.id}`);
+  entry.textContent = game.name;
   row.appendChild(entry);
-  row.appendChild(deleteButton);
   return row;
 };
 

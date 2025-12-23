@@ -13,11 +13,11 @@ FROM lan
 
 -- Get paricipants of a lan
 SELECT
-    user.name AS participant
+    user.id, user.name
 FROM lan
     JOIN lan_participants ON lan.id = lan_participants.lan_id
     JOIN user ON lan_participants.user_id = user.id
-    WHERE lan.id = ?;
+    WHERE lan.id = 27;
 
 
 -- Get games of a lan
