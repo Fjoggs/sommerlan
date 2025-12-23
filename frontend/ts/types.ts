@@ -4,9 +4,9 @@ export type LAN = {
   description: string;
   endDate: string;
   event: Event;
-  games: Game[];
+  games?: Game[];
   lanId: number;
-  participants: User[];
+  participants?: User[];
   startDate: string;
 };
 

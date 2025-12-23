@@ -1,9 +1,10 @@
+import { fetchAll } from "./crud.js";
 import { LAN } from "./types.js";
 import { createElement } from "./utils.js";
 
 export const fetchLans = async () => {
-  const res = await fetch("http://localhost:8080/api/lan/");
-  const lans: LAN[] = await res.json();
+  const lans: LAN[] | undefined = await fetchAll("lan");
+  if (!lans) return;
   const preContainer = document.getElementById("pre");
   const mainContainer = document.getElementById("main");
   const sideContainer = document.getElementById("side");
@@ -74,7 +75,7 @@ const buildEntry = (lan: LAN) => {
   for (const participant of lan.participants) {
     const pill = createElement("span");
     pill.className = "pill";
-    pill.textContent += `${participant} `;
+    pill.textContent += `${participant.name} `;
     participants.appendChild(pill);
   }
   container.appendChild(participants);
@@ -87,7 +88,7 @@ const buildEntry = (lan: LAN) => {
   for (const game of lan.games) {
     const pill = createElement("span");
     pill.className = "pill";
-    pill.textContent += `${game} `;
+    pill.textContent += `${game.name} `;
     games.appendChild(pill);
   }
   container.appendChild(games);

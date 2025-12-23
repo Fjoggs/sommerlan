@@ -1,61 +1,6 @@
-import { create, fetchAll, fetchById } from "./crud.js";
+import { create, fetchAll } from "./crud.js";
 import { Game, LAN, User } from "./types.js";
 import { createElement } from "./utils.js";
-
-export const fetchLans = async () => {
-  const lans: LAN[] | undefined = await fetchAll("lan");
-  if (!lans) return;
-
-  const preContainer = document.getElementById("pre");
-  lans.forEach((lan) => {
-    if (lan.event === "pre") {
-      const entry = buildEntry(lan);
-      preContainer?.appendChild(entry);
-    }
-  });
-};
-
-const fetchLanById = async (id: number) => {
-  const lan: LAN | undefined = await fetchById("lan", id);
-  if (!lan) return;
-
-  console.log("lan", lan);
-};
-
-export const buildEntry = (lan: LAN) => {
-  const startDate = new Date(lan.startDate);
-  const id = `id-${lan.lanId}`;
-  const container = createElement("button", id);
-  container.className = "timeline-event";
-  container.addEventListener("click", () => fetchLanById(lan.lanId));
-
-  const header = createElement("h3");
-  header.textContent = startDate.getFullYear().toString();
-
-  const list = createElement("ul");
-
-  const participants = createElement("li");
-  participants.textContent = "Deltakere: ";
-  for (const participant of lan.participants) {
-    participants.textContent += `${participant} `;
-  }
-  list.appendChild(participants);
-
-  const description = createElement("li");
-  description.textContent = `Highlights: ${lan.description}`;
-  list.appendChild(description);
-
-  const games = createElement("li");
-  games.textContent = "Spill: ";
-  for (const game of lan.games) {
-    games.textContent += `${game} `;
-  }
-  list.appendChild(games);
-
-  container.appendChild(header);
-  container.appendChild(list);
-  return container;
-};
 
 const buildUserInputs = async () => {
   const users: User[] | undefined = await fetchAll("user");
@@ -171,13 +116,17 @@ export const createLAN = (lan: LAN) => {
   row.appendChild(era);
 
   const participants = createElement("td");
-  participants.textContent = lan.participants
-    .map((participant) => participant.name)
-    .join(", ");
+  if (lan.participants) {
+    participants.textContent = lan.participants
+      .map((participant) => participant.name)
+      .join(", ");
+  }
   row.appendChild(participants);
 
   const games = createElement("td");
-  games.textContent = lan.games.map((game) => game.name).join(", ");
+  if (lan.games) {
+    games.textContent = lan.games.map((game) => game.name).join(", ");
+  }
   row.appendChild(games);
 
   return row;
