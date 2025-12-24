@@ -1,0 +1,103 @@
+/* Inputs */
+input,
+textarea {
+  background-color: var(--bg);
+  border: 2px solid var(--border-muted);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--primary);
+  background-color: var(--bg-light);
+  box-shadow: 0 0 0 3px oklch(0.6 0.2 250 / 0.1);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--text);
+}
+
+/* Checkbox */
+/* Container */
+#user-list,
+#game-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+label:has(input[type="checkbox"]:not(:disabled))::before {
+  content: "";
+  width: 0.5em;
+  height: 0.5rem;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: inline-block;
+  transition: all 0.2s ease;
+}
+
+label:has(input[type="checkbox"]:checked)::before {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* Radio button */
+/* Container */
+.radio-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+label:has(input[type="radio"])::before {
+  content: "○";
+  color: var(--border);
+  line-height: 1;
+  font-size: 1.5rem;
+}
+
+label:has(input[type="radio"]:checked)::before {
+  content: "●";
+  color: var(--primary);
+}
+
+/* Radio and checkbox */
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background-color: var(--bg);
+}
+
+label:has(input[type="checkbox"]:disabled),
+label:has(input[type="radio"]:disabled) {
+  cursor: default;
+}
+
+label:has(input[type="checkbox"]):hover,
+label:has(input[type="radio"]):hover {
+  background-color: var(--bg-light);
+}
+
+label:has(input[type="checkbox"]:checked),
+label:has(input[type="radio"]:checked) {
+  /* border-left: 3px solid var(--primary); */
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  display: none;
+}

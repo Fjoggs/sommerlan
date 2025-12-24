@@ -39,9 +39,13 @@ export const createUser = (user: User) => {
   deleteCell.appendChild(deleteButton);
   row.appendChild(deleteCell);
 
-  const entry = createElement("td", `user-entry-${user.id}`);
-  entry.textContent = user.name;
-  row.appendChild(entry);
+  const name = createElement("td", `user-name-${user.id}`);
+  name.textContent = user.name;
+  row.appendChild(name);
+
+  const color = createElement("td", `user-color-${user.id}`);
+  color.textContent = user.color;
+  row.appendChild(color);
   return row;
 };
 

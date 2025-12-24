@@ -45,15 +45,52 @@ func (a *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	userName := req.FormValue("userName")
-	userId, err := database.AddUser(a.db, userName)
+	color := req.FormValue("color")
+	userId, err := database.AddUser(a.db, userName, color)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
 		return
 	}
 
 	res := database.UserResponse{
-		Id:   int(userId),
-		Name: userName,
+		Id:    int(userId),
+		Name:  userName,
+		Color: color,
+	}
+
+	err = json.NewEncoder(writer).Encode(res)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
+func (a *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	err := req.ParseMultipartForm(0)
+	if err != nil {
+		fmt.Println("Parsing user form failed", err)
+	}
+
+	userId := req.FormValue("userId")
+	id, err := strconv.Atoi(userId)
+	if err != nil {
+		// Handle error - invalid ID format
+		fmt.Println("Invalid participant ID:", userId)
+		return
+	}
+	userName := req.FormValue("userName")
+	color := req.FormValue("color")
+	err = database.AlterUser(a.db, id, userName, color)
+	if err != nil {
+		fmt.Println("Failed to add user", err)
+		return
+	}
+
+	res := database.UserResponse{
+		Id:    id,
+		Name:  userName,
+		Color: color,
 	}
 
 	err = json.NewEncoder(writer).Encode(res)

@@ -1,0 +1,16 @@
+/* Headings */
+h2 {
+  color: var(--text);
+  font-size: 2rem;
+}
+
+h3 {
+  color: var(--text);
+}
+
+h4 {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}

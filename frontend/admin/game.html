@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SommerLAN</title>
-    <link href="../style.css" rel="stylesheet" />
+    <link href="../css/headings.css" rel="stylesheet" />
+    <link href="../css/inputs.css" rel="stylesheet" />
+    <link href="../css/style.css" rel="stylesheet" />
+    <link href="../css/table.css" rel="stylesheet" />
     <script type="module" src="../dist/ts/game.js"></script>
   </head>
   <body>
@@ -16,20 +19,11 @@
     </header>
     <main class="content-container">
       <nav class="admin-nav">
-        <ul class="admin-nav-list">
-          <li class="admin-nav-item">
-            <a href="/admin/game.html" class="admin-nav-link active">Spill</a>
-          </li>
-          <li class="admin-nav-item">
-            <a href="/admin/lan.html" class="admin-nav-link">Lan</a>
-          </li>
-          <li class="admin-nav-item">
-            <a href="/admin/user.html" class="admin-nav-link">Deltaker</a>
-          </li>
-        </ul>
+        <a href="/admin/game.html" class="link active">Spill</a>
+        <a href="/admin/lan.html" class="link">Lan</a>
+        <a href="/admin/user.html" class="link">Deltaker</a>
       </nav>
       <section>
-        <h2>Spill</h2>
         <form id="gameForm">
           <label>
             Spillnavn

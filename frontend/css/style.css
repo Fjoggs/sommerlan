@@ -24,10 +24,6 @@
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.hash {
-  color: var(--primary);
-}
-
 body {
   font-family: "Manrope", sans-serif;
   background: linear-gradient(
@@ -41,9 +37,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
-  min-height: 100vh;
 }
+
 a {
   text-decoration: none;
   color: var(--primary);
@@ -54,91 +49,15 @@ a:hover {
   color: var(--info);
 }
 
-/* Headings */
-h2 {
-  color: var(--text);
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-}
-
-h3 {
-  color: var(--text);
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-h4 {
-  color: var(--text);
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0;
-  margin-bottom: 0.5rem;
-}
-
 /* Forms */
 form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  align-items: stretch;
-  width: 100%;
-  max-width: 500px;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  color: var(--text);
-  font-weight: 500;
-  font-size: 0.95rem;
-}
-
-/* Inputs */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-textarea,
-select {
-  background-color: var(--bg);
-  border: 2px solid var(--border-muted);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  color: var(--text);
-  font-size: 1rem;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-input[type="time"]:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--primary);
-  background-color: var(--bg-light);
-  box-shadow: 0 0 0 3px oklch(0.6 0.2 250 / 0.1);
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-muted);
-  opacity: 0.6;
 }
 
 /* Buttons */
-button,
-input[type="submit"],
-.button {
+button {
   background-color: var(--primary);
   color: var(--text);
   border: none;
@@ -152,34 +71,16 @@ input[type="submit"],
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-button:hover,
-input[type="submit"]:hover,
-.button:hover {
+button:hover {
   background-color: var(--info);
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-button:active,
-input[type="submit"]:active,
-.button:active {
-  transform: translateY(0);
+button:active {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Secondary buttons */
-button.secondary {
-  background-color: var(--bg-light);
-  color: var(--text-muted);
-}
-
-button.secondary:hover {
-  background-color: var(--border);
-  color: var(--text);
-}
-
 /* Danger buttons */
-button.danger,
 button[id^="delete-"] {
   background-color: var(--danger);
   color: var(--text);
@@ -188,9 +89,12 @@ button[id^="delete-"] {
   min-width: 40px;
 }
 
-button.danger:hover,
 button[id^="delete-"]:hover {
   background-color: oklch(0.5 0.25 25);
+}
+
+.hash {
+  color: var(--primary);
 }
 
 .timeline {
@@ -200,6 +104,7 @@ button[id^="delete-"]:hover {
   gap: 1.5rem;
   width: 100%;
   max-width: 800px;
+  margin-bottom: 2rem;
 }
 
 .flex-column {
@@ -215,13 +120,11 @@ button[id^="delete-"]:hover {
   padding: 1.5rem 2rem;
   background-color: var(--bg);
   box-shadow: var(--shadow);
-  border: 1px solid var(--border-muted);
-  border-top: 3px solid var(--primary);
   font-size: 16px;
   display: flex;
   flex-direction: column;
   align-items: baseline;
-  width: 100%;
+  width: 500px;
   transition: all 0.2s ease;
 }
 
@@ -242,13 +145,14 @@ button[id^="delete-"]:hover {
   flex-direction: column;
   align-items: baseline;
   width: 100%;
+  transition: all 0.2s ease;
 }
 
 .timeline-event-header {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
 }
 
 .edit-button {
@@ -269,25 +173,19 @@ button[id^="delete-"]:hover {
   transform: scale(-1, 1) translateY(-2px);
 }
 
-ul {
-  text-align: left;
-  padding-left: 1.5rem;
-}
-
-tr {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  gap: 1rem;
-}
-
-.pill-list {
+.pill-container {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1rem;
   width: 100%;
+}
+
+.pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  filter: saturate(0.5);
 }
 
 .pill {
@@ -300,7 +198,7 @@ tr {
   color: var(--text);
   padding: 0.5rem 1rem;
   min-height: 35px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .pill:hover {
@@ -364,11 +262,9 @@ tr {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  pointer-events: none;
 }
 
 .error-toast {
@@ -378,7 +274,6 @@ tr {
   border-radius: 10px;
   box-shadow: var(--shadow);
   animation: slideIn 0.3s ease-out;
-  pointer-events: auto;
   min-width: 250px;
   max-width: 400px;
   word-wrap: break-word;
@@ -398,13 +293,6 @@ tr {
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.toast-message {
-  flex: 1;
-  color: var(--text);
 }
 
 .error-toast.fade-out {
@@ -432,205 +320,40 @@ tr {
     transform: translateX(100px);
   }
 }
+
 /* Sub-navigation for admin pages */
 .admin-nav {
-  margin: 2rem 0;
-}
-
-.admin-nav-list {
-  list-style: none;
-  padding: 0;
   display: flex;
-  gap: 0.5rem;
-  background-color: var(--bg);
-  border-radius: 12px;
-  padding: 0.5rem;
-  box-shadow: var(--shadow);
+  justify-content: center;
+  gap: 1.5rem;
 }
 
-.admin-nav-item {
-  flex: 1;
-}
-
-.admin-nav-link {
+.admin-nav .link {
+  font-size: 1.2rem;
   display: block;
   padding: 0.75rem 1.5rem;
   text-align: center;
   color: var(--text-muted);
   font-weight: 600;
+  outline: 2px solid transparent;
+  transition: all 0.5s ease;
   border-radius: 8px;
-  transition: all 0.2s ease;
-  text-decoration: none;
 }
 
-.admin-nav-link:hover {
-  background-color: var(--bg-light);
+.admin-nav .link:hover {
   color: var(--text);
+  outline: 2px solid var(--primary);
 }
 
-.admin-nav-link.active {
-  background-color: var(--primary);
+.admin-nav .link.active {
   color: var(--text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-/* Custom Radio Buttons */
-input[type="radio"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  background-color: var(--bg);
-  cursor: pointer;
-  position: relative;
-  transition: all 0.2s ease;
-  margin: 0;
-}
-
-input[type="radio"]:hover {
-  border-color: var(--primary);
-  background-color: var(--bg-light);
-}
-
-input[type="radio"]:checked {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 4px var(--primary);
-}
-
-input[type="radio"]:checked::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--text);
-}
-
-input[type="radio"]:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px oklch(0.6 0.2 250 / 0.2);
-}
-
-input[type="radio"]:focus:checked {
-  box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 4px var(--primary),
-    0 0 0 7px oklch(0.6 0.2 250 / 0.2);
-}
-
-/* Radio button container - horizontal layout */
-.radio-group {
-  display: flex;
-  gap: 0.5rem;
-  background-color: var(--bg);
-  border-radius: 10px;
-  padding: 0.5rem;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-/* Radio button labels */
-label:has(input[type="radio"]) {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  flex: 1;
-  background-color: transparent;
-  border: 1px solid transparent;
-  font-weight: 500;
-}
-
-label:has(input[type="radio"]):hover {
-  background-color: var(--bg-light);
-}
-
-label:has(input[type="radio"]:checked) {
-  background-color: var(--primary);
-  color: var(--text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Hide the actual radio button since the label is the button */
-label:has(input[type="radio"]) input[type="radio"] {
-  display: none;
+  outline: 2px solid var(--primary);
 }
 
 /* Main content container */
 .content-container {
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-}
-/* Table styling */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: var(--bg);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
-
-thead {
-  background-color: var(--bg-light);
-  border-bottom: 2px solid var(--border-muted);
-}
-
-th {
-  padding: 1rem;
-  text-align: left;
-  color: var(--text);
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-tbody tr {
-  border-bottom: 1px solid var(--border-muted);
-  transition: background-color 0.2s ease;
-}
-
-tbody tr:last-child {
-  border-bottom: none;
-}
-
-tbody tr:hover {
-  background-color: var(--bg-light);
-}
-
-td {
-  padding: 1rem;
-  color: var(--text-muted);
-  vertical-align: middle;
-}
-
-/* Empty cell placeholder */
-td:empty::before {
-  content: "—";
-  color: var(--text-muted);
-  opacity: 0.3;
-}
-
-/* Fix tr display for table rows */
-tbody tr,
-thead tr {
-  display: table-row;
-}
-
-/* Delete button in table */
-tbody tr button {
-  margin-left: auto;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
 }

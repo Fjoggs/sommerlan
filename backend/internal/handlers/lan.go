@@ -138,8 +138,9 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		}
 
 		participant := database.UserResponse{
-			Id:   user.Id,
-			Name: user.Name,
+			Id:    user.Id,
+			Name:  user.Name,
+			Color: user.Color,
 		}
 		participants = append(participants, participant)
 	}

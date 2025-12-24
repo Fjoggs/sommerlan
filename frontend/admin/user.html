@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SommerLAN</title>
-    <link href="../style.css" rel="stylesheet" />
+    <link href="../css/headings.css" rel="stylesheet" />
+    <link href="../css/inputs.css" rel="stylesheet" />
+    <link href="../css/style.css" rel="stylesheet" />
+    <link href="../css/table.css" rel="stylesheet" />
     <script type="module" src="../dist/ts/admin.js"></script>
     <script type="module" src="../dist/ts/user.js"></script>
   </head>
@@ -17,26 +20,19 @@
     </header>
     <main class="content-container">
       <nav class="admin-nav">
-        <ul class="admin-nav-list">
-          <li class="admin-nav-item">
-            <a href="/admin/game.html" class="admin-nav-link">Spill</a>
-          </li>
-          <li class="admin-nav-item">
-            <a href="/admin/lan.html" class="admin-nav-link">Lan</a>
-          </li>
-          <li class="admin-nav-item">
-            <a href="/admin/user.html" class="admin-nav-link active"
-              >Deltaker</a
-            >
-          </li>
-        </ul>
+        <a href="/admin/game.html" class="link">Spill</a>
+        <a href="/admin/lan.html" class="link">Lan</a>
+        <a href="/admin/user.html" class="link active">Deltaker</a>
       </nav>
       <section>
-        <h2>Deltaker</h2>
         <form id="userForm">
           <label>
             Navn
             <input type="text" name="userName" />
+          </label>
+          <label>
+            Farge
+            <input type="text" name="color" />
           </label>
           <button type="submit">Submit</button>
         </form>
@@ -46,6 +42,7 @@
           <tr>
             <th></th>
             <th>Navn</th>
+            <th>Farge</th>
           </tr>
         </thead>
         <tbody id="userTable"></tbody>

@@ -68,29 +68,51 @@ const buildEntry = (lan: LAN) => {
   container.appendChild(description);
 
   const participants = createElement("div");
-  participants.className = "pill-list";
+  participants.className = "pill-container";
   const pHeader = createElement("h4");
   pHeader.textContent = "Deltakere";
   participants.appendChild(pHeader);
-  for (const participant of lan.participants) {
-    const pill = createElement("span");
-    pill.className = "pill";
-    pill.textContent += `${participant.name} `;
-    participants.appendChild(pill);
+  const pillContainer = createElement("div");
+  pillContainer.className = "pill-list";
+  if (lan.participants) {
+    for (const participant of lan.participants) {
+      const label = createElement("label");
+      label.textContent = participant.name;
+      const checkbox = createElement("input", participant.id.toString());
+      checkbox.setAttribute("type", "checkbox");
+      checkbox.setAttribute("name", "participants");
+      checkbox.setAttribute("value", participant.id.toString());
+      checkbox.setAttribute("disabled", "true");
+      label.style.backgroundColor = participant.color || "var(--bg-light)";
+      label.appendChild(checkbox);
+      pillContainer.appendChild(label);
+    }
   }
+  participants.appendChild(pillContainer);
   container.appendChild(participants);
 
   const games = createElement("div");
-  games.className = "pill-list";
+  games.className = "pill-container";
   const gHeader = createElement("h4");
   gHeader.textContent = "Spill";
   games.appendChild(gHeader);
-  for (const game of lan.games) {
-    const pill = createElement("span");
-    pill.className = "pill";
-    pill.textContent += `${game.name} `;
-    games.appendChild(pill);
+  const gamePillContainer = createElement("div");
+  gamePillContainer.className = "pill-list";
+  if (lan.games) {
+    for (const game of lan.games) {
+      const label = createElement("label");
+      label.textContent = game.name;
+      const checkbox = createElement("input", game.id.toString());
+      checkbox.setAttribute("type", "checkbox");
+      checkbox.setAttribute("name", "games");
+      checkbox.setAttribute("value", game.id.toString());
+      checkbox.setAttribute("disabled", "true");
+      label.style.backgroundColor = "var(--bg-light)";
+      label.appendChild(checkbox);
+      gamePillContainer.appendChild(label);
+    }
   }
+  games.appendChild(gamePillContainer);
   container.appendChild(games);
 
   return container;

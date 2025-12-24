@@ -30,14 +30,15 @@ type GameResponse struct {
 }
 
 type UserResponse struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 func GetUsers(db *sql.DB) ([]UserResponse, error) {
 	var users []UserResponse
 
-	userQuery := "SELECT id, name FROM user;"
+	userQuery := "SELECT id, name, color FROM user;"
 
 	userRows, err := doQuery(db, userQuery)
 	if err != nil {
@@ -47,10 +48,18 @@ func GetUsers(db *sql.DB) ([]UserResponse, error) {
 
 	for userRows.Next() {
 		var user UserResponse
-		err := userRows.Scan(&user.Id, &user.Name)
+		var color sql.NullString
+		err := userRows.Scan(&user.Id, &user.Name, &color)
 		if err != nil {
 			return users, err
 		}
+
+		if color.Valid {
+			user.Color = color.String
+		} else {
+			user.Color = ""
+		}
+
 		users = append(users, user)
 	}
 	return users, nil
@@ -59,7 +68,7 @@ func GetUsers(db *sql.DB) ([]UserResponse, error) {
 func GetUserWithId(db *sql.DB, userId int) (UserResponse, error) {
 	var user UserResponse
 
-	userQuery := "SELECT id, name FROM user WHERE id = ?;"
+	userQuery := "SELECT id, name, color FROM user WHERE id = ?;"
 
 	userRow, err := doQueryWithId(db, userQuery, userId)
 	if err != nil {
@@ -68,9 +77,17 @@ func GetUserWithId(db *sql.DB, userId int) (UserResponse, error) {
 	defer userRow.Close()
 
 	for userRow.Next() {
-		err := userRow.Scan(&user.Id, &user.Name)
+		var color sql.NullString
+		err := userRow.Scan(&user.Id, &user.Name, &color)
 		if err != nil {
+			fmt.Println("GetUserWithId scan failed", err)
 			return user, err
+		}
+
+		if color.Valid {
+			user.Color = color.String
+		} else {
+			user.Color = ""
 		}
 	}
 	return user, nil
@@ -242,7 +259,7 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	paricipantsQuery := `
 		SELECT
-    user.id, user.name
+    user.id, user.name, user.color
 		FROM lan
     JOIN lan_participants ON lan.id = lan_participants.lan_id
     JOIN user ON lan_participants.user_id = user.id
@@ -258,13 +275,23 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	for participantRows.Next() {
 		var participant UserResponse
+		var color sql.NullString
 		err := participantRows.Scan(
 			&participant.Id,
 			&participant.Name,
+			&color,
 		)
 		if err != nil {
+			fmt.Println("Scanning participant blew up", err)
 			return event, err
 		}
+
+		if color.Valid {
+			participant.Color = color.String
+		} else {
+			participant.Color = ""
+		}
+
 		participants = append(participants, participant)
 	}
 
@@ -347,10 +374,10 @@ func AddLan(
 	return id, nil
 }
 
-func AddUser(db *sql.DB, name string) (int64, error) {
-	query := "INSERT INTO user(name) VALUES (?)"
+func AddUser(db *sql.DB, name string, color string) (int64, error) {
+	query := "INSERT INTO user(name, color) VALUES (?, ?)"
 
-	result, err := db.Exec(query, name)
+	result, err := db.Exec(query, name, color)
 	if err != nil {
 		return 0, fmt.Errorf("USER INSERT ERROR: %v", err)
 	}
@@ -361,6 +388,17 @@ func AddUser(db *sql.DB, name string) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func AlterUser(db *sql.DB, id int, name string, color string) error {
+	query := "UPDATE USER set name = ?, color = ?  WHERE id = ?"
+
+	_, err := db.Exec(query, name, color, id)
+	if err != nil {
+		return fmt.Errorf("USER INSERT ERROR: %v", err)
+	}
+
+	return nil
 }
 
 func AddGame(db *sql.DB, name string) (int64, error) {
