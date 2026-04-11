@@ -36,7 +36,7 @@ func (h *UserHandlers) GetUsers(writer http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (a *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
+func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -46,7 +46,7 @@ func (a *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 
 	userName := req.FormValue("userName")
 	color := req.FormValue("color")
-	userId, err := database.AddUser(a.db, userName, color)
+	userId, err := database.AddUser(h.db, userName, color)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
 		return
@@ -64,7 +64,7 @@ func (a *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (a *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) {
+func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -76,12 +76,12 @@ func (a *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) 
 	id, err := strconv.Atoi(userId)
 	if err != nil {
 		// Handle error - invalid ID format
-		fmt.Println("Invalid participant ID:", userId)
+		fmt.Println("Invalid user ID:", userId)
 		return
 	}
 	userName := req.FormValue("userName")
 	color := req.FormValue("color")
-	err = database.AlterUser(a.db, id, userName, color)
+	err = database.AlterUser(h.db, id, userName, color)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
 		return

@@ -26,6 +26,11 @@ label {
   color: var(--text);
 }
 
+fieldset {
+  border: 0;
+  width: 100%;
+}
+
 /* Checkbox */
 /* Container */
 #user-list,

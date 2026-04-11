@@ -162,6 +162,105 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	err := req.ParseMultipartForm(0)
+	if err != nil {
+		fmt.Println("Parsing user form failed", err)
+	}
+
+	lanId := req.FormValue("lanId")
+	id, err := strconv.Atoi(lanId)
+	if err != nil {
+		// Handle error - invalid ID format
+		fmt.Println("Invalid lan ID:", lanId)
+		return
+	}
+
+	description := req.FormValue("description")
+	endDate := req.FormValue("endDate")
+	event := req.FormValue("event")
+	startDate := req.FormValue("startDate")
+	err = database.AlterLan(h.db, id, description, endDate, event, startDate)
+	if err != nil {
+		fmt.Println("Failed to add user", err)
+		return
+	}
+
+	lanGames := []database.GameResponse{}
+	for _, lanGameId := range req.Form["games"] {
+		gameId, err := strconv.Atoi(lanGameId)
+		if err != nil {
+			// Handle error - invalid ID format
+			fmt.Println("Invalid participant ID:", lanGameId)
+			continue
+		}
+
+		_, err = database.AddLanGame(h.db, int64(id), gameId)
+		if err != nil {
+			fmt.Println("Failed to add lan game", err)
+			return
+		}
+
+		game, err := database.GetGameWithId(h.db, gameId)
+		if err != nil {
+			fmt.Println("Failed to get lan game", err)
+			return
+		}
+
+		lanGame := database.GameResponse{
+			Id:   game.Id,
+			Name: game.Name,
+		}
+		lanGames = append(lanGames, lanGame)
+	}
+
+	participants := []database.UserResponse{}
+	for _, participantId := range req.Form["participants"] {
+		userId, err := strconv.Atoi(participantId)
+		if err != nil {
+			// Handle error - invalid ID format
+			fmt.Println("Invalid participant ID:", participantId)
+			continue
+		}
+
+		_, err = database.AddLanParticipant(h.db, int64(id), userId)
+		if err != nil {
+			fmt.Println("Failed to add lan user", err)
+			return
+		}
+
+		user, err := database.GetUserWithId(h.db, userId)
+		if err != nil {
+			fmt.Println("Failed to get lan user", err)
+			return
+		}
+
+		participant := database.UserResponse{
+			Id:    user.Id,
+			Name:  user.Name,
+			Color: user.Color,
+		}
+		participants = append(participants, participant)
+	}
+
+	res := database.LanEvent{
+		Description:  description,
+		End_date:     endDate,
+		Event:        event,
+		Games:        lanGames,
+		Id:           id,
+		Participants: participants,
+		Start_date:   startDate,
+	}
+
+	err = json.NewEncoder(writer).Encode(res)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
 func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 

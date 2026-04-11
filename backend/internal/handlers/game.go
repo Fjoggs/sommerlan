@@ -68,6 +68,39 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	err := req.ParseMultipartForm(0)
+	if err != nil {
+		fmt.Println("Parsing game form failed", err)
+	}
+
+	userId := req.FormValue("gameId")
+	id, err := strconv.Atoi(userId)
+	if err != nil {
+		// Handle error - invalid ID format
+		fmt.Println("Invalid game ID:", userId)
+		return
+	}
+	gameName := req.FormValue("gameName")
+	err = database.AlterGame(a.db, id, gameName)
+	if err != nil {
+		fmt.Println("Failed to add user", err)
+		return
+	}
+
+	res := database.GameResponse{
+		Id:   id,
+		Name: gameName,
+	}
+
+	err = json.NewEncoder(writer).Encode(res)
+	if err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
 func (h *GameHandlers) DeleteGameWithId(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 

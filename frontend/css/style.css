@@ -119,6 +119,7 @@ button[id^="delete-"]:hover {
   border-radius: 12px;
   padding: 1.5rem 2rem;
   background-color: var(--bg);
+  border: 2px solid transparent;
   box-shadow: var(--shadow);
   font-size: 16px;
   display: flex;
@@ -129,7 +130,6 @@ button[id^="delete-"]:hover {
 }
 
 .timeline-event:hover {
-  border-top-color: var(--info);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
 }
 
@@ -139,7 +139,6 @@ button[id^="delete-"]:hover {
   background-color: var(--bg);
   box-shadow: var(--shadow);
   border: 2px solid var(--primary);
-  border-top: 3px solid var(--primary);
   font-size: 16px;
   display: flex;
   flex-direction: column;
@@ -165,6 +164,8 @@ button[id^="delete-"]:hover {
   color: var(--text-muted);
   transition: all 0.2s ease;
   box-shadow: none;
+  -webkit-text-fill-color: currentColor; /* Force monochrome on iOS */
+  font-variant-emoji: text; /* Force text rendering, not emoji */
 }
 
 .edit-button:hover {

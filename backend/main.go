@@ -29,6 +29,7 @@ func main() {
 	// LAN routes
 	router.HandleFunc("GET /api/lan/", handlers.EnableCORS(lan.GetLan))
 	router.HandleFunc("POST /api/lan/", handlers.EnableCORS(lan.AddLan))
+	router.HandleFunc("PATCH /api/lan/", handlers.EnableCORS(user.AlterUser))
 	router.HandleFunc("GET /api/lan/{id}/", handlers.EnableCORS(lan.GetLanById))
 	router.HandleFunc(
 		"OPTIONS /api/lan/{id}/",
@@ -40,6 +41,7 @@ func main() {
 
 	// Game routes
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))
+	router.HandleFunc("PATCH /api/game/", handlers.EnableCORS(user.AlterUser))
 	router.HandleFunc("POST /api/game/", handlers.EnableCORS(game.AddGame))
 	router.HandleFunc(
 		"OPTIONS /api/game/{id}/",

@@ -374,6 +374,24 @@ func AddLan(
 	return id, nil
 }
 
+func AlterLan(
+	db *sql.DB,
+	id int,
+	description string,
+	end_date string,
+	event string,
+	start_date string,
+) error {
+	query := `UPDATE lan set description = ?, end_date = ?, event = ?, start_date = ? where id = ?`
+
+	_, err := db.Exec(query, description, end_date, event, start_date, id)
+	if err != nil {
+		return fmt.Errorf("LAN UPDATE ERROR: %v", err)
+	}
+
+	return nil
+}
+
 func AddUser(db *sql.DB, name string, color string) (int64, error) {
 	query := "INSERT INTO user(name, color) VALUES (?, ?)"
 
@@ -395,7 +413,7 @@ func AlterUser(db *sql.DB, id int, name string, color string) error {
 
 	_, err := db.Exec(query, name, color, id)
 	if err != nil {
-		return fmt.Errorf("USER INSERT ERROR: %v", err)
+		return fmt.Errorf("USER UPDATE ERROR: %v", err)
 	}
 
 	return nil
@@ -417,8 +435,19 @@ func AddGame(db *sql.DB, name string) (int64, error) {
 	return id, nil
 }
 
+func AlterGame(db *sql.DB, id int, name string) error {
+	query := "UPDATE GAME set name = ? WHERE id = ?"
+
+	_, err := db.Exec(query, name, id)
+	if err != nil {
+		return fmt.Errorf("GAME UPDATE ERROR: %v", err)
+	}
+
+	return nil
+}
+
 func AddLanGame(db *sql.DB, lanId int64, gameId int) (int64, error) {
-	query := "INSERT INTO lan_games(lan_id, game_id) VALUES (?, ?)"
+	query := "INSERT OR IGNORE INTO lan_games(lan_id, game_id) VALUES (?, ?)"
 
 	result, err := db.Exec(query, lanId, gameId)
 	if err != nil {
@@ -434,7 +463,7 @@ func AddLanGame(db *sql.DB, lanId int64, gameId int) (int64, error) {
 }
 
 func AddLanParticipant(db *sql.DB, lanId int64, userId int) (int64, error) {
-	query := "INSERT INTO lan_participants(lan_id, user_id) VALUES (?, ?)"
+	query := "INSERT OR IGNORE INTO lan_participants(lan_id, user_id) VALUES (?, ?)"
 
 	result, err := db.Exec(query, lanId, userId)
 	if err != nil {
