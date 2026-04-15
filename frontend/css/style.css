@@ -22,6 +22,8 @@
   --info: oklch(0.65 0.18 230); /* Cyan blue */
 
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  --border-radius: 8px;
 }
 
 body {
@@ -61,7 +63,7 @@ button {
   background-color: var(--primary);
   color: var(--text);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   padding: 0.75rem 1.5rem;
   font-size: 1rem;
   font-weight: 600;
@@ -116,7 +118,7 @@ button[id^="delete-"]:hover {
 }
 
 .timeline-event {
-  border-radius: 12px;
+  border-radius: var(--border-radius);
   padding: 1.5rem 2rem;
   background-color: var(--bg);
   border: 2px solid transparent;
@@ -134,7 +136,7 @@ button[id^="delete-"]:hover {
 }
 
 .editing {
-  border-radius: 12px;
+  border-radius: var(--border-radius);
   padding: 1.5rem 2rem;
   background-color: var(--bg);
   box-shadow: var(--shadow);
@@ -193,7 +195,7 @@ button[id^="delete-"]:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   background-color: var(--bg-light);
   border: 1px solid var(--border-muted);
   color: var(--text);
@@ -243,7 +245,7 @@ button[id^="delete-"]:hover {
 .add-lan {
   cursor: pointer;
   border: 2px dashed var(--border);
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   background-color: transparent;
   font-size: 1.5rem;
   padding: 0.5rem 1rem;
@@ -272,7 +274,7 @@ button[id^="delete-"]:hover {
   background-color: var(--danger);
   color: var(--text);
   padding: 1rem 1.5rem;
-  border-radius: 10px;
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   animation: slideIn 0.3s ease-out;
   min-width: 250px;
@@ -338,7 +340,7 @@ button[id^="delete-"]:hover {
   font-weight: 600;
   outline: 2px solid transparent;
   transition: all 0.5s ease;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
 }
 
 .admin-nav .link:hover {
@@ -357,4 +359,10 @@ button[id^="delete-"]:hover {
   display: flex;
   flex-direction: column;
   gap: 4rem;
+}
+
+.rsvp-container {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
 }
