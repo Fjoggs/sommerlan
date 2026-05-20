@@ -1,4 +1,5 @@
 import { fetchAll } from "./crud.js";
+import { requireAuth } from "./auth.js";
 import { Game, LAN, User } from "./types.js";
 import { createElement } from "./utils.js";
 
@@ -157,4 +158,5 @@ const createCheckbox = (
   return label;
 };
 
-await fetchLans();
+const me = await requireAuth();
+if (me) await fetchLans();

@@ -462,6 +462,80 @@ func AddLanGame(db *sql.DB, lanId int64, gameId int) (int64, error) {
 	return id, nil
 }
 
+type RsvpEntry struct {
+	UserId int      `json:"userId"`
+	Name   string   `json:"name"`
+	Color  string   `json:"color"`
+	Dates  []string `json:"dates"`
+}
+
+func AddRsvpDates(db *sql.DB, userId int, dates []string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("RSVP BEGIN ERROR: %v", err)
+	}
+	if _, err := tx.Exec("DELETE FROM rsvp WHERE user_id = ?", userId); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("RSVP DELETE ERROR: %v", err)
+	}
+	stmt, err := tx.Prepare("INSERT INTO rsvp(user_id, date) VALUES(?, ?)")
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("RSVP PREPARE ERROR: %v", err)
+	}
+	defer stmt.Close()
+	for _, date := range dates {
+		if _, err := stmt.Exec(userId, date); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("RSVP INSERT ERROR: %v", err)
+		}
+	}
+	return tx.Commit()
+}
+
+func GetRsvps(db *sql.DB) ([]RsvpEntry, error) {
+	query := `
+		SELECT u.id, u.name, u.color, r.date
+		FROM rsvp r
+		JOIN user u ON r.user_id = u.id
+		ORDER BY u.id, r.date
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("RSVP QUERY ERROR: %v", err)
+	}
+	defer rows.Close()
+
+	entryMap := make(map[int]*RsvpEntry)
+	var order []int
+	for rows.Next() {
+		var userId int
+		var name, date string
+		var color sql.NullString
+		if err := rows.Scan(&userId, &name, &color, &date); err != nil {
+			return nil, err
+		}
+		if _, ok := entryMap[userId]; !ok {
+			c := ""
+			if color.Valid {
+				c = color.String
+			}
+			entryMap[userId] = &RsvpEntry{UserId: userId, Name: name, Color: c}
+			order = append(order, userId)
+		}
+		entryMap[userId].Dates = append(entryMap[userId].Dates, date)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	result := make([]RsvpEntry, 0, len(order))
+	for _, id := range order {
+		result = append(result, *entryMap[id])
+	}
+	return result, nil
+}
+
 func AddLanParticipant(db *sql.DB, lanId int64, userId int) (int64, error) {
 	query := "INSERT OR IGNORE INTO lan_participants(lan_id, user_id) VALUES (?, ?)"
 

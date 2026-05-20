@@ -42,6 +42,19 @@ CREATE TABLE IF NOT EXISTS lan_participants (
   FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS rsvp (
+  user_id INTEGER,
+  date TEXT,
+  PRIMARY KEY (user_id, date),
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
 `
 
 func InitDB(dbPath string) (*sql.DB, error) {
@@ -59,6 +72,10 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	if _, err = db.Exec(schema); err != nil {
 		return nil, err
 	}
+
+	// Migration: add discord_id column if not already present (ignore error on re-run)
+	_, _ = db.Exec(`ALTER TABLE user ADD COLUMN discord_id TEXT`)
+	_, _ = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_discord_id ON user(discord_id) WHERE discord_id IS NOT NULL`)
 
 	log.Println("Database initialized successfully")
 	return db, nil

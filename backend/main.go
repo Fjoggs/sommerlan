@@ -22,9 +22,25 @@ func main() {
 	lan := handlers.NewLanHandlers(db)
 	game := handlers.NewGameHandlers(db)
 	user := handlers.NewUserHandlers(db)
+	rsvp := handlers.NewRsvpHandlers(db)
+	auth := handlers.NewAuthHandlers(db)
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
+
+	// Auth routes
+	router.HandleFunc("GET /api/auth/discord/", auth.DiscordLogin)
+	router.HandleFunc("GET /api/auth/discord/callback/", auth.DiscordCallback)
+	router.HandleFunc("GET /api/auth/me/", handlers.EnableCORS(auth.Me))
+	router.HandleFunc("POST /api/auth/logout/", handlers.EnableCORS(auth.Logout))
+	router.HandleFunc("PATCH /api/auth/me/", handlers.EnableCORS(auth.UpdateMe))
+	router.HandleFunc("OPTIONS /api/auth/me/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/auth/logout/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+
+	// RSVP routes
+	router.HandleFunc("GET /api/rsvp/", handlers.EnableCORS(rsvp.GetRsvps))
+	router.HandleFunc("POST /api/rsvp/", handlers.EnableCORS(rsvp.AddRsvp))
+	router.HandleFunc("OPTIONS /api/rsvp/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// LAN routes
 	router.HandleFunc("GET /api/lan/", handlers.EnableCORS(lan.GetLan))
@@ -38,6 +54,11 @@ func main() {
 		}),
 	)
 	router.HandleFunc("DELETE /api/lan/{id}/", handlers.EnableCORS(lan.DeleteLanWithId))
+	router.HandleFunc("POST /api/lan/{id}/participant/", handlers.EnableCORS(lan.AddParticipantToLan))
+	router.HandleFunc(
+		"OPTIONS /api/lan/{id}/participant/",
+		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}),
+	)
 
 	// Game routes
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))
@@ -62,6 +83,9 @@ func main() {
 		}),
 	)
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
+
+	// Serve frontend static files (catch-all, must be registered last)
+	router.Handle("/", http.FileServer(http.Dir("../frontend")))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

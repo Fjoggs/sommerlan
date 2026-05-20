@@ -20,3 +20,10 @@ export type Game = {
   id: number;
   name: string;
 };
+
+export type RsvpEntry = {
+  userId: number;
+  name: string;
+  color: string;
+  dates: string[];
+};

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SommerLAN — Profil</title>
+    <link href="css/headings.css" rel="stylesheet" />
+    <link href="css/inputs.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" />
+    <link href="css/rsvp.css" rel="stylesheet" />
+    <script defer type="module" src="dist/ts/profile.js"></script>
+    <script defer type="module" src="dist/ts/nav.js"></script>
+    <style>
+      .profile-card {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .profile-preview-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .profile-avatar {
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #fff;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease;
+      }
+
+      .profile-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .field-group label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .color-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      #color-swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .color-swatch {
+        width: 1.6rem;
+        height: 1.6rem;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.1s ease, border-color 0.1s ease;
+      }
+
+      .color-swatch:hover {
+        transform: scale(1.2);
+        border-color: var(--border);
+      }
+
+      input[type="color"] {
+        width: 2.2rem;
+        height: 2.2rem;
+        padding: 0;
+        border: 2px solid var(--border-muted);
+        border-radius: var(--border-radius);
+        background: none;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .profile-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-top: 0.5rem;
+      }
+
+      #logout-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 0;
+        font-family: inherit;
+      }
+
+      #logout-btn:hover {
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="menu">
+      <a href="index.html" class="menu-item">Oversikt</a>
+      <a href="countdown.html" class="menu-item">Nedtelling</a>
+      <a href="rsvp.html" class="menu-item nav-pre-lan">RSVP</a>
+      <a href="pameldte.html" class="menu-item nav-pre-lan">Påmeldte</a>
+      <a href="profile.html" class="menu-item active">Profil</a>
+    </nav>
+
+    <main class="rsvp-wrapper">
+      <div class="profile-card">
+        <div class="profile-preview-row">
+          <div id="profile-preview" class="profile-avatar"></div>
+          <div>
+            <div class="rsvp-header" style="margin: 0">
+              <h1 style="font-size: 1.5rem; margin: 0">Profil</h1>
+            </div>
+          </div>
+        </div>
+
+        <form id="profile-form" class="profile-fields">
+          <div class="field-group">
+            <label for="profile-name">Kallenavn</label>
+            <input type="text" id="profile-name" name="name" maxlength="32" autocomplete="off" />
+          </div>
+
+          <div class="field-group">
+            <label>Farge</label>
+            <div class="color-row">
+              <input type="color" id="profile-color" name="color" />
+              <div id="color-swatches"></div>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button type="button" id="logout-btn">Logg ut</button>
+            <button type="submit" id="save-btn">Lagre</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SommerLAN 2026</title>
+    <link href="css/headings.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" />
+    <script defer type="module" src="dist/ts/countdown.js"></script>
+    <script defer type="module" src="dist/ts/nav.js"></script>
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .countdown-main {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 2rem;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .countdown-title {
+        font-size: clamp(1.5rem, 5vw, 2.5rem);
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+      }
+
+      .countdown-subtitle {
+        color: var(--text-muted);
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .countdown-units {
+        display: flex;
+        align-items: flex-start;
+        gap: clamp(1rem, 4vw, 3rem);
+        margin-top: 1rem;
+      }
+
+      .countdown-unit {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .countdown-number {
+        font-size: clamp(3rem, 12vw, 7rem);
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        min-width: 2ch;
+      }
+
+      .countdown-label {
+        font-size: clamp(0.7rem, 2vw, 0.9rem);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+      }
+
+      .countdown-sep {
+        font-size: clamp(3rem, 12vw, 7rem);
+        font-weight: 300;
+        color: var(--border);
+        line-height: 1;
+        padding-top: 0;
+        align-self: flex-start;
+      }
+
+      .countdown-started {
+        font-size: clamp(1.5rem, 6vw, 3rem);
+        font-weight: 700;
+        color: var(--primary);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="menu">
+      <a href="index.html" class="menu-item">Oversikt</a>
+      <a href="countdown.html" class="menu-item active">Nedtelling</a>
+      <a href="rsvp.html" class="menu-item nav-pre-lan">RSVP</a>
+      <a href="pameldte.html" class="menu-item nav-pre-lan">Påmeldte</a>
+      <a href="profile.html" class="menu-item">Profil</a>
+    </nav>
+
+    <main class="countdown-main">
+      <div id="countdown-units" class="countdown-units">
+        <div class="countdown-unit">
+          <span id="cd-days" class="countdown-number">--</span>
+          <span class="countdown-label">dager</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-unit">
+          <span id="cd-hours" class="countdown-number">--</span>
+          <span class="countdown-label">timer</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-unit">
+          <span id="cd-minutes" class="countdown-number">--</span>
+          <span class="countdown-label">min</span>
+        </div>
+        <span class="countdown-sep">:</span>
+        <div class="countdown-unit">
+          <span id="cd-seconds" class="countdown-number">--</span>
+          <span class="countdown-label">sek</span>
+        </div>
+      </div>
+
+      <p id="countdown-started" class="countdown-started" hidden>LAN er i gang! 🎮</p>
+    </main>
+  </body>
+</html>

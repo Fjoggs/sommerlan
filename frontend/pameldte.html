@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SommerLAN — Påmeldte</title>
+    <link href="css/headings.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" />
+    <link href="css/rsvp.css" rel="stylesheet" />
+    <script defer type="module" src="dist/ts/pameldte.js"></script>
+    <script defer type="module" src="dist/ts/nav.js"></script>
+  </head>
+  <body>
+    <nav class="menu">
+      <a href="index.html" class="menu-item">Oversikt</a>
+      <a href="countdown.html" class="menu-item">Nedtelling</a>
+      <a href="rsvp.html" class="menu-item nav-pre-lan">RSVP</a>
+      <a href="pameldte.html" class="menu-item active nav-pre-lan">Påmeldte</a>
+      <a href="profile.html" class="menu-item">Profil</a>
+    </nav>
+
+    <main class="rsvp-wrapper wide">
+      <div id="participant-matrix">
+        <p class="loading-text">Laster…</p>
+      </div>
+    </main>
+
+    <div id="toast-container"></div>
+  </body>
+</html>

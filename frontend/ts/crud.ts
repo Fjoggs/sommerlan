@@ -1,5 +1,5 @@
-// ts/crud.ts
 import { showError } from "./errorHandler.js";
+import { authHeaders } from "./auth.js";
 
 const API_URL = "http://localhost:8080/api";
 
@@ -27,7 +27,8 @@ const apiCall = async <T>(
   options: RequestInit = {},
 ): Promise<T | undefined> => {
   try {
-    const res = await fetch(`${API_URL}/${url}/`, options);
+    const headers = { ...authHeaders(), ...(options.headers as Record<string, string> ?? {}) };
+    const res = await fetch(`${API_URL}/${url}/`, { ...options, headers });
 
     if (!res.ok) {
       const action = options.method || "GET";
@@ -44,7 +45,7 @@ const apiCall = async <T>(
 
 const deleteApiCall = async (url: string): Promise<void> => {
   try {
-    const res = await fetch(`${API_URL}/${url}/`, { method: "DELETE" });
+    const res = await fetch(`${API_URL}/${url}/`, { method: "DELETE", headers: authHeaders() });
 
     if (res.status !== 204) {
       showError(`Failed to DELETE ${url.split("/")[0]}`);
