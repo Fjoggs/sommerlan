@@ -1,20 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="no">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SommerLAN</title>
+    <title>SommerLAN — Event</title>
     <link href="css/headings.css" rel="stylesheet" />
-    <link href="css/inputs.css" rel="stylesheet" />
     <link href="css/style.css" rel="stylesheet" />
-    <link href="css/table.css" rel="stylesheet" />
-    <script defer type="module" src="dist/index.js"></script>
+    <script defer type="module" src="dist/ts/lan-event.js"></script>
     <script defer type="module" src="dist/ts/nav.js"></script>
   </head>
   <body>
     <header>
       <nav class="menu">
-        <a class="menu-item active" href="/">Oversikt</a>
+        <a class="menu-item" href="/">Oversikt</a>
         <a class="menu-item" href="countdown.html">Nedtelling</a>
         <a class="menu-item nav-pre-lan" href="rsvp.html">RSVP</a>
         <a class="menu-item nav-pre-lan" href="pameldte.html">Påmeldte</a>
@@ -22,17 +20,9 @@
         <a id="profile-avatar" href="profile.html"></a>
       </nav>
     </header>
-    <main>
-      <section class="timeline">
-        <h2><span class="hash">#</span>Classical Era</h2>
-        <div class="flex-column" id="pre"></div>
-
-        <h2 class="button-heading">
-          <span><span class="hash">#</span>SommerLAN</span>
-          <button class="add-lan">+</button>
-        </h2>
-        <div class="flex-column" id="main"></div>
-      </section>
+    <main class="event-subpage">
+      <div id="content"></div>
     </main>
+    <div id="toast-container"></div>
   </body>
 </html>

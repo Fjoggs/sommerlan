@@ -45,7 +45,8 @@ func main() {
 	// LAN routes
 	router.HandleFunc("GET /api/lan/", handlers.EnableCORS(lan.GetLan))
 	router.HandleFunc("POST /api/lan/", handlers.EnableCORS(lan.AddLan))
-	router.HandleFunc("PATCH /api/lan/", handlers.EnableCORS(user.AlterUser))
+	router.HandleFunc("PATCH /api/lan/", handlers.EnableCORS(lan.AlterLan))
+	router.HandleFunc("OPTIONS /api/lan/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("GET /api/lan/{id}/", handlers.EnableCORS(lan.GetLanById))
 	router.HandleFunc(
 		"OPTIONS /api/lan/{id}/",
@@ -59,6 +60,17 @@ func main() {
 		"OPTIONS /api/lan/{id}/participant/",
 		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}),
 	)
+	router.HandleFunc("POST /api/lan/{id}/attend/", handlers.EnableCORS(lan.AttendLan))
+	router.HandleFunc("DELETE /api/lan/{id}/attend/", handlers.EnableCORS(lan.UnattendLan))
+	router.HandleFunc(
+		"OPTIONS /api/lan/{id}/attend/",
+		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}),
+	)
+	router.HandleFunc("GET /api/lan/{id}/images/", handlers.EnableCORS(lan.GetLanImages))
+	router.HandleFunc("POST /api/lan/{id}/images/", handlers.EnableCORS(lan.UploadLanImage))
+	router.HandleFunc("DELETE /api/lan/{id}/images/{imageId}/", handlers.EnableCORS(lan.DeleteLanImage))
+	router.HandleFunc("OPTIONS /api/lan/{id}/images/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/lan/{id}/images/{imageId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// Game routes
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))

@@ -5,13 +5,13 @@ import type { RsvpEntry } from "./types.js";
 
 const API_URL = "http://localhost:8080/api";
 
-let me: { id: number; name: string; color: string } | null = null;
+let me: { id: number; name: string; nickname?: string; color: string } | null = null;
 
 async function init() {
   me = await requireAuth();
   if (!me) return;
 
-  document.getElementById("user-greeting")!.textContent = `Hei, ${me.name}!`;
+  document.getElementById("user-greeting")!.textContent = `Hei, ${me.nickname || me.name}!`;
   setupDayCheckboxes();
   updateSubmitButton();
 }

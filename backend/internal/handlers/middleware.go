@@ -1,8 +1,21 @@
 package handlers
 
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
 )
+
+func requireAdmin(db *sql.DB, r *http.Request) error {
+	user, err := GetUserFromRequest(db, r)
+	if err != nil {
+		return fmt.Errorf("unauthorized")
+	}
+	if user.Role != "admin" {
+		return fmt.Errorf("forbidden")
+	}
+	return nil
+}
 
 func EnableCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

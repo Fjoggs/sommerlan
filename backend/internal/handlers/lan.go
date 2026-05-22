@@ -4,9 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"time"
 
 	"backend/internal/database"
 )
@@ -70,6 +74,10 @@ func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -81,8 +89,10 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 	endDate := req.FormValue("endDate")
 	event := req.FormValue("event")
 	description := req.FormValue("description")
+	fromDisplay := req.FormValue("fromDisplay")
+	toDisplay := req.FormValue("toDisplay")
 
-	lanId, err := database.AddLan(h.db, description, endDate, event, startDate)
+	lanId, err := database.AddLan(h.db, description, endDate, event, startDate, fromDisplay, toDisplay)
 	if err != nil {
 		fmt.Println("Failed to add lan", err)
 		return
@@ -149,10 +159,12 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		Description:  description,
 		End_date:     endDate,
 		Event:        event,
+		FromDisplay:  fromDisplay,
 		Games:        lanGames,
 		Id:           int(lanId),
 		Participants: participants,
 		Start_date:   startDate,
+		ToDisplay:    toDisplay,
 	}
 
 	fmt.Println("Added LAN to db", res)
@@ -163,6 +175,10 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -182,9 +198,16 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	endDate := req.FormValue("endDate")
 	event := req.FormValue("event")
 	startDate := req.FormValue("startDate")
-	err = database.AlterLan(h.db, id, description, endDate, event, startDate)
+	fromDisplay := req.FormValue("fromDisplay")
+	toDisplay := req.FormValue("toDisplay")
+	err = database.AlterLan(h.db, id, description, endDate, event, startDate, fromDisplay, toDisplay)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
+		return
+	}
+
+	if err := database.RemoveLanGames(h.db, id); err != nil {
+		fmt.Println("Failed to clear lan games", err)
 		return
 	}
 
@@ -192,8 +215,7 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	for _, lanGameId := range req.Form["games"] {
 		gameId, err := strconv.Atoi(lanGameId)
 		if err != nil {
-			// Handle error - invalid ID format
-			fmt.Println("Invalid participant ID:", lanGameId)
+			fmt.Println("Invalid game ID:", lanGameId)
 			continue
 		}
 
@@ -209,18 +231,18 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		lanGame := database.GameResponse{
-			Id:   game.Id,
-			Name: game.Name,
-		}
-		lanGames = append(lanGames, lanGame)
+		lanGames = append(lanGames, database.GameResponse{Id: game.Id, Name: game.Name})
+	}
+
+	if err := database.RemoveLanParticipants(h.db, id); err != nil {
+		fmt.Println("Failed to clear lan participants", err)
+		return
 	}
 
 	participants := []database.UserResponse{}
 	for _, participantId := range req.Form["participants"] {
 		userId, err := strconv.Atoi(participantId)
 		if err != nil {
-			// Handle error - invalid ID format
 			fmt.Println("Invalid participant ID:", participantId)
 			continue
 		}
@@ -249,10 +271,12 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 		Description:  description,
 		End_date:     endDate,
 		Event:        event,
+		FromDisplay:  fromDisplay,
 		Games:        lanGames,
 		Id:           id,
 		Participants: participants,
 		Start_date:   startDate,
+		ToDisplay:    toDisplay,
 	}
 
 	err = json.NewEncoder(writer).Encode(res)
@@ -262,6 +286,10 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")
@@ -305,26 +333,183 @@ func (a *LanHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (a *LanHandlers) AddParticipant(writer http.ResponseWriter, req *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-
-	var lanParticipant addParticipantBody
-
-	err := json.NewDecoder(req.Body).Decode(&lanParticipant)
+func (h *LanHandlers) AttendLan(writer http.ResponseWriter, req *http.Request) {
+	user, err := GetUserFromRequest(h.db, req)
 	if err != nil {
-		fmt.Println("error", err)
-		http.Error(writer, err.Error(), http.StatusBadRequest)
+		http.Error(writer, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	lanId, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil {
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	if _, err = database.AddLanParticipant(h.db, int64(lanId), user.Id); err != nil {
+		http.Error(writer, "failed to add participant", http.StatusInternalServerError)
+		return
+	}
+	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) UnattendLan(writer http.ResponseWriter, req *http.Request) {
+	user, err := GetUserFromRequest(h.db, req)
+	if err != nil {
+		http.Error(writer, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	lanId, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil {
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	if err = database.RemoveLanParticipant(h.db, int64(lanId), user.Id); err != nil {
+		http.Error(writer, "failed to remove participant", http.StatusInternalServerError)
+		return
+	}
+	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) GetLanImages(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	images, err := database.GetLanImages(h.db, lanId)
+	if err != nil {
+		http.Error(w, "failed to get images", http.StatusInternalServerError)
+		return
+	}
+	if images == nil {
+		images = []database.LanImage{}
+	}
+	json.NewEncoder(w).Encode(images)
+}
+
+func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromRequest(h.db, r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		http.Error(w, "failed to parse form", http.StatusBadRequest)
+		return
+	}
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, "no image provided", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	allowed := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/gif":  true,
+		"image/webp": true,
+	}
+	contentType := header.Header.Get("Content-Type")
+	if !allowed[contentType] {
+		http.Error(w, "unsupported image type", http.StatusBadRequest)
 		return
 	}
 
-	rows, err := database.AddLanParticipant(a.db, lanParticipant.lanId, lanParticipant.userId)
+	ext := filepath.Ext(header.Filename)
+	if ext == "" {
+		ext = ".jpg"
+	}
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+
+	uploadDir := fmt.Sprintf("../frontend/uploads/lan/%d", lanId)
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		http.Error(w, "failed to create upload directory", http.StatusInternalServerError)
+		return
+	}
+	dst, err := os.Create(filepath.Join(uploadDir, filename))
 	if err != nil {
-		fmt.Println("Blew up:", err)
+		http.Error(w, "failed to save image", http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+	if _, err := io.Copy(dst, file); err != nil {
+		http.Error(w, "failed to write image", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(rows)
+	img, err := database.AddLanImage(h.db, lanId, filename, user.Id)
 	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		http.Error(w, "failed to save image record", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(img)
+}
+
+func (h *LanHandlers) DeleteLanImage(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	imageId, err := strconv.Atoi(r.PathValue("imageId"))
+	if err != nil {
+		http.Error(w, "invalid image id", http.StatusBadRequest)
+		return
+	}
+	dbLanId, filename, err := database.GetLanImageFilename(h.db, imageId)
+	if err != nil || dbLanId != lanId {
+		http.Error(w, "image not found", http.StatusNotFound)
+		return
+	}
+	if err := database.DeleteLanImageById(h.db, imageId); err != nil {
+		http.Error(w, "failed to delete image", http.StatusInternalServerError)
+		return
+	}
+	_ = os.Remove(fmt.Sprintf("../frontend/uploads/lan/%d/%s", lanId, filename))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) AddParticipantToLan(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
+	idPath := req.PathValue("id")
+	lanId, err := strconv.Atoi(idPath)
+	if err != nil {
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		UserId int `json:"userId"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		http.Error(writer, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if body.UserId == 0 {
+		http.Error(writer, "userId is required", http.StatusBadRequest)
+		return
+	}
+
+	_, err = database.AddLanParticipant(h.db, int64(lanId), body.UserId)
+	if err != nil {
+		fmt.Println("AddParticipantToLan failed:", err)
+		http.Error(writer, "failed to add participant", http.StatusInternalServerError)
+		return
+	}
+
+	writer.WriteHeader(http.StatusNoContent)
 }

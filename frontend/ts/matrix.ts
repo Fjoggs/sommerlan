@@ -77,7 +77,7 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
     const row = tbody.insertRow();
     const nameCell = row.insertCell();
     nameCell.className = "matrix-name";
-    nameCell.innerHTML = `<span class="user-dot" style="background-color:${entry.color}"></span>${entry.name}`;
+    nameCell.innerHTML = `<span class="user-dot" style="background-color:${entry.color}"></span>${entry.nickname || entry.name}`;
 
     for (const date of visibleDates) {
       const cell = row.insertCell();

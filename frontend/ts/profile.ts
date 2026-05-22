@@ -15,9 +15,10 @@ async function init() {
   const colorInput = document.getElementById("profile-color") as HTMLInputElement;
   const preview = document.getElementById("profile-preview") as HTMLElement;
 
-  nameInput.value = me.name;
+  nameInput.value = me.nickname || "";
+  nameInput.placeholder = me.name;
   colorInput.value = me.color || "#5865F2";
-  updatePreview(me.name, colorInput.value, preview);
+  updatePreview(me.nickname || me.name, colorInput.value, preview);
 
   renderSwatches(colorInput, preview, nameInput);
 
@@ -26,7 +27,7 @@ async function init() {
 
   document.getElementById("profile-form")!.addEventListener("submit", async (e) => {
     e.preventDefault();
-    await save(nameInput.value.trim(), colorInput.value, preview);
+    await save(nameInput.value.trim(), colorInput.value, me.name, preview);
   });
 
   document.getElementById("logout-btn")!.addEventListener("click", async () => {
@@ -57,8 +58,7 @@ function updatePreview(name: string, color: string, preview: HTMLElement) {
   preview.textContent = name.charAt(0).toUpperCase() || "?";
 }
 
-async function save(name: string, color: string, preview: HTMLElement) {
-  if (!name) return;
+async function save(nickname: string, color: string, discordName: string, preview: HTMLElement) {
   const btn = document.getElementById("save-btn") as HTMLButtonElement;
   btn.disabled = true;
   btn.textContent = "Lagrer…";
@@ -67,10 +67,10 @@ async function save(name: string, color: string, preview: HTMLElement) {
     const res = await fetch(`${API_URL}/auth/me/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ name, color }),
+      body: JSON.stringify({ nickname, color }),
     });
     if (!res.ok) throw new Error(`${res.status}`);
-    updatePreview(name, color, preview);
+    updatePreview(nickname || discordName, color, preview);
     btn.textContent = "Lagret ✓";
     setTimeout(() => {
       btn.disabled = false;

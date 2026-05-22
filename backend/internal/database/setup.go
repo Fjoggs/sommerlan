@@ -74,8 +74,21 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	}
 
 	// Migration: add discord_id column if not already present (ignore error on re-run)
+	_, _ = db.Exec(`ALTER TABLE lan ADD COLUMN from_display TEXT`)
+	_, _ = db.Exec(`ALTER TABLE lan ADD COLUMN to_display TEXT`)
 	_, _ = db.Exec(`ALTER TABLE user ADD COLUMN discord_id TEXT`)
 	_, _ = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_discord_id ON user(discord_id) WHERE discord_id IS NOT NULL`)
+	_, _ = db.Exec(`ALTER TABLE user ADD COLUMN nickname TEXT`)
+	_, _ = db.Exec(`ALTER TABLE user ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`)
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS lan_images (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		lan_id INTEGER NOT NULL,
+		filename TEXT NOT NULL,
+		uploaded_by INTEGER,
+		uploaded_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
+		FOREIGN KEY (uploaded_by) REFERENCES user(id)
+	)`)
 
 	log.Println("Database initialized successfully")
 	return db, nil

@@ -37,6 +37,10 @@ func (h *GameHandlers) GetGames(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(a.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -69,6 +73,10 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(a.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -102,6 +110,10 @@ func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) 
 }
 
 func (h *GameHandlers) DeleteGameWithId(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")

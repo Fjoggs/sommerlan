@@ -40,16 +40,19 @@ func UpsertDiscordUser(db *sql.DB, name, discordID string) (*UserResponse, error
 	}
 
 	var user UserResponse
-	var color sql.NullString
+	var color, nickname sql.NullString
 	err = db.QueryRow(
-		`SELECT id, name, color FROM user WHERE discord_id = ?`,
+		`SELECT id, name, color, nickname, role FROM user WHERE discord_id = ?`,
 		discordID,
-	).Scan(&user.Id, &user.Name, &color)
+	).Scan(&user.Id, &user.Name, &color, &nickname, &user.Role)
 	if err != nil {
 		return nil, fmt.Errorf("UpsertDiscordUser select: %w", err)
 	}
 	if color.Valid {
 		user.Color = color.String
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
 	}
 	return &user, nil
 }
@@ -65,11 +68,11 @@ func CreateSession(db *sql.DB, userID int) (string, error) {
 
 func GetUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
 	var user UserResponse
-	var color sql.NullString
+	var color, nickname sql.NullString
 	err := db.QueryRow(
-		`SELECT u.id, u.name, u.color FROM sessions s JOIN user u ON s.user_id = u.id WHERE s.token = ?`,
+		`SELECT u.id, u.name, u.color, u.nickname, u.role FROM sessions s JOIN user u ON s.user_id = u.id WHERE s.token = ?`,
 		token,
-	).Scan(&user.Id, &user.Name, &color)
+	).Scan(&user.Id, &user.Name, &color, &nickname, &user.Role)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("no session for token")
 	}
@@ -78,6 +81,9 @@ func GetUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
 	}
 	if color.Valid {
 		user.Color = color.String
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
 	}
 	return &user, nil
 }

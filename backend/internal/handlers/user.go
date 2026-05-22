@@ -37,6 +37,10 @@ func (h *UserHandlers) GetUsers(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -65,6 +69,10 @@ func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	err := req.ParseMultipartForm(0)
@@ -100,6 +108,10 @@ func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) 
 }
 
 func (h *UserHandlers) DeleteUserWithId(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAdmin(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusForbidden)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")
