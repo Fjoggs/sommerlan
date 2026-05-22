@@ -22,6 +22,7 @@ func main() {
 	lan := handlers.NewLanHandlers(db)
 	game := handlers.NewGameHandlers(db)
 	user := handlers.NewUserHandlers(db)
+	rsvp := handlers.NewRsvpHandlers(db)
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
@@ -50,6 +51,13 @@ func main() {
 		}),
 	)
 	router.HandleFunc("DELETE /api/game/{id}/", handlers.EnableCORS(game.DeleteGameWithId))
+
+	// RSVP routes
+	router.HandleFunc("POST /api/rsvp/", handlers.EnableCORS(rsvp.SubmitRsvp))
+	router.HandleFunc(
+		"OPTIONS /api/rsvp/",
+		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}),
+	)
 
 	// User routes
 	router.HandleFunc("GET /api/user/", handlers.EnableCORS(user.GetUsers))

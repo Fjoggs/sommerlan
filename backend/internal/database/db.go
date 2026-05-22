@@ -15,13 +15,13 @@ type Lan struct {
 }
 
 type LanEvent struct {
-	Description  string         `json:"description"`
-	End_date     string         `json:"endDate"`
-	Event        string         `json:"event"`
-	Games        []GameResponse `json:"games"`
-	Id           int            `json:"lanId"`
-	Participants []UserResponse `json:"participants"`
-	Start_date   string         `json:"startDate"`
+	Description  string                `json:"description"`
+	End_date     string                `json:"endDate"`
+	Event        string                `json:"event"`
+	Games        []GameResponse        `json:"games"`
+	Id           int                   `json:"lanId"`
+	Participants []ParticipantResponse `json:"participants"`
+	Start_date   string                `json:"startDate"`
 }
 
 type GameResponse struct {
@@ -33,6 +33,13 @@ type UserResponse struct {
 	Id    int    `json:"id"`
 	Name  string `json:"name"`
 	Color string `json:"color"`
+}
+
+type ParticipantResponse struct {
+	Id    int      `json:"id"`
+	Name  string   `json:"name"`
+	Color string   `json:"color"`
+	Dates []string `json:"dates"`
 }
 
 func GetUsers(db *sql.DB) ([]UserResponse, error) {
@@ -257,24 +264,23 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		return event, err
 	}
 
-	paricipantsQuery := `
-		SELECT
-    user.id, user.name, user.color
+	participantsQuery := `
+		SELECT user.id, user.name, user.color
 		FROM lan
-    JOIN lan_participants ON lan.id = lan_participants.lan_id
-    JOIN user ON lan_participants.user_id = user.id
-    WHERE lan.id = ?;
-`
-	var participants []UserResponse
+		JOIN lan_participants ON lan.id = lan_participants.lan_id
+		JOIN user ON lan_participants.user_id = user.id
+		WHERE lan.id = ?;
+	`
+	var participants []ParticipantResponse
 
-	participantRows, err := doQueryWithId(db, paricipantsQuery, id)
+	participantRows, err := doQueryWithId(db, participantsQuery, id)
 	if err != nil {
 		return event, err
 	}
 	defer participantRows.Close()
 
 	for participantRows.Next() {
-		var participant UserResponse
+		var participant ParticipantResponse
 		var color sql.NullString
 		err := participantRows.Scan(
 			&participant.Id,
@@ -292,12 +298,31 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 			participant.Color = ""
 		}
 
+		datesQuery := `SELECT date FROM lan_participant_days WHERE lan_id = ? AND user_id = ?;`
+		dateRows, err := db.Query(datesQuery, id, participant.Id)
+		if err != nil {
+			return event, err
+		}
+		defer dateRows.Close()
+
+		for dateRows.Next() {
+			var date string
+			if err := dateRows.Scan(&date); err != nil {
+				return event, err
+			}
+			participant.Dates = append(participant.Dates, date)
+		}
+
 		participants = append(participants, participant)
 	}
 
 	err = participantRows.Err()
 	if err != nil {
 		return event, err
+	}
+
+	if participants == nil {
+		participants = []ParticipantResponse{}
 	}
 
 	event = LanEvent{
@@ -460,6 +485,24 @@ func AddLanGame(db *sql.DB, lanId int64, gameId int) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func SetParticipantDates(db *sql.DB, lanId int, userId int, dates []string) error {
+	_, err := db.Exec(`DELETE FROM lan_participant_days WHERE lan_id = ? AND user_id = ?`, lanId, userId)
+	if err != nil {
+		return fmt.Errorf("PARTICIPANT DAYS DELETE ERROR: %v", err)
+	}
+
+	for _, date := range dates {
+		_, err := db.Exec(
+			`INSERT INTO lan_participant_days(lan_id, user_id, date) VALUES (?, ?, ?)`,
+			lanId, userId, date,
+		)
+		if err != nil {
+			return fmt.Errorf("PARTICIPANT DAY INSERT ERROR: %v", err)
+		}
+	}
+	return nil
 }
 
 func AddLanParticipant(db *sql.DB, lanId int64, userId int) (int64, error) {

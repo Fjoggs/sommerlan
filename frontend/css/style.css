@@ -17,6 +17,8 @@
   --primary: oklch(0.6 0.2 250); /* Bright blue */
   --secondary: oklch(0.65 0.15 280); /* Purple */
   --danger: oklch(0.6 0.22 25); /* Vibrant red */
+  --danger-dark: oklch(0.35 0.18 25); /* Dark red for toast background */
+  --danger-border: oklch(0.45 0.2 25); /* Toast border */
   --warning: oklch(0.75 0.15 85); /* Warm yellow */
   --success: oklch(0.65 0.18 150); /* Fresh green */
   --info: oklch(0.65 0.18 230); /* Cyan blue */
@@ -271,7 +273,7 @@ button[id^="delete-"]:hover {
 }
 
 .error-toast {
-  background-color: var(--danger);
+  background-color: var(--danger-dark);
   color: var(--text);
   padding: 1rem 1.5rem;
   border-radius: var(--border-radius);
@@ -283,12 +285,11 @@ button[id^="delete-"]:hover {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid oklch(0.7 0.22 25);
 }
 
 .toast-icon {
   background-color: var(--text);
-  color: var(--danger);
+  color: var(--danger-dark);
   width: 24px;
   height: 24px;
   border-radius: 50%;

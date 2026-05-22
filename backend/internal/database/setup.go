@@ -42,6 +42,15 @@ CREATE TABLE IF NOT EXISTS lan_participants (
   FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS lan_participant_days (
+  lan_id INTEGER,
+  user_id INTEGER,
+  date TEXT,
+  PRIMARY KEY (lan_id, user_id, date),
+  FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
+);
 `
 
 func InitDB(dbPath string) (*sql.DB, error) {

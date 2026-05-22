@@ -1,12 +1,19 @@
 type Event = "pre" | "main" | "side";
 
+export type Participant = {
+  id: number;
+  name: string;
+  color: string;
+  dates: string[];
+};
+
 export type LAN = {
   description: string;
   endDate: string;
   event: Event;
   games?: Game[];
   lanId: number;
-  participants?: User[];
+  participants?: Participant[];
   startDate: string;
 };
 

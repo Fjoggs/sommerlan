@@ -7,72 +7,162 @@
     <link href="css/headings.css" rel="stylesheet" />
     <link href="css/inputs.css" rel="stylesheet" />
     <link href="css/style.css" rel="stylesheet" />
-    <link href="css/table.css" rel="stylesheet" />
     <link href="css/rsvp.css" rel="stylesheet" />
     <script defer type="module" src="dist/ts/rsvp.js"></script>
   </head>
   <body>
-    <main>
-      <table>
-        <thead>
-          <tr>
-            <th>Pre-pre-LAN</th>
-            <th>Pre-LAN</th>
-            <th>SommerLAN 2026</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="input-row">
-              <label>
-                <input type="checkbox" name="Tirsdag" value="14" />
-              </label>
-              <label>
-                <input type="checkbox" name="Onsdag" value="15" />
-              </label>
-              <label>
-                <input type="checkbox" name="Torsdag" value="16" />
-              </label>
-            </td>
+    <main class="content-container">
+      <h2><span class="hash">#</span>SommerLAN 2026</h2>
 
-            <td class="input-row">
-              <label>
-                <input type="checkbox" name="Fredag" value="17" />
-              </label>
-              <label>
-                <input type="checkbox" name="Lørdag" value="18" />
-              </label>
-              <label>
-                <input type="checkbox" name="Søndag" value="19" />
-              </label>
-            </td>
+      <div class="rsvp-grid">
+          <div class="rsvp-row rsvp-header">
+            <div class="rsvp-name"></div>
+            <div class="rsvp-group col-preprelan">Pre-pre-LAN</div>
+            <div class="rsvp-group col-prelan">Pre-LAN</div>
+            <div class="rsvp-group col-main">SommerLAN 2026</div>
+          </div>
+          <div class="rsvp-row rsvp-dates">
+            <div class="rsvp-name"></div>
+            <div class="rsvp-group col-preprelan">
+              <span class="rsvp-slot">14</span>
+              <span class="rsvp-slot">15</span>
+              <span class="rsvp-slot">16</span>
+            </div>
+            <div class="rsvp-group col-prelan">
+              <span class="rsvp-slot">17</span>
+              <span class="rsvp-slot">18</span>
+              <span class="rsvp-slot">19</span>
+            </div>
+            <div class="rsvp-group col-main">
+              <span class="rsvp-slot">20</span>
+              <span class="rsvp-slot">21</span>
+              <span class="rsvp-slot">22</span>
+              <span class="rsvp-slot">23</span>
+              <span class="rsvp-slot">24</span>
+              <span class="rsvp-slot">25</span>
+              <span class="rsvp-slot">26</span>
+            </div>
+          </div>
+          <div id="participants-body"></div>
+        </div>
 
-            <td class="input-row">
-              <label>
-                <input type="checkbox" name="Mandag" value="20" />
-              </label>
-              <label>
-                <input type="checkbox" name="Tirsdag" value="21" />
-              </label>
-              <label>
-                <input type="checkbox" name="Onsdag" value="22" />
-              </label>
-              <label>
-                <input type="checkbox" name="Torsdag" value="23" />
-              </label>
-              <label>
-                <input type="checkbox" name="Fredag" value="24" />
-              </label>
-              <label>
-                <input type="checkbox" name="Lørdag" value="25" />
-              </label>
-              <label>
-                <input type="checkbox" name="Søndag" value="26" />
-              </label>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <form id="rsvp-form">
+          <select id="user-select" name="userId" required>
+            <option value="" disabled selected>Hvem er du?</option>
+          </select>
+          <div id="date-checkboxes">
+            <div class="date-section">
+              <span class="date-section-label">Pre-pre-LAN</span>
+              <div class="date-group">
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-14"
+                  />14</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-15"
+                  />15</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-16"
+                  />16</label
+                >
+                <button type="button" class="select-all-btn">*</button>
+              </div>
+            </div>
+            <div class="date-section">
+              <span class="date-section-label">Pre-LAN</span>
+              <div class="date-group">
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-17"
+                  />17</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-18"
+                  />18</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-19"
+                  />19</label
+                >
+                <button type="button" class="select-all-btn">*</button>
+              </div>
+            </div>
+            <div class="date-section">
+              <span class="date-section-label">SommerLAN 2026</span>
+              <div class="date-group">
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-20"
+                  />20</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-21"
+                  />21</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-22"
+                  />22</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-23"
+                  />23</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-24"
+                  />24</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-25"
+                  />25</label
+                >
+                <label class="date-toggle"
+                  ><input
+                    type="checkbox"
+                    name="date"
+                    value="2026-07-26"
+                  />26</label
+                >
+                <button type="button" class="select-all-btn">*</button>
+              </div>
+            </div>
+          </div>
+          <button type="submit">Send inn</button>
+        </form>
     </main>
   </body>
 </html>

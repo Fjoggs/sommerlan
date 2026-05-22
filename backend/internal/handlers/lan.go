@@ -116,7 +116,7 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		lanGames = append(lanGames, lanGame)
 	}
 
-	participants := []database.UserResponse{}
+	participants := []database.ParticipantResponse{}
 	for _, participantId := range req.Form["participants"] {
 		userId, err := strconv.Atoi(participantId)
 		if err != nil {
@@ -137,7 +137,7 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		participant := database.UserResponse{
+		participant := database.ParticipantResponse{
 			Id:    user.Id,
 			Name:  user.Name,
 			Color: user.Color,
@@ -216,7 +216,7 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 		lanGames = append(lanGames, lanGame)
 	}
 
-	participants := []database.UserResponse{}
+	participants := []database.ParticipantResponse{}
 	for _, participantId := range req.Form["participants"] {
 		userId, err := strconv.Atoi(participantId)
 		if err != nil {
@@ -237,7 +237,7 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		participant := database.UserResponse{
+		participant := database.ParticipantResponse{
 			Id:    user.Id,
 			Name:  user.Name,
 			Color: user.Color,
