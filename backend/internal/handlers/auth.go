@@ -128,6 +128,7 @@ func (h *AuthHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Nickname string `json:"nickname"`
 		Color    string `json:"color"`
+		Color2   string `json:"color2"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid body", http.StatusBadRequest)
@@ -138,14 +139,14 @@ func (h *AuthHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.SetNickname(h.db, user.Id, body.Nickname, body.Color); err != nil {
+	if err := database.SetNickname(h.db, user.Id, body.Nickname, body.Color, body.Color2); err != nil {
 		log.Printf("UpdateMe: %v", err)
 		http.Error(w, "failed to update", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(database.UserResponse{Id: user.Id, Name: user.Name, Nickname: body.Nickname, Color: body.Color})
+	json.NewEncoder(w).Encode(database.UserResponse{Id: user.Id, Name: user.Name, Nickname: body.Nickname, Color: body.Color, Color2: body.Color2})
 }
 
 func (h *AuthHandlers) Logout(w http.ResponseWriter, r *http.Request) {

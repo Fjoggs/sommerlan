@@ -18,6 +18,7 @@ export type User = {
   name: string;
   nickname?: string;
   color: string;
+  color2?: string;
 };
 
 export type Game = {
@@ -35,5 +36,6 @@ export type RsvpEntry = {
   name: string;
   nickname?: string;
   color: string;
+  color2?: string;
   dates: string[];
 };

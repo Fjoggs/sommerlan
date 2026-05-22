@@ -3,12 +3,15 @@ import { requireAuth, authHeaders } from "./auth.js";
 import { LAN } from "./types.js";
 import { createElement } from "./utils.js";
 
+type Tag = { id: number; name: string };
+
 type LanImage = {
   id: number;
   lanId: number;
   filename: string;
   uploadedBy?: number;
   uploadedAt: string;
+  tags: Tag[];
 };
 
 type TweetEntry = { date: string; text: string; images?: string[] };
@@ -55,13 +58,21 @@ if (!lan) {
 } else {
   const year = lan.startDate.substring(0, 4);
 
-  const [tweetRes, imageRes] = await Promise.all([
+  const [tweetRes, imageRes, tagsRes] = await Promise.all([
     fetch(`/data/tweets/${year}.json`),
     fetch(`http://localhost:8080/api/lan/${lan.lanId}/images/`, { headers: authHeaders() }),
+    fetch(`http://localhost:8080/api/tags/`, { headers: authHeaders() }),
   ]);
 
   const tweets: TweetEntry[] = tweetRes.ok ? await tweetRes.json() : [];
   const lanImages: LanImage[] = imageRes.ok ? await imageRes.json() : [];
+  const allTags: Tag[] = tagsRes.ok ? await tagsRes.json() : [];
+  const datalist = document.getElementById("tag-suggestions")!;
+  for (const tag of allTags) {
+    const opt = document.createElement("option");
+    opt.value = tag.name;
+    datalist.appendChild(opt);
+  }
 
   // filename → tweet (for image cards to look up their tweet)
   const imageToTweet = new Map<string, TweetEntry>();
@@ -74,7 +85,33 @@ if (!lan) {
   // set of filenames currently on this LAN (for tweet cards to check)
   const lanImageFilenames = new Set(lanImages.map((i) => i.filename));
 
-  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames);
+  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags);
+}
+
+function buildSommerlanLogo(): HTMLElement {
+  const wrap = createElement("div") as HTMLDivElement;
+  wrap.className = "sommerlan-logo";
+
+  const sommer = createElement("span") as HTMLSpanElement;
+  sommer.className = "logo-sommer";
+  sommer.textContent = "Sommer";
+
+  const right = createElement("span") as HTMLSpanElement;
+  right.className = "logo-right";
+
+  const lan = createElement("span") as HTMLSpanElement;
+  lan.className = "logo-lan";
+  lan.textContent = "LAN";
+
+  const ten = createElement("span") as HTMLSpanElement;
+  ten.className = "logo-ten";
+  ten.textContent = "10";
+
+  right.appendChild(lan);
+  right.appendChild(ten);
+  wrap.appendChild(sommer);
+  wrap.appendChild(right);
+  return wrap;
 }
 
 function renderLan(
@@ -83,6 +120,7 @@ function renderLan(
   lanImages: LanImage[],
   imageToTweet: Map<string, TweetEntry>,
   lanImageFilenames: Set<string>,
+  allTags: Tag[],
 ) {
   const year = lan.startDate.substring(0, 4);
   const eventLabels: Record<string, string> = {
@@ -91,13 +129,47 @@ function renderLan(
     side: "Side-event",
   };
 
+  const sorted = [...(allLans ?? [])].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const idx = sorted.findIndex((l) => l.lanId === lan.lanId);
+  const prev = idx > 0 ? sorted[idx - 1] : null;
+  const next = idx < sorted.length - 1 ? sorted[idx + 1] : null;
+
+  const titleRow = createElement("div") as HTMLDivElement;
+  titleRow.className = "event-title-row";
+
+  const prevLink = createElement("a") as HTMLAnchorElement;
+  prevLink.className = "event-nav-arrow";
+  if (prev) {
+    prevLink.href = `lan-event.html?id=${prev.lanId}`;
+    prevLink.innerHTML = `&#8592; <span>${prev.startDate.substring(0, 4)}</span>`;
+  } else {
+    prevLink.setAttribute("aria-hidden", "true");
+  }
+
   const title = createElement("h1") as HTMLHeadingElement;
   const hash = createElement("span");
   hash.className = "hash";
   hash.textContent = "#";
   title.appendChild(hash);
   title.append(`${eventLabels[lan.event] ?? lan.event} ${year}`);
-  content.appendChild(title);
+
+  const nextLink = createElement("a") as HTMLAnchorElement;
+  nextLink.className = "event-nav-arrow";
+  if (next) {
+    nextLink.href = `lan-event.html?id=${next.lanId}`;
+    nextLink.innerHTML = `<span>${next.startDate.substring(0, 4)}</span> &#8594;`;
+  } else {
+    nextLink.setAttribute("aria-hidden", "true");
+  }
+
+  titleRow.appendChild(prevLink);
+  titleRow.appendChild(title);
+  titleRow.appendChild(nextLink);
+  content.appendChild(titleRow);
+
+  if (lan.lanId === 30) {
+    content.appendChild(buildSommerlanLogo());
+  }
 
   if (lan.fromDisplay || lan.toDisplay) {
     const dates = createElement("p") as HTMLParagraphElement;
@@ -116,6 +188,14 @@ function renderLan(
     desc.textContent = lan.description;
     content.appendChild(desc);
   }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    if (document.querySelector(".lightbox-overlay")) return;
+    if (document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+    if (e.key === "ArrowLeft" && prev) window.location.href = `lan-event.html?id=${prev.lanId}`;
+    if (e.key === "ArrowRight" && next) window.location.href = `lan-event.html?id=${next.lanId}`;
+  });
 
   if (lan.participants && lan.participants.length > 0) {
     const section = createElement("section");
@@ -181,7 +261,7 @@ function renderLan(
     content.appendChild(section);
   }
 
-  renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames);
+  renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames, allTags);
 
   if (tweets.length) {
     renderTweetFeed(tweets, lanImageFilenames);
@@ -195,6 +275,7 @@ function renderImageSection(
   lanImages: LanImage[],
   imageToTweet: Map<string, TweetEntry>,
   lanImageFilenames: Set<string>,
+  allTags: Tag[],
 ) {
   const section = createElement("section");
   section.className = "event-section";
@@ -208,6 +289,7 @@ function renderImageSection(
   const fileInput = createElement("input") as HTMLInputElement;
   fileInput.type = "file";
   fileInput.accept = "image/jpeg,image/png,image/gif,image/webp";
+  fileInput.multiple = true;
   fileInput.style.display = "none";
 
   const uploadBtn = createElement("button") as HTMLButtonElement;
@@ -218,42 +300,159 @@ function renderImageSection(
   header.appendChild(uploadBtn);
   section.appendChild(header);
 
+  // collect tags used in this LAN's images for the filter bar
+  const usedTagIds = new Set(lanImages.flatMap((img) => (img.tags ?? []).map((t) => t.id)));
+  const usedTags = allTags.filter((t) => usedTagIds.has(t.id));
+  const activeFilters = new Set<number>();
+
+  const filterBar = createElement("div") as HTMLDivElement;
+  filterBar.className = "image-filter-bar";
+  filterBar.style.display = usedTags.length ? "" : "none";
+
+  const filterLabel = createElement("span");
+  filterLabel.className = "image-filter-label";
+  filterLabel.textContent = "Filter:";
+  filterBar.appendChild(filterLabel);
+
+  function applyFilters() {
+    for (const card of Array.from(grid.querySelectorAll<HTMLElement>(".image-card"))) {
+      const cardTagIds = JSON.parse(card.dataset.tagIds ?? "[]") as number[];
+      const visible = activeFilters.size === 0 || cardTagIds.some((id) => activeFilters.has(id));
+      card.style.display = visible ? "" : "none";
+    }
+  }
+
+  for (const tag of usedTags) {
+    const pill = createElement("button") as HTMLButtonElement;
+    pill.type = "button";
+    pill.className = "image-filter-pill";
+    pill.textContent = tag.name;
+    pill.dataset.tagId = String(tag.id);
+    pill.addEventListener("click", () => {
+      if (activeFilters.has(tag.id)) {
+        activeFilters.delete(tag.id);
+        pill.classList.remove("active");
+      } else {
+        activeFilters.add(tag.id);
+        pill.classList.add("active");
+      }
+      applyFilters();
+    });
+    filterBar.appendChild(pill);
+  }
+  section.appendChild(filterBar);
+
   const grid = createElement("div");
   grid.className = "image-grid";
 
   const carousel: CarouselEntry[] = [];
 
+  const selected = new Set<HTMLElement>();
+
   for (const img of lanImages) {
     const src = `/uploads/lan/${lanId}/${img.filename}`;
+    const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
     const tweet = imageToTweet.get(img.filename);
     carousel.push({ src, tweet });
-    grid.appendChild(buildImageCard(img, lanId, grid, carousel, carousel.length - 1));
+    const card = buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected, allTags, filterBar);
+    grid.appendChild(card);
   }
   section.appendChild(grid);
 
-  fileInput.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
-    uploadBtn.textContent = "Laster...";
-    uploadBtn.disabled = true;
-    const fd = new FormData();
-    fd.append("image", file);
-    const uploadRes = await fetch(`http://localhost:8080/api/lan/${lanId}/images/`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: fd,
+  if (me!.role === "admin") {
+    let dragSrc: HTMLElement | null = null;
+
+    grid.addEventListener("dragstart", (e) => {
+      dragSrc = (e.target as HTMLElement).closest(".image-card");
+      if (!dragSrc) return;
+      if (!selected.has(dragSrc)) {
+        selected.forEach((c) => c.classList.remove("selected"));
+        selected.clear();
+      }
+      const dragging = selected.size > 0 ? Array.from(selected) : [dragSrc];
+      dragging.forEach((c) => c.classList.add("dragging"));
+      e.dataTransfer!.effectAllowed = "move";
     });
+
+    grid.addEventListener("dragend", () => {
+      grid.querySelectorAll(".image-card").forEach((c) => {
+        c.classList.remove("dragging", "drag-over");
+      });
+      dragSrc = null;
+    });
+
+    grid.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const target = (e.target as HTMLElement).closest<HTMLElement>(".image-card");
+      if (!target || selected.has(target)) return;
+      grid.querySelectorAll(".image-card").forEach((c) => c.classList.remove("drag-over"));
+      target.classList.add("drag-over");
+    });
+
+    grid.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      const target = (e.target as HTMLElement).closest<HTMLElement>(".image-card");
+      if (!target || !dragSrc || selected.has(target)) return;
+
+      const allCards = Array.from(grid.querySelectorAll<HTMLElement>(".image-card"));
+      const moving = selected.size > 0
+        ? allCards.filter((c) => selected.has(c))
+        : [dragSrc];
+
+      const tgtIdx = allCards.indexOf(target);
+      const srcIdxFirst = allCards.indexOf(moving[0]);
+
+      moving.forEach((c) => c.remove());
+      const updatedCards = Array.from(grid.querySelectorAll<HTMLElement>(".image-card"));
+      const newTgtIdx = updatedCards.indexOf(target);
+
+      if (srcIdxFirst < tgtIdx) {
+        moving.reverse().forEach((c) => target.after(c));
+        moving.reverse();
+      } else {
+        moving.forEach((c) => target.before(c));
+      }
+
+      selected.forEach((c) => c.classList.remove("selected"));
+      selected.clear();
+
+      const ids = Array.from(grid.querySelectorAll<HTMLElement>(".image-card")).map((c) =>
+        parseInt(c.id.replace("img-", ""), 10)
+      );
+      await fetch(`http://localhost:8080/api/lan/${lanId}/images/order/`, {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+    });
+  }
+
+  fileInput.addEventListener("change", async () => {
+    const files = Array.from(fileInput.files ?? []);
+    if (!files.length) return;
+    uploadBtn.disabled = true;
+    for (let i = 0; i < files.length; i++) {
+      uploadBtn.textContent = files.length > 1 ? `Laster... (${i + 1}/${files.length})` : "Laster...";
+      const fd = new FormData();
+      fd.append("image", files[i]);
+      const uploadRes = await fetch(`http://localhost:8080/api/lan/${lanId}/images/`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: fd,
+      });
+      if (uploadRes.ok) {
+        const img: LanImage = await uploadRes.json();
+        lanImageFilenames.add(img.filename);
+        const src = `/uploads/lan/${lanId}/${img.filename}`;
+        const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
+        const tweet = imageToTweet.get(img.filename);
+        carousel.push({ src, tweet });
+        grid.appendChild(buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected, allTags, filterBar));
+      }
+    }
     uploadBtn.textContent = "+ Last opp";
     uploadBtn.disabled = false;
     fileInput.value = "";
-    if (uploadRes.ok) {
-      const img: LanImage = await uploadRes.json();
-      lanImageFilenames.add(img.filename);
-      const src = `/uploads/lan/${lanId}/${img.filename}`;
-      const tweet = imageToTweet.get(img.filename);
-      carousel.push({ src, tweet });
-      grid.appendChild(buildImageCard(img, lanId, grid, carousel, carousel.length - 1));
-    }
   });
 
   section.appendChild(fileInput);
@@ -365,24 +564,40 @@ function openLightbox(images: CarouselEntry[], startIndex: number) {
 function buildImageCard(
   img: LanImage,
   lanId: number,
+  thumbSrc: string,
   grid: HTMLElement,
   carousel: CarouselEntry[],
   index: number,
+  selected: Set<HTMLElement> = new Set(),
+  allTags: Tag[] = [],
+  filterBar?: HTMLElement,
 ): HTMLElement {
   const card = createElement("div");
   card.className = "image-card";
   card.id = `img-${img.id}`;
+  card.dataset.tagIds = JSON.stringify((img.tags ?? []).map((t) => t.id));
 
   const imgEl = createElement("img") as HTMLImageElement;
-  imgEl.src = `/uploads/lan/${lanId}/${img.filename}`;
+  imgEl.src = thumbSrc;
   imgEl.alt = "";
   imgEl.loading = "lazy";
+  imgEl.addEventListener("error", () => { imgEl.src = `/uploads/lan/${lanId}/${img.filename}`; }, { once: true });
   card.appendChild(imgEl);
 
   const tweet = carousel[index]?.tweet;
   card.style.cursor = "pointer";
   card.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).closest(".image-delete-btn")) return;
+    if ((e.target as HTMLElement).closest(".image-delete-btn, .image-tag-strip, .image-tag-add")) return;
+    if (e.shiftKey && me!.role === "admin") {
+      if (selected.has(card)) {
+        selected.delete(card);
+        card.classList.remove("selected");
+      } else {
+        selected.add(card);
+        card.classList.add("selected");
+      }
+      return;
+    }
     openLightbox(carousel, index);
   });
 
@@ -393,11 +608,132 @@ function buildImageCard(
     card.appendChild(badge);
   }
 
+  // tag strip
+  const tagStrip = createElement("div") as HTMLDivElement;
+  tagStrip.className = "image-tag-strip";
+
+  const cardTags: Tag[] = [...(img.tags ?? [])];
+
+  function syncTagIds() {
+    card.dataset.tagIds = JSON.stringify(cardTags.map((t) => t.id));
+    // update filter bar visibility
+    if (filterBar) {
+      const usedIds = new Set(
+        Array.from(filterBar.closest("section")!.querySelectorAll<HTMLElement>(".image-card"))
+          .flatMap((c) => JSON.parse(c.dataset.tagIds ?? "[]") as number[])
+      );
+      filterBar.querySelectorAll<HTMLElement>(".image-filter-pill").forEach((pill) => {
+        const id = parseInt(pill.dataset.tagId ?? "0", 10);
+        pill.style.display = usedIds.has(id) ? "" : "none";
+      });
+      filterBar.style.display = usedIds.size ? "" : "none";
+    }
+  }
+
+  function renderTagPill(tag: Tag) {
+    const pill = createElement("span") as HTMLSpanElement;
+    pill.className = "image-tag-pill";
+    pill.textContent = tag.name;
+
+    if (me!.role === "admin") {
+      const removeBtn = createElement("button") as HTMLButtonElement;
+      removeBtn.type = "button";
+      removeBtn.className = "image-tag-remove";
+      removeBtn.textContent = "×";
+      removeBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const res = await fetch(`http://localhost:8080/api/lan/${lanId}/images/${img.id}/tags/${tag.id}/`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
+        if (res.ok) {
+          pill.remove();
+          const idx = cardTags.findIndex((t) => t.id === tag.id);
+          if (idx !== -1) cardTags.splice(idx, 1);
+          syncTagIds();
+          // also add back to allTags suggestions if missing
+          if (!allTags.find((t) => t.id === tag.id)) allTags.push(tag);
+        }
+      });
+      pill.appendChild(removeBtn);
+    }
+    return pill;
+  }
+
+  for (const tag of cardTags) {
+    tagStrip.appendChild(renderTagPill(tag));
+  }
+
   if (me!.role === "admin") {
+    const addBtn = createElement("button") as HTMLButtonElement;
+    addBtn.type = "button";
+    addBtn.className = "image-tag-add";
+    addBtn.textContent = "+";
+    addBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      addBtn.style.display = "none";
+      const input = createElement("input") as HTMLInputElement;
+      input.type = "text";
+      input.className = "image-tag-input";
+      input.placeholder = "Tag...";
+      input.setAttribute("list", "tag-suggestions");
+      tagStrip.appendChild(input);
+      input.focus();
+
+      async function submit() {
+        const name = input.value.trim();
+        input.remove();
+        addBtn.style.display = "";
+        if (!name) return;
+        const res = await fetch(`http://localhost:8080/api/lan/${lanId}/images/${img.id}/tags/`, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (res.ok) {
+          const tag: Tag = await res.json();
+          if (!cardTags.find((t) => t.id === tag.id)) {
+            cardTags.push(tag);
+            tagStrip.insertBefore(renderTagPill(tag), addBtn);
+            syncTagIds();
+            if (!allTags.find((t) => t.id === tag.id)) {
+              allTags.push(tag);
+              // add to datalist
+              const opt = document.createElement("option");
+              opt.value = tag.name;
+              document.getElementById("tag-suggestions")?.appendChild(opt);
+            }
+            // add filter pill if new
+            if (filterBar && !filterBar.querySelector(`[data-tag-id="${tag.id}"]`)) {
+              const filterPill = createElement("button") as HTMLButtonElement;
+              filterPill.type = "button";
+              filterPill.className = "image-filter-pill";
+              filterPill.textContent = tag.name;
+              filterPill.dataset.tagId = String(tag.id);
+              filterBar.appendChild(filterPill);
+              filterBar.style.display = "";
+            }
+          }
+        }
+      }
+
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { input.remove(); addBtn.style.display = ""; } });
+      input.addEventListener("blur", submit);
+    });
+    tagStrip.appendChild(addBtn);
+  }
+
+  if (cardTags.length > 0 || me!.role === "admin") {
+    card.appendChild(tagStrip);
+  }
+
+  if (me!.role === "admin") {
+    card.draggable = true;
+
     const deleteBtn = createElement("button") as HTMLButtonElement;
     deleteBtn.type = "button";
     deleteBtn.className = "image-delete-btn";
-    deleteBtn.textContent = "✕";
+    deleteBtn.textContent = "🗑";
     deleteBtn.addEventListener("click", async () => {
       const delRes = await fetch(`http://localhost:8080/api/lan/${lanId}/images/${img.id}/`, {
         method: "DELETE",

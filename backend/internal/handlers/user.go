@@ -50,16 +50,18 @@ func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 
 	userName := req.FormValue("userName")
 	color := req.FormValue("color")
-	userId, err := database.AddUser(h.db, userName, color)
+	color2 := req.FormValue("color2")
+	userId, err := database.AddUser(h.db, userName, color, color2)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
 		return
 	}
 
 	res := database.UserResponse{
-		Id:    int(userId),
-		Name:  userName,
-		Color: color,
+		Id:     int(userId),
+		Name:   userName,
+		Color:  color,
+		Color2: color2,
 	}
 
 	err = json.NewEncoder(writer).Encode(res)
@@ -89,16 +91,18 @@ func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) 
 	}
 	userName := req.FormValue("userName")
 	color := req.FormValue("color")
-	err = database.AlterUser(h.db, id, userName, color)
+	color2 := req.FormValue("color2")
+	err = database.AlterUser(h.db, id, userName, color, color2)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
 		return
 	}
 
 	res := database.UserResponse{
-		Id:    id,
-		Name:  userName,
-		Color: color,
+		Id:     id,
+		Name:   userName,
+		Color:  color,
+		Color2: color2,
 	}
 
 	err = json.NewEncoder(writer).Encode(res)

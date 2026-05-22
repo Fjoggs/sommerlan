@@ -70,8 +70,16 @@ func main() {
 	router.HandleFunc("GET /api/lan/{id}/images/", handlers.EnableCORS(lan.GetLanImages))
 	router.HandleFunc("POST /api/lan/{id}/images/", handlers.EnableCORS(lan.UploadLanImage))
 	router.HandleFunc("DELETE /api/lan/{id}/images/{imageId}/", handlers.EnableCORS(lan.DeleteLanImage))
+	router.HandleFunc("PUT /api/lan/{id}/images/order/", handlers.EnableCORS(lan.ReorderLanImages))
+	router.HandleFunc("POST /api/lan/{id}/images/{imageId}/tags/", handlers.EnableCORS(lan.AddImageTag))
+	router.HandleFunc("DELETE /api/lan/{id}/images/{imageId}/tags/{tagId}/", handlers.EnableCORS(lan.RemoveImageTag))
+	router.HandleFunc("GET /api/tags/", handlers.EnableCORS(lan.GetTags))
 	router.HandleFunc("OPTIONS /api/lan/{id}/images/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("OPTIONS /api/lan/{id}/images/{imageId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/lan/{id}/images/order/{$}", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/lan/{id}/images/{imageId}/tags/{$}", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/lan/{id}/images/{imageId}/tags/{tagId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/tags/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// Game routes
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))

@@ -8,11 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
 
 	"backend/internal/database"
+	"github.com/rwcarlsen/goexif/exif"
 )
 
 type addLanGame struct {
@@ -488,7 +490,24 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	img, err := database.AddLanImage(h.db, lanId, filename, user.Id)
+	var exifDate *string
+	fullPath := filepath.Join(uploadDir, filename)
+	if f, err := os.Open(fullPath); err == nil {
+		if x, err := exif.Decode(f); err == nil {
+			if t, err := x.DateTime(); err == nil {
+				s := t.Format("2006:01:02 15:04:05")
+				exifDate = &s
+			}
+		}
+		f.Close()
+	}
+
+	thumbDir := filepath.Join(uploadDir, "thumbs")
+	if err := os.MkdirAll(thumbDir, 0755); err == nil {
+		exec.Command("magick", fullPath, "-thumbnail", "600x600>", "-auto-orient", filepath.Join(thumbDir, filename)).Run()
+	}
+
+	img, err := database.AddLanImage(h.db, lanId, filename, user.Id, exifDate)
 	if err != nil {
 		http.Error(w, "failed to save image record", http.StatusInternalServerError)
 		return
@@ -522,6 +541,88 @@ func (h *LanHandlers) DeleteLanImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = os.Remove(fmt.Sprintf("../frontend/uploads/lan/%d/%s", lanId, filename))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) GetTags(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	tags, err := database.GetAllTags(h.db)
+	if err != nil {
+		http.Error(w, "failed to get tags", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(tags)
+}
+
+func (h *LanHandlers) AddImageTag(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	imageId, err := strconv.Atoi(r.PathValue("imageId"))
+	if err != nil {
+		http.Error(w, "invalid image id", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == "" {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	tag, err := database.AddImageTag(h.db, imageId, body.Name)
+	if err != nil {
+		http.Error(w, "failed to add tag", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tag)
+}
+
+func (h *LanHandlers) RemoveImageTag(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	imageId, err := strconv.Atoi(r.PathValue("imageId"))
+	if err != nil {
+		http.Error(w, "invalid image id", http.StatusBadRequest)
+		return
+	}
+	tagId, err := strconv.Atoi(r.PathValue("tagId"))
+	if err != nil {
+		http.Error(w, "invalid tag id", http.StatusBadRequest)
+		return
+	}
+	if err := database.RemoveImageTag(h.db, imageId, tagId); err != nil {
+		http.Error(w, "failed to remove tag", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) ReorderLanImages(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	var body struct {
+		Ids []int `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Ids) == 0 {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := database.ReorderLanImages(h.db, lanId, body.Ids); err != nil {
+		http.Error(w, "failed to reorder images", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 

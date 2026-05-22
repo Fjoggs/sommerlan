@@ -89,6 +89,21 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
 		FOREIGN KEY (uploaded_by) REFERENCES user(id)
 	)`)
+	_, _ = db.Exec(`ALTER TABLE lan_images ADD COLUMN sort_order INTEGER`)
+	_, _ = db.Exec(`ALTER TABLE lan_images ADD COLUMN exif_date TEXT`)
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS tag (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE
+	)`)
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS lan_image_tag (
+		image_id INTEGER NOT NULL,
+		tag_id INTEGER NOT NULL,
+		PRIMARY KEY (image_id, tag_id),
+		FOREIGN KEY (image_id) REFERENCES lan_images(id) ON DELETE CASCADE,
+		FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
+	)`)
+
+	_, _ = db.Exec(`ALTER TABLE user ADD COLUMN color2 TEXT`)
 
 	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS award (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
