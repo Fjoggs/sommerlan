@@ -115,17 +115,12 @@
 
 .event-block {
   background-color: var(--bg);
-  border: 1px solid var(--border-muted);
   border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.event-block-main {
-  border-color: var(--primary);
-  border-width: 2px;
 }
 
 .event-block-header {

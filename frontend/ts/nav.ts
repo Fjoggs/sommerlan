@@ -17,11 +17,6 @@ if (me) {
     avatar.style.backgroundColor = me.color || "var(--primary)";
   }
 
-  if (me.role !== "admin") {
-    document.querySelectorAll<HTMLElement>(".nav-admin").forEach((el) => {
-      el.hidden = true;
-    });
-  }
 }
 
 const nav = document.querySelector<HTMLElement>("nav.menu");

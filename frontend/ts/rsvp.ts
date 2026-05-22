@@ -11,9 +11,21 @@ async function init() {
   me = await requireAuth();
   if (!me) return;
 
-  document.getElementById("user-greeting")!.textContent = `Hei, ${me.nickname || me.name}!`;
   setupDayCheckboxes();
+  await loadExistingRsvp();
   updateSubmitButton();
+}
+
+async function loadExistingRsvp() {
+  const entries = await apiFetch<RsvpEntry[]>("rsvp");
+  if (!entries) return;
+  const myEntry = entries.find((e) => e.userId === me!.id);
+  if (!myEntry) return;
+  for (const date of myEntry.dates) {
+    const day = String(parseInt(date.split("-")[2], 10));
+    const cb = document.querySelector<HTMLInputElement>(`input[name="day"][value="${day}"]`);
+    if (cb) cb.checked = true;
+  }
 }
 
 function setupDayCheckboxes() {

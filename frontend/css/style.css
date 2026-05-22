@@ -63,12 +63,14 @@ body::before {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
-  z-index: 1;
+  z-index: 60;
 }
 
 body:has(.editing)::before {
   opacity: 1;
+  pointer-events: auto;
 }
+
 
 a {
   text-decoration: none;
@@ -176,7 +178,6 @@ button[id^="delete-"]:hover {
     oklch(0.22 0.025 250) 70%,
     var(--bg-dark) 100%
   );
-  background-attachment: fixed;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   border: 2px solid var(--primary);
   font-size: 16px;
@@ -185,8 +186,7 @@ button[id^="delete-"]:hover {
   align-items: baseline;
   width: 100%;
   position: relative;
-  z-index: 2;
-  transition: box-shadow 0.3s ease;
+  z-index: 61;
 }
 
 .timeline-event-header {
@@ -302,6 +302,49 @@ button[id^="delete-"]:hover {
   border-color: var(--danger);
 }
 
+.edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  align-self: stretch;
+}
+
+.delete-btn {
+  background-color: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--border-radius);
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.delete-btn:hover {
+  background-color: var(--danger);
+  color: var(--bg-dark);
+  font-weight: 700;
+}
+
+.save-btn {
+  align-self: auto;
+  background-color: var(--success);
+  color: var(--bg-dark);
+  font-weight: 700;
+  border: none;
+  border-radius: var(--border-radius);
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.save-btn:hover {
+  background-color: oklch(0.55 0.2 150);
+}
+
 .lan-text-input {
   width: 100%;
   box-sizing: border-box;
@@ -326,8 +369,8 @@ button[id^="delete-"]:hover {
 }
 
 .pill-list label {
-  border: 1px solid var(--border-muted);
   border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
 }
 
 .pill-list label::before {
@@ -616,15 +659,14 @@ header {
   display: inline-flex;
   align-items: center;
   border-radius: var(--border-radius);
-  border: 1px solid var(--border-muted);
+  box-shadow: var(--shadow);
   padding: 0.4rem 0.9rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: oklch(0.15 0.01 250);
 }
 
 .event-pill.game-pill {
-  background-color: var(--bg-light);
+  background-color: var(--bg-dark);
   color: var(--text);
 }
 
@@ -875,6 +917,13 @@ header {
 
 .tweet-hashtag {
   color: var(--primary);
+}
+
+.first-event-badge {
+  font-size: 0.7em;
+  margin-left: 0.15em;
+  opacity: 0.85;
+  font-variant-emoji: text;
 }
 
 @media (max-width: 600px) {

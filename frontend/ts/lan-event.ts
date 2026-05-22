@@ -1,4 +1,4 @@
-import { fetchById } from "./crud.js";
+import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN } from "./types.js";
 import { createElement } from "./utils.js";
@@ -24,7 +24,27 @@ const me = await requireAuth();
 if (!me) throw new Error();
 
 const id = parseInt(idParam!, 10);
-const lan = await fetchById<LAN>("lan", id);
+const [lan, allLans] = await Promise.all([
+  fetchById<LAN>("lan", id),
+  fetchAll<LAN>("lan"),
+]);
+
+function buildFirstTimers(lans: LAN[], lanId: number): Set<number> {
+  const sorted = [...lans].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const seen = new Set<number>();
+  const firsts = new Set<number>();
+  for (const l of sorted) {
+    for (const p of l.participants ?? []) {
+      if (!seen.has(p.id)) {
+        if (l.lanId === lanId) firsts.add(p.id);
+        seen.add(p.id);
+      }
+    }
+  }
+  return firsts;
+}
+
+const firstTimers = allLans ? buildFirstTimers(allLans, id) : new Set<number>();
 
 const content = document.getElementById("content")!;
 
@@ -106,10 +126,19 @@ function renderLan(
     const pillList = createElement("div");
     pillList.className = "pill-list event-pills";
     for (const p of lan.participants) {
-      const pill = createElement("span");
+      const pill = createElement("span") as HTMLSpanElement;
       pill.className = "event-pill";
-      pill.textContent = p.nickname || p.name;
-      (pill as HTMLSpanElement).style.backgroundColor = p.color;
+      pill.style.backgroundColor = `color-mix(in srgb, ${p.color} 20%, var(--bg))`;
+      pill.style.color = p.color;
+      pill.style.fontWeight = "bold";
+      pill.append(p.nickname || p.name);
+      if (firstTimers.has(p.id)) {
+        const badge = createElement("span") as HTMLSpanElement;
+        badge.className = "first-event-badge";
+        badge.textContent = "★";
+        badge.title = "Første LAN!";
+        pill.appendChild(badge);
+      }
       pillList.appendChild(pill);
     }
     section.appendChild(pillList);

@@ -6,20 +6,41 @@ import { createElement } from "./utils.js";
 export const fetchLans = async () => {
   const lans: LAN[] | undefined = await fetchAll("lan");
   if (!lans) return;
+
+  const firstTimerMap = buildFirstTimerMap(lans);
+
   const preContainer = document.getElementById("pre");
   const mainContainer = document.getElementById("main");
   const sideContainer = document.getElementById("side");
 
   for (const lan of lans) {
+    const firstTimers = firstTimerMap.get(lan.lanId) ?? new Set<number>();
     if (lan.event === "pre") {
-      preContainer?.appendChild(await buildEntry(lan));
+      preContainer?.appendChild(await buildEntry(lan, firstTimers));
     } else if (lan.event === "main") {
-      mainContainer?.appendChild(await buildEntry(lan));
+      mainContainer?.appendChild(await buildEntry(lan, firstTimers));
     } else if (lan.event === "side") {
-      sideContainer?.appendChild(await buildEntry(lan));
+      sideContainer?.appendChild(await buildEntry(lan, firstTimers));
     }
   }
 };
+
+function buildFirstTimerMap(lans: LAN[]): Map<number, Set<number>> {
+  const sorted = [...lans].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const seen = new Set<number>();
+  const map = new Map<number, Set<number>>();
+  for (const lan of sorted) {
+    const firsts = new Set<number>();
+    for (const p of lan.participants ?? []) {
+      if (!seen.has(p.id)) {
+        firsts.add(p.id);
+        seen.add(p.id);
+      }
+    }
+    map.set(lan.lanId, firsts);
+  }
+  return map;
+}
 
 const fetchLanById = async (id: number) => {
   const res = await fetch(`http://localhost:8080/api/lan/${id}/`);
@@ -27,7 +48,7 @@ const fetchLanById = async (id: number) => {
   console.log("lan", lan);
 };
 
-const buildEntry = async (lan: LAN) => {
+const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   const id = `id-${lan.lanId}`;
   const container = createElement("form", id);
   container.className = "timeline-event";
@@ -89,6 +110,19 @@ const buildEntry = async (lan: LAN) => {
   hContainer.appendChild(headerLeft);
 
   const editButton = createElement("button", `edit-button-${lan.lanId}`) as HTMLButtonElement;
+  const editActionsRow = createElement("div") as HTMLDivElement;
+  editActionsRow.className = "edit-actions";
+  editActionsRow.style.display = "none";
+
+  const deleteButton = createElement("button") as HTMLButtonElement;
+  deleteButton.type = "button";
+  deleteButton.className = "delete-btn";
+  deleteButton.textContent = "Slett";
+
+  const saveButton = createElement("button") as HTMLButtonElement;
+  saveButton.type = "button";
+  saveButton.className = "save-btn";
+  saveButton.textContent = "Lagre";
 
   const fieldset = createElement("fieldset", `fieldset-${lan.lanId}`) as HTMLFieldSetElement;
   fieldset.setAttribute("disabled", "true");
@@ -126,15 +160,64 @@ const buildEntry = async (lan: LAN) => {
     eventTypeGroup.appendChild(label);
   }
 
+  function closeEdit() {
+    document.removeEventListener("mousedown", outsideClickHandler);
+    document.removeEventListener("keydown", escHandler);
+    container.className = "timeline-event";
+    fieldset.setAttribute("disabled", "true");
+    editActionsRow.style.display = "none";
+    editButton.style.display = "";
+    editButton.addEventListener("click", handleEdit);
+    header.style.display = "";
+    yearInput.style.display = "none";
+    fromToRow.style.display = "none";
+    descriptionDisplay.style.display = "";
+    descriptionInput.style.display = "none";
+    eventTypeGroup.style.display = "none";
+    attendBtn.style.display = "";
+    if (!datesDisplay.textContent) datesDisplay.style.display = "none";
+    for (const element of Array.from(pillContainer.children)) {
+      const color = element.getAttribute("data-color");
+      if (color) {
+        element.setAttribute("style", `background-color: color-mix(in srgb, ${color} 20%, var(--bg)); color: ${color}; font-weight: 700`);
+      } else {
+        element.setAttribute("style", "display: none");
+      }
+    }
+    for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
+      input.disabled = true;
+    }
+    const anyGameChecked = Array.from(gamePillContainer.querySelectorAll<HTMLInputElement>("input")).some(i => i.checked);
+    gHeader.style.display = anyGameChecked ? "" : "none";
+    for (const element of Array.from(gamePillContainer.children)) {
+      const input = element.querySelector<HTMLInputElement>("input");
+      if (input?.checked) {
+        element.removeAttribute("style");
+      } else {
+        element.setAttribute("style", "display: none");
+      }
+    }
+    newGameInput.style.display = "none";
+    newGameInput.value = "";
+  }
+
+  function outsideClickHandler(e: MouseEvent) {
+    if (!container.contains(e.target as Node)) {
+      closeEdit();
+    }
+  }
+
+  function escHandler(e: KeyboardEvent) {
+    if (e.key === "Escape") closeEdit();
+  }
+
   function handleEdit(event: Event) {
     event.preventDefault();
-    editButton.textContent = "✔";
     container.className = "editing";
     fieldset.removeAttribute("disabled");
     editButton.removeEventListener("click", handleEdit);
-    editButton.addEventListener("click", handleFinish);
-    editButton.style.transform = "scale(1,1)";
-    // Show edit controls, hide display elements
+    editButton.style.display = "none";
+    editActionsRow.style.display = "";
     header.style.display = "none";
     yearInput.style.display = "block";
     datesDisplay.style.display = "none";
@@ -154,6 +237,9 @@ const buildEntry = async (lan: LAN) => {
       element.removeAttribute("style");
     }
     newGameInput.style.display = "";
+    document.addEventListener("mousedown", outsideClickHandler);
+    document.addEventListener("keydown", escHandler);
+    container.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   async function handleFinish(event: Event) {
@@ -201,44 +287,7 @@ const buildEntry = async (lan: LAN) => {
       }
     }
 
-    editButton.textContent = "✎";
-    container.className = "timeline-event";
-    fieldset.setAttribute("disabled", "true");
-    editButton.removeEventListener("click", handleFinish);
-    editButton.addEventListener("click", handleEdit);
-    editButton.style.transform = "scale(-1,1)";
-    // Restore display elements, hide edit controls
-    header.style.display = "";
-    yearInput.style.display = "none";
-    fromToRow.style.display = "none";
-    descriptionDisplay.style.display = "";
-    descriptionInput.style.display = "none";
-    eventTypeGroup.style.display = "none";
-    attendBtn.style.display = "";
-    if (!datesDisplay.textContent) datesDisplay.style.display = "none";
-    for (const element of Array.from(pillContainer.children)) {
-      const color = element.getAttribute("data-color");
-      if (color) {
-        element.setAttribute("style", `background-color: ${color}`);
-      } else {
-        element.setAttribute("style", "display: none");
-      }
-    }
-    for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
-      input.disabled = true;
-    }
-    const anyGameChecked = Array.from(gamePillContainer.querySelectorAll<HTMLInputElement>("input")).some(i => i.checked);
-    gHeader.style.display = anyGameChecked ? "" : "none";
-    for (const element of Array.from(gamePillContainer.children)) {
-      const input = element.querySelector<HTMLInputElement>("input");
-      if (input?.checked) {
-        element.removeAttribute("style");
-      } else {
-        element.setAttribute("style", "display: none");
-      }
-    }
-    newGameInput.style.display = "none";
-    newGameInput.value = "";
+    closeEdit();
   }
 
   editButton.textContent = "✎";
@@ -264,6 +313,18 @@ const buildEntry = async (lan: LAN) => {
   participants.appendChild(pHeader);
   pillContainer.className = "pill-list";
   await renderAllUsers(pillContainer, lan.participants);
+  for (const userId of firstTimers) {
+    const input = pillContainer.querySelector<HTMLInputElement>(`input[value="${userId}"]`);
+    const label = input?.closest<HTMLLabelElement>("label");
+    if (label) {
+      const badge = createElement("span") as HTMLSpanElement;
+      badge.className = "first-event-badge";
+      badge.textContent = "★";
+      badge.title = "Første LAN!";
+      const checkboxEl = label.querySelector("input");
+      label.insertBefore(badge, checkboxEl);
+    }
+  }
   for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
     input.disabled = true;
   }
@@ -299,7 +360,7 @@ const buildEntry = async (lan: LAN) => {
         attendBtn.textContent = `- ${me!.nickname || me!.name}`;
         if (pill) {
           pill.setAttribute("data-color", me!.color);
-          pill.setAttribute("style", `background-color: ${me!.color}`);
+          pill.setAttribute("style", `background-color: color-mix(in srgb, ${me!.color} 20%, var(--bg)); color: ${me!.color}; font-weight: 700`);
         }
       }
     }
@@ -339,7 +400,7 @@ const buildEntry = async (lan: LAN) => {
     });
     if (!res.ok) return;
     const game: Game = await res.json();
-    const row = createCheckbox(game, "games", "var(--bg-light)", true);
+    const row = createCheckbox(game, "games", "var(--bg-dark)", true);
     gamePillContainer.appendChild(row);
     gHeader.style.display = "";
     newGameInput.value = "";
@@ -347,6 +408,24 @@ const buildEntry = async (lan: LAN) => {
   games.appendChild(newGameInput);
 
   fieldset.appendChild(games);
+
+  saveButton.addEventListener("click", handleFinish);
+
+  deleteButton.addEventListener("click", async () => {
+    const confirmed = window.confirm(`Slett LAN ${lan.startDate.substring(0, 4)}? Dette kan ikke angres.`);
+    if (!confirmed) return;
+    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (res.ok) {
+      container.remove();
+    }
+  });
+
+  editActionsRow.appendChild(deleteButton);
+  editActionsRow.appendChild(saveButton);
+  container.appendChild(editActionsRow);
 
   return container;
 };
@@ -364,8 +443,11 @@ const renderAllUsers = async (
         (participant) => participant.id === user.id,
       );
       if (participant) {
-        const row = createCheckbox(user, "participants", participant.color, true);
+        const row = createCheckbox(user, "participants", "var(--bg-light)", true);
         row.setAttribute("data-color", participant.color);
+        row.style.backgroundColor = `color-mix(in srgb, ${participant.color} 20%, var(--bg))`;
+        row.style.color = participant.color;
+        row.style.fontWeight = "700";
         container.appendChild(row);
       } else {
         const row = createCheckbox(user, "participants");
@@ -385,7 +467,7 @@ const renderAllGames = async (
 
   games.forEach((game) => {
     const isOnLan = lanGames?.some((g) => g.id === game.id) ?? false;
-    const row = createCheckbox(game, "games", "var(--bg-light)", isOnLan);
+    const row = createCheckbox(game, "games", "var(--bg-dark)", isOnLan);
     if (!isOnLan) row.setAttribute("style", "display: none");
     container.appendChild(row);
   });
@@ -558,7 +640,7 @@ const buildNewEntry = async (): Promise<void> => {
     });
     if (!res.ok) return;
     const game: Game = await res.json();
-    const row = createCheckbox(game, "games", "var(--bg-light)", true);
+    const row = createCheckbox(game, "games", "var(--bg-dark)", true);
     gamePillContainer.appendChild(row);
     newGameInput.value = "";
   });
