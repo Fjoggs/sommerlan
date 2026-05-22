@@ -163,12 +163,32 @@ function renderLan(
     content.appendChild(section);
   }
 
+  if (lan.awards && lan.awards.length > 0) {
+    const section = createElement("section");
+    section.className = "event-section";
+    const h2 = createElement("h2");
+    h2.innerHTML = `<span class="hash">#</span>Kåringer`;
+    section.appendChild(h2);
+    const pillList = createElement("div");
+    pillList.className = "pill-list event-pills";
+    for (const award of lan.awards) {
+      const pill = createElement("span");
+      pill.className = "event-pill game-pill";
+      pill.textContent = award.name;
+      pillList.appendChild(pill);
+    }
+    section.appendChild(pillList);
+    content.appendChild(section);
+  }
+
   renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames);
 
   if (tweets.length) {
     renderTweetFeed(tweets, lanImageFilenames);
   }
 }
+
+type CarouselEntry = { src: string; tweet: TweetEntry | undefined };
 
 function renderImageSection(
   lanId: number,
@@ -201,8 +221,13 @@ function renderImageSection(
   const grid = createElement("div");
   grid.className = "image-grid";
 
+  const carousel: CarouselEntry[] = [];
+
   for (const img of lanImages) {
-    grid.appendChild(buildImageCard(img, lanId, grid, imageToTweet));
+    const src = `/uploads/lan/${lanId}/${img.filename}`;
+    const tweet = imageToTweet.get(img.filename);
+    carousel.push({ src, tweet });
+    grid.appendChild(buildImageCard(img, lanId, grid, carousel, carousel.length - 1));
   }
   section.appendChild(grid);
 
@@ -224,7 +249,10 @@ function renderImageSection(
     if (uploadRes.ok) {
       const img: LanImage = await uploadRes.json();
       lanImageFilenames.add(img.filename);
-      grid.appendChild(buildImageCard(img, lanId, grid, imageToTweet));
+      const src = `/uploads/lan/${lanId}/${img.filename}`;
+      const tweet = imageToTweet.get(img.filename);
+      carousel.push({ src, tweet });
+      grid.appendChild(buildImageCard(img, lanId, grid, carousel, carousel.length - 1));
     }
   });
 
@@ -232,7 +260,9 @@ function renderImageSection(
   content.appendChild(section);
 }
 
-function openLightbox(src: string, tweet: TweetEntry | undefined) {
+function openLightbox(images: CarouselEntry[], startIndex: number) {
+  let current = startIndex;
+
   const overlay = createElement("div");
   overlay.className = "lightbox-overlay";
 
@@ -240,59 +270,95 @@ function openLightbox(src: string, tweet: TweetEntry | undefined) {
   inner.className = "lightbox-inner";
 
   const imgAnchor = createElement("a") as HTMLAnchorElement;
-  imgAnchor.href = src;
   imgAnchor.target = "_blank";
   imgAnchor.rel = "noopener";
   imgAnchor.style.display = "contents";
 
   const imgEl = createElement("img") as HTMLImageElement;
-  imgEl.src = src;
   imgEl.className = "lightbox-img";
   imgAnchor.appendChild(imgEl);
   inner.appendChild(imgAnchor);
 
-  if (tweet) {
-    const tweetBox = createElement("div");
-    tweetBox.className = "lightbox-tweet";
-
-    const meta = createElement("div");
-    meta.className = "lightbox-tweet-meta";
-    const handle = createElement("span");
-    handle.className = "tweet-handle";
-    handle.textContent = "@SommerLANassss";
-    const date = createElement("span");
-    date.className = "tweet-date";
-    date.textContent = formatTweetDate(tweet.date);
-    meta.appendChild(handle);
-    meta.appendChild(date);
-
-    const body = createElement("p");
-    body.className = "tweet-text";
-    body.innerHTML = formatTweetText(tweet.text);
-
-    tweetBox.appendChild(meta);
-    tweetBox.appendChild(body);
-    inner.appendChild(tweetBox);
-  }
+  const tweetBox = createElement("div");
+  tweetBox.className = "lightbox-tweet";
+  inner.appendChild(tweetBox);
 
   overlay.appendChild(inner);
 
-  document.body.style.overflow = "hidden";
-  const close = () => { document.body.removeChild(overlay); document.body.style.overflow = ""; };
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-  document.addEventListener("keydown", function onKey(e) {
-    if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); }
-  }, { once: false });
+  const prevBtn = createElement("button") as HTMLButtonElement;
+  prevBtn.type = "button";
+  prevBtn.className = "lightbox-nav lightbox-prev";
+  prevBtn.textContent = "‹";
+  overlay.appendChild(prevBtn);
+
+  const nextBtn = createElement("button") as HTMLButtonElement;
+  nextBtn.type = "button";
+  nextBtn.className = "lightbox-nav lightbox-next";
+  nextBtn.textContent = "›";
+  overlay.appendChild(nextBtn);
+
+  const counter = createElement("div");
+  counter.className = "lightbox-counter";
+  overlay.appendChild(counter);
 
   const closeBtn = createElement("button") as HTMLButtonElement;
   closeBtn.type = "button";
   closeBtn.className = "lightbox-close";
   closeBtn.textContent = "✕";
-  closeBtn.addEventListener("click", close);
   overlay.appendChild(closeBtn);
 
+  function update() {
+    const { src, tweet } = images[current];
+    imgEl.src = src;
+    imgAnchor.href = src;
+
+    tweetBox.innerHTML = "";
+    if (tweet) {
+      const meta = createElement("div");
+      meta.className = "lightbox-tweet-meta";
+      const handle = createElement("span");
+      handle.className = "tweet-handle";
+      handle.textContent = "@SommerLANassss";
+      const date = createElement("span");
+      date.className = "tweet-date";
+      date.textContent = formatTweetDate(tweet.date);
+      meta.appendChild(handle);
+      meta.appendChild(date);
+      const body = createElement("p");
+      body.className = "tweet-text";
+      body.innerHTML = formatTweetText(tweet.text);
+      tweetBox.appendChild(meta);
+      tweetBox.appendChild(body);
+      tweetBox.style.display = "";
+    } else {
+      tweetBox.style.display = "none";
+    }
+
+    prevBtn.style.visibility = images.length > 1 ? "" : "hidden";
+    nextBtn.style.visibility = images.length > 1 ? "" : "hidden";
+    if (images.length > 1) counter.textContent = `${current + 1} / ${images.length}`;
+  }
+
+  const close = () => {
+    document.body.removeChild(overlay);
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", onKey);
+  };
+
+  function onKey(e: KeyboardEvent) {
+    if (e.key === "Escape") { close(); return; }
+    if (e.key === "ArrowLeft") { current = (current - 1 + images.length) % images.length; update(); }
+    if (e.key === "ArrowRight") { current = (current + 1) % images.length; update(); }
+  }
+
+  prevBtn.addEventListener("click", (e) => { e.stopPropagation(); current = (current - 1 + images.length) % images.length; update(); });
+  nextBtn.addEventListener("click", (e) => { e.stopPropagation(); current = (current + 1) % images.length; update(); });
+  closeBtn.addEventListener("click", close);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  document.addEventListener("keydown", onKey);
+
+  update();
+  document.body.style.overflow = "hidden";
   document.body.appendChild(overlay);
 }
 
@@ -300,7 +366,8 @@ function buildImageCard(
   img: LanImage,
   lanId: number,
   grid: HTMLElement,
-  imageToTweet: Map<string, TweetEntry>,
+  carousel: CarouselEntry[],
+  index: number,
 ): HTMLElement {
   const card = createElement("div");
   card.className = "image-card";
@@ -312,11 +379,11 @@ function buildImageCard(
   imgEl.loading = "lazy";
   card.appendChild(imgEl);
 
-  const tweet = imageToTweet.get(img.filename);
+  const tweet = carousel[index]?.tweet;
   card.style.cursor = "pointer";
   card.addEventListener("click", (e) => {
     if ((e.target as HTMLElement).closest(".image-delete-btn")) return;
-    openLightbox(`/uploads/lan/${lanId}/${img.filename}`, tweet);
+    openLightbox(carousel, index);
   });
 
   if (tweet) {

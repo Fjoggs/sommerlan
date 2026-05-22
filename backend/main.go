@@ -21,6 +21,7 @@ func main() {
 
 	lan := handlers.NewLanHandlers(db)
 	game := handlers.NewGameHandlers(db)
+	award := handlers.NewAwardHandlers(db)
 	user := handlers.NewUserHandlers(db)
 	rsvp := handlers.NewRsvpHandlers(db)
 	auth := handlers.NewAuthHandlers(db)
@@ -83,6 +84,13 @@ func main() {
 		}),
 	)
 	router.HandleFunc("DELETE /api/game/{id}/", handlers.EnableCORS(game.DeleteGameWithId))
+
+	// Award routes
+	router.HandleFunc("GET /api/award/", handlers.EnableCORS(award.GetAwards))
+	router.HandleFunc("POST /api/award/", handlers.EnableCORS(award.AddAward))
+	router.HandleFunc("DELETE /api/award/{id}/", handlers.EnableCORS(award.DeleteAwardWithId))
+	router.HandleFunc("OPTIONS /api/award/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/award/{id}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// User routes
 	router.HandleFunc("GET /api/user/", handlers.EnableCORS(user.GetUsers))

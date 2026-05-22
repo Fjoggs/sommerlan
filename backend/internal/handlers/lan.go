@@ -155,7 +155,27 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		participants = append(participants, participant)
 	}
 
+	lanAwards := []database.AwardResponse{}
+	for _, lanAwardId := range req.Form["awards"] {
+		awardId, err := strconv.Atoi(lanAwardId)
+		if err != nil {
+			fmt.Println("Invalid award ID:", lanAwardId)
+			continue
+		}
+		if _, err = database.AddLanAward(h.db, lanId, awardId); err != nil {
+			fmt.Println("Failed to add lan award", err)
+			return
+		}
+		award, err := database.GetAwardWithId(h.db, awardId)
+		if err != nil {
+			fmt.Println("Failed to get lan award", err)
+			return
+		}
+		lanAwards = append(lanAwards, database.AwardResponse{Id: award.Id, Name: award.Name})
+	}
+
 	res := database.LanEvent{
+		Awards:       lanAwards,
 		Description:  description,
 		End_date:     endDate,
 		Event:        event,
@@ -267,7 +287,32 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 		participants = append(participants, participant)
 	}
 
+	if err := database.RemoveLanAwards(h.db, id); err != nil {
+		fmt.Println("Failed to clear lan awards", err)
+		return
+	}
+
+	lanAwards := []database.AwardResponse{}
+	for _, lanAwardId := range req.Form["awards"] {
+		awardId, err := strconv.Atoi(lanAwardId)
+		if err != nil {
+			fmt.Println("Invalid award ID:", lanAwardId)
+			continue
+		}
+		if _, err = database.AddLanAward(h.db, int64(id), awardId); err != nil {
+			fmt.Println("Failed to add lan award", err)
+			return
+		}
+		award, err := database.GetAwardWithId(h.db, awardId)
+		if err != nil {
+			fmt.Println("Failed to get lan award", err)
+			return
+		}
+		lanAwards = append(lanAwards, database.AwardResponse{Id: award.Id, Name: award.Name})
+	}
+
 	res := database.LanEvent{
+		Awards:       lanAwards,
 		Description:  description,
 		End_date:     endDate,
 		Event:        event,

@@ -15,18 +15,24 @@ type Lan struct {
 }
 
 type LanEvent struct {
-	Description  string         `json:"description"`
-	End_date     string         `json:"endDate"`
-	Event        string         `json:"event"`
-	FromDisplay  string         `json:"fromDisplay"`
-	Games        []GameResponse `json:"games"`
-	Id           int            `json:"lanId"`
-	Participants []UserResponse `json:"participants"`
-	Start_date   string         `json:"startDate"`
-	ToDisplay    string         `json:"toDisplay"`
+	Awards       []AwardResponse `json:"awards"`
+	Description  string          `json:"description"`
+	End_date     string          `json:"endDate"`
+	Event        string          `json:"event"`
+	FromDisplay  string          `json:"fromDisplay"`
+	Games        []GameResponse  `json:"games"`
+	Id           int             `json:"lanId"`
+	Participants []UserResponse  `json:"participants"`
+	Start_date   string          `json:"startDate"`
+	ToDisplay    string          `json:"toDisplay"`
 }
 
 type GameResponse struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type AwardResponse struct {
 	Id   int    `json:"id"`
 	Name string `json:"name"`
 }
@@ -308,7 +314,34 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		return event, err
 	}
 
+	lanAwardsQuery := `
+		SELECT award.id, award.name
+		FROM lan
+		JOIN lan_awards ON lan.id = lan_awards.lan_id
+		JOIN award ON lan_awards.award_id = award.id
+		WHERE lan.id = ?;
+	`
+	var lanAwards []AwardResponse
+
+	lanAwardsRows, err := doQueryWithId(db, lanAwardsQuery, id)
+	if err != nil {
+		return event, err
+	}
+	defer lanAwardsRows.Close()
+
+	for lanAwardsRows.Next() {
+		var a AwardResponse
+		if err := lanAwardsRows.Scan(&a.Id, &a.Name); err != nil {
+			return event, err
+		}
+		lanAwards = append(lanAwards, a)
+	}
+	if err = lanAwardsRows.Err(); err != nil {
+		return event, err
+	}
+
 	event = LanEvent{
+		Awards:       lanAwards,
 		Description:  lan.Description,
 		End_date:     lan.End_date,
 		Event:        lan.Event,
@@ -474,6 +507,59 @@ func AddLanGame(db *sql.DB, lanId int64, gameId int) (int64, error) {
 	}
 
 	return id, nil
+}
+
+func GetAwards(db *sql.DB) ([]AwardResponse, error) {
+	var awards []AwardResponse
+	rows, err := doQuery(db, "SELECT id, name FROM award;")
+	if err != nil {
+		return awards, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var a AwardResponse
+		if err := rows.Scan(&a.Id, &a.Name); err != nil {
+			return awards, err
+		}
+		awards = append(awards, a)
+	}
+	return awards, nil
+}
+
+func GetAwardWithId(db *sql.DB, id int) (AwardResponse, error) {
+	var a AwardResponse
+	row, err := doQueryWithId(db, "SELECT id, name FROM award WHERE id = ?;", id)
+	if err != nil {
+		return a, err
+	}
+	defer row.Close()
+	for row.Next() {
+		if err := row.Scan(&a.Id, &a.Name); err != nil {
+			return a, err
+		}
+	}
+	return a, nil
+}
+
+func AddAward(db *sql.DB, name string) (int64, error) {
+	result, err := db.Exec("INSERT INTO award(name) VALUES (?)", name)
+	if err != nil {
+		return 0, fmt.Errorf("AWARD INSERT ERROR: %v", err)
+	}
+	return result.LastInsertId()
+}
+
+func RemoveLanAwards(db *sql.DB, lanId int) error {
+	_, err := db.Exec("DELETE FROM lan_awards WHERE lan_id = ?", lanId)
+	return err
+}
+
+func AddLanAward(db *sql.DB, lanId int64, awardId int) (int64, error) {
+	result, err := db.Exec("INSERT OR IGNORE INTO lan_awards(lan_id, award_id) VALUES (?, ?)", lanId, awardId)
+	if err != nil {
+		return 0, fmt.Errorf("AWARD INSERT ERROR: %v", err)
+	}
+	return result.LastInsertId()
 }
 
 type RsvpEntry struct {

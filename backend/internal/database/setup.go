@@ -90,6 +90,18 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		FOREIGN KEY (uploaded_by) REFERENCES user(id)
 	)`)
 
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS award (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL
+	)`)
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS lan_awards (
+		lan_id INTEGER,
+		award_id INTEGER,
+		PRIMARY KEY (lan_id, award_id),
+		FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
+		FOREIGN KEY (award_id) REFERENCES award(id) ON DELETE CASCADE
+	)`)
+
 	log.Println("Database initialized successfully")
 	return db, nil
 }

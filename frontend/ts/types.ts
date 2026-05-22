@@ -1,6 +1,7 @@
 type Event = "pre" | "main" | "side";
 
 export type LAN = {
+  awards?: Award[];
   description: string;
   endDate: string;
   event: Event;
@@ -20,6 +21,11 @@ export type User = {
 };
 
 export type Game = {
+  id: number;
+  name: string;
+};
+
+export type Award = {
   id: number;
   name: string;
 };

@@ -164,8 +164,13 @@ button[id^="delete-"]:hover {
   transition: all 0.2s ease;
 }
 
-.timeline-event:hover {
+.timeline-event:not(.editing) {
+  cursor: pointer;
+}
+
+.timeline-event:not(.editing):hover {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  border-color: var(--border-muted);
 }
 
 .editing {
@@ -895,6 +900,44 @@ header {
 .lightbox-close:hover {
   background: var(--danger);
   box-shadow: none;
+}
+
+.lightbox-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: oklch(0 0 0 / 0.5);
+  border: none;
+  border-radius: 50%;
+  color: var(--text);
+  width: 48px;
+  height: 48px;
+  font-size: 2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.15s ease;
+}
+
+.lightbox-nav:hover {
+  background: oklch(0 0 0 / 0.8);
+  box-shadow: none;
+}
+
+.lightbox-prev { left: 1rem; }
+.lightbox-next { right: 1rem; }
+
+.lightbox-counter {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
 }
 
 .tweet-handle {

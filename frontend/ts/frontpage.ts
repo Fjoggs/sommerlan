@@ -1,6 +1,6 @@
 import { fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
-import { Game, LAN, User } from "./types.js";
+import { Award, Game, LAN, User } from "./types.js";
 import { createElement } from "./utils.js";
 
 export const fetchLans = async () => {
@@ -128,6 +128,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   fieldset.setAttribute("disabled", "true");
   const pillContainer = createElement("div") as HTMLDivElement;
   const gamePillContainer = createElement("div") as HTMLDivElement;
+  const awardPillContainer = createElement("div") as HTMLDivElement;
 
   const descriptionDisplay = createElement("p");
   descriptionDisplay.textContent = lan.description;
@@ -199,6 +200,18 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     }
     newGameInput.style.display = "none";
     newGameInput.value = "";
+    const anyAwardChecked = Array.from(awardPillContainer.querySelectorAll<HTMLInputElement>("input")).some(i => i.checked);
+    awardHeader.style.display = anyAwardChecked ? "" : "none";
+    for (const element of Array.from(awardPillContainer.children)) {
+      const input = element.querySelector<HTMLInputElement>("input");
+      if (input?.checked) {
+        element.removeAttribute("style");
+      } else {
+        element.setAttribute("style", "display: none");
+      }
+    }
+    newAwardInput.style.display = "none";
+    newAwardInput.value = "";
   }
 
   function outsideClickHandler(e: MouseEvent) {
@@ -237,6 +250,11 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
       element.removeAttribute("style");
     }
     newGameInput.style.display = "";
+    awardHeader.style.display = "";
+    for (const element of Array.from(awardPillContainer.children)) {
+      element.removeAttribute("style");
+    }
+    newAwardInput.style.display = "";
     document.addEventListener("mousedown", outsideClickHandler);
     document.addEventListener("keydown", escHandler);
     container.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -259,6 +277,9 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     }
     for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input:checked"))) {
       formData.append("participants", input.value);
+    }
+    for (const input of Array.from(awardPillContainer.querySelectorAll<HTMLInputElement>("input:checked"))) {
+      formData.append("awards", input.value);
     }
 
     const res = await fetch("http://localhost:8080/api/lan/", {
@@ -409,6 +430,43 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
 
   fieldset.appendChild(games);
 
+  const awardsSection = createElement("div");
+  awardsSection.className = "pill-container";
+  const awardHeader = createElement("h4");
+  awardHeader.textContent = "Kåringer";
+  if (!lan.awards || lan.awards.length === 0) awardHeader.style.display = "none";
+  awardsSection.appendChild(awardHeader);
+  awardPillContainer.className = "pill-list";
+  await renderAllAwards(awardPillContainer, lan.awards);
+  awardsSection.appendChild(awardPillContainer);
+
+  const newAwardInput = createElement("input") as HTMLInputElement;
+  newAwardInput.type = "text";
+  newAwardInput.className = "lan-text-input";
+  newAwardInput.placeholder = "Ny kåring...";
+  newAwardInput.style.display = "none";
+  newAwardInput.addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const name = newAwardInput.value.trim();
+    if (!name) return;
+    const fd = new FormData();
+    fd.append("awardName", name);
+    const res = await fetch("http://localhost:8080/api/award/", {
+      method: "POST",
+      headers: authHeaders(),
+      body: fd,
+    });
+    if (!res.ok) return;
+    const award: Award = await res.json();
+    const row = createCheckbox(award, "awards", "var(--bg-dark)", true);
+    awardPillContainer.appendChild(row);
+    awardHeader.style.display = "";
+    newAwardInput.value = "";
+  });
+  awardsSection.appendChild(newAwardInput);
+  fieldset.appendChild(awardsSection);
+
   saveButton.addEventListener("click", handleFinish);
 
   deleteButton.addEventListener("click", async () => {
@@ -426,6 +484,12 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   editActionsRow.appendChild(deleteButton);
   editActionsRow.appendChild(saveButton);
   container.appendChild(editActionsRow);
+
+  container.addEventListener("click", (e) => {
+    if (container.classList.contains("editing")) return;
+    if ((e.target as HTMLElement).closest("a, button, input, label")) return;
+    window.location.href = `lan-event.html?id=${lan.lanId}`;
+  });
 
   return container;
 };
@@ -473,8 +537,23 @@ const renderAllGames = async (
   });
 };
 
+const renderAllAwards = async (
+  container: HTMLElement,
+  lanAwards?: Award[],
+) => {
+  const awards: Award[] | undefined = await fetchAll("award");
+  if (!awards) return;
+
+  awards.forEach((award) => {
+    const isOnLan = lanAwards?.some((a) => a.id === award.id) ?? false;
+    const row = createCheckbox(award, "awards", "var(--bg-dark)", isOnLan);
+    if (!isOnLan) row.setAttribute("style", "display: none");
+    container.appendChild(row);
+  });
+};
+
 const createCheckbox = (
-  data: Game | User,
+  data: Game | Award | User,
   name: string,
   color: string = "var(--bg-light)",
   checked: boolean = false,
@@ -544,24 +623,6 @@ const buildNewEntry = async (): Promise<void> => {
 
   hContainer.appendChild(headerLeft);
 
-  const btnGroup = createElement("div");
-  btnGroup.style.cssText = "display:flex;gap:0.25rem";
-
-  const cancelButton = createElement("button") as HTMLButtonElement;
-  cancelButton.textContent = "✕";
-  cancelButton.className = "edit-button";
-  cancelButton.setAttribute("type", "button");
-  cancelButton.style.cssText = "transform:scale(1,1);color:var(--danger)";
-
-  const saveButton = createElement("button") as HTMLButtonElement;
-  saveButton.textContent = "✔";
-  saveButton.className = "edit-button";
-  saveButton.setAttribute("type", "button");
-  saveButton.style.transform = "scale(1,1)";
-
-  btnGroup.appendChild(cancelButton);
-  btnGroup.appendChild(saveButton);
-  hContainer.appendChild(btnGroup);
   container.appendChild(hContainer);
 
   container.appendChild(fromToRow);
@@ -646,7 +707,61 @@ const buildNewEntry = async (): Promise<void> => {
   });
   games.appendChild(newGameInput);
   fieldset.appendChild(games);
+
+  const awardPillContainer = createElement("div") as HTMLDivElement;
+  awardPillContainer.className = "pill-list";
+  await renderAllAwards(awardPillContainer, []);
+  for (const el of Array.from(awardPillContainer.children)) el.removeAttribute("style");
+
+  const awardHeaderNew = createElement("h4");
+  awardHeaderNew.textContent = "Kåringer";
+  const awardsNew = createElement("div");
+  awardsNew.className = "pill-container";
+  awardsNew.appendChild(awardHeaderNew);
+  awardsNew.appendChild(awardPillContainer);
+
+  const newAwardInputNew = createElement("input") as HTMLInputElement;
+  newAwardInputNew.type = "text";
+  newAwardInputNew.className = "lan-text-input";
+  newAwardInputNew.placeholder = "Ny kåring...";
+  newAwardInputNew.addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const name = newAwardInputNew.value.trim();
+    if (!name) return;
+    const fd = new FormData();
+    fd.append("awardName", name);
+    const res = await fetch("http://localhost:8080/api/award/", {
+      method: "POST",
+      headers: authHeaders(),
+      body: fd,
+    });
+    if (!res.ok) return;
+    const award: Award = await res.json();
+    const row = createCheckbox(award, "awards", "var(--bg-dark)", true);
+    awardPillContainer.appendChild(row);
+    newAwardInputNew.value = "";
+  });
+  awardsNew.appendChild(newAwardInputNew);
+  fieldset.appendChild(awardsNew);
+
   container.appendChild(fieldset);
+
+  const cancelButton = createElement("button") as HTMLButtonElement;
+  cancelButton.type = "button";
+  cancelButton.className = "delete-btn";
+  cancelButton.textContent = "Avbryt";
+
+  const saveButton = createElement("button") as HTMLButtonElement;
+  saveButton.type = "button";
+  saveButton.className = "save-btn";
+  saveButton.textContent = "Lagre";
+
+  const actionsRow = createElement("div") as HTMLDivElement;
+  actionsRow.className = "edit-actions";
+  actionsRow.appendChild(cancelButton);
+  actionsRow.appendChild(saveButton);
+  container.appendChild(actionsRow);
 
   cancelButton.addEventListener("click", (e) => {
     e.preventDefault();
@@ -670,6 +785,9 @@ const buildNewEntry = async (): Promise<void> => {
     }
     for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input:checked"))) {
       formData.append("participants", input.value);
+    }
+    for (const input of Array.from(awardPillContainer.querySelectorAll<HTMLInputElement>("input:checked"))) {
+      formData.append("awards", input.value);
     }
 
     const res = await fetch("http://localhost:8080/api/lan/", {

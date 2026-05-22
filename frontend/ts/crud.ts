@@ -3,7 +3,7 @@ import { authHeaders } from "./auth.js";
 
 const API_URL = "http://localhost:8080/api";
 
-type Model = "game" | "lan" | "user";
+type Model = "award" | "game" | "lan" | "user";
 
 export const fetchById = async <T>(
   model: Model,
