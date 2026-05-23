@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type Lan struct {
@@ -22,6 +23,7 @@ type LanEvent struct {
 	FromDisplay  string          `json:"fromDisplay"`
 	Games        []GameResponse  `json:"games"`
 	Id           int             `json:"lanId"`
+	ImageCount   int             `json:"imageCount"`
 	Participants []UserResponse  `json:"participants"`
 	Start_date   string          `json:"startDate"`
 	ToDisplay    string          `json:"toDisplay"`
@@ -38,12 +40,13 @@ type AwardResponse struct {
 }
 
 type UserResponse struct {
-	Id       int    `json:"id"`
-	Name     string `json:"name"`
-	Nickname string `json:"nickname,omitempty"`
-	Color    string `json:"color"`
-	Color2   string `json:"color2,omitempty"`
-	Role     string `json:"role,omitempty"`
+	Id            int    `json:"id"`
+	Name          string `json:"name"`
+	Nickname      string `json:"nickname,omitempty"`
+	EventNickname string `json:"eventNickname,omitempty"`
+	Color         string `json:"color"`
+	Color2        string `json:"color2,omitempty"`
+	Role          string `json:"role,omitempty"`
 }
 
 func GetUsers(db *sql.DB) ([]UserResponse, error) {
@@ -118,6 +121,78 @@ func DeleteUserWithId(db *sql.DB, id int) (int64, error) {
 	}
 
 	return result.RowsAffected()
+}
+
+type GameStat struct {
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	LanCount int    `json:"lanCount"`
+}
+
+type UserStat struct {
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	Nickname string `json:"nickname,omitempty"`
+	Color    string `json:"color"`
+	Color2   string `json:"color2,omitempty"`
+	LanCount int    `json:"lanCount"`
+}
+
+func GetUserStats(db *sql.DB) ([]UserStat, error) {
+	query := `
+		SELECT u.id, u.name, COALESCE(u.nickname, ''), u.color, COALESCE(u.color2, ''),
+		       COUNT(DISTINCT lp.lan_id) AS lan_count
+		FROM user u
+		JOIN lan_participants lp ON u.id = lp.user_id
+		GROUP BY u.id
+		ORDER BY lan_count DESC, u.name ASC
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []UserStat
+	for rows.Next() {
+		var s UserStat
+		if err := rows.Scan(&s.Id, &s.Name, &s.Nickname, &s.Color, &s.Color2, &s.LanCount); err != nil {
+			return nil, err
+		}
+		stats = append(stats, s)
+	}
+	if stats == nil {
+		stats = []UserStat{}
+	}
+	return stats, rows.Err()
+}
+
+func GetGameStats(db *sql.DB) ([]GameStat, error) {
+	query := `
+		SELECT g.id, g.name, COUNT(DISTINCT lg.lan_id) AS lan_count
+		FROM game g
+		JOIN lan_games lg ON g.id = lg.game_id
+		GROUP BY g.id
+		ORDER BY lan_count DESC, g.name ASC
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []GameStat
+	for rows.Next() {
+		var s GameStat
+		if err := rows.Scan(&s.Id, &s.Name, &s.LanCount); err != nil {
+			return nil, err
+		}
+		stats = append(stats, s)
+	}
+	if stats == nil {
+		stats = []GameStat{}
+	}
+	return stats, rows.Err()
 }
 
 func GetGames(db *sql.DB) ([]GameResponse, error) {
@@ -280,11 +355,12 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	paricipantsQuery := `
 		SELECT
-    user.id, user.name, user.color, user.color2, user.nickname
+			user.id, user.name, user.color, user.color2,
+			COALESCE(lp.nickname, user.nickname), lp.nickname
 		FROM lan
-    JOIN lan_participants ON lan.id = lan_participants.lan_id
-    JOIN user ON lan_participants.user_id = user.id
-    WHERE lan.id = ?;
+		JOIN lan_participants lp ON lan.id = lp.lan_id
+		JOIN user ON lp.user_id = user.id
+		WHERE lan.id = ?;
 `
 	var participants []UserResponse
 
@@ -296,13 +372,14 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	for participantRows.Next() {
 		var participant UserResponse
-		var color, color2, nickname sql.NullString
+		var color, color2, nickname, eventNickname sql.NullString
 		err := participantRows.Scan(
 			&participant.Id,
 			&participant.Name,
 			&color,
 			&color2,
 			&nickname,
+			&eventNickname,
 		)
 		if err != nil {
 			fmt.Println("Scanning participant blew up", err)
@@ -316,6 +393,9 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		}
 		if nickname.Valid {
 			participant.Nickname = nickname.String
+		}
+		if eventNickname.Valid {
+			participant.EventNickname = eventNickname.String
 		}
 		participants = append(participants, participant)
 	}
@@ -351,6 +431,9 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		return event, err
 	}
 
+	var imageCount int
+	db.QueryRow("SELECT COUNT(*) FROM lan_images WHERE lan_id = ?", id).Scan(&imageCount)
+
 	event = LanEvent{
 		Awards:       lanAwards,
 		Description:  lan.Description,
@@ -358,6 +441,7 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		Event:        lan.Event,
 		Games:        lanGames,
 		Id:           lan.Id,
+		ImageCount:   imageCount,
 		Participants: participants,
 		Start_date:   lan.Start_date,
 		FromDisplay:  fromDisplay.String,
@@ -673,6 +757,42 @@ func SetNickname(db *sql.DB, id int, nickname string, color string, color2 strin
 		return fmt.Errorf("NICKNAME UPDATE ERROR: %v", err)
 	}
 	return nil
+}
+
+// UpdateLanParticipants removes participants not in userIds and inserts new ones,
+// preserving the nickname column on existing rows.
+func UpdateLanParticipants(db *sql.DB, lanId int, userIds []int) error {
+	if len(userIds) == 0 {
+		_, err := db.Exec("DELETE FROM lan_participants WHERE lan_id = ?", lanId)
+		return err
+	}
+	placeholders := strings.Repeat("?,", len(userIds))
+	placeholders = placeholders[:len(placeholders)-1]
+	args := make([]interface{}, 0, len(userIds)+1)
+	args = append(args, lanId)
+	for _, id := range userIds {
+		args = append(args, id)
+	}
+	if _, err := db.Exec(
+		fmt.Sprintf("DELETE FROM lan_participants WHERE lan_id = ? AND user_id NOT IN (%s)", placeholders),
+		args...,
+	); err != nil {
+		return err
+	}
+	for _, userId := range userIds {
+		if _, err := db.Exec("INSERT OR IGNORE INTO lan_participants(lan_id, user_id) VALUES (?, ?)", lanId, userId); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func SetParticipantNickname(db *sql.DB, lanId, userId int, nickname string) error {
+	_, err := db.Exec(
+		"UPDATE lan_participants SET nickname = NULLIF(?, '') WHERE lan_id = ? AND user_id = ?",
+		nickname, lanId, userId,
+	)
+	return err
 }
 
 func AddLanParticipant(db *sql.DB, lanId int64, userId int) (int64, error) {

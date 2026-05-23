@@ -21,6 +21,18 @@ func NewGameHandlers(db *sql.DB) *GameHandlers {
 	}
 }
 
+func (h *GameHandlers) GetGameStats(writer http.ResponseWriter, _ *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+	stats, err := database.GetGameStats(h.db)
+	if err != nil {
+		http.Error(writer, "failed to get game stats", http.StatusInternalServerError)
+		return
+	}
+	if err := json.NewEncoder(writer).Encode(stats); err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
 func (h *GameHandlers) GetGames(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 

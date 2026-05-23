@@ -14,7 +14,9 @@ if (me) {
   if (avatar) {
     const initial = (me.nickname ?? me.name).charAt(0).toUpperCase();
     avatar.textContent = initial;
-    avatar.style.backgroundColor = me.color || "var(--primary)";
+    avatar.style.background = me.color2
+      ? `linear-gradient(135deg, ${me.color}, ${me.color2})`
+      : me.color || "var(--primary)";
   }
 
 }

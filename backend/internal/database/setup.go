@@ -63,8 +63,16 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, err
 	}
 
+	// SQLite is single-writer; one connection ensures the foreign_keys pragma persists
+	db.SetMaxOpenConns(1)
+
 	// Test the connection
 	if err = db.Ping(); err != nil {
+		return nil, err
+	}
+
+	// Enable foreign key enforcement (SQLite disables it by default)
+	if _, err = db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, err
 	}
 
@@ -104,6 +112,7 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	)`)
 
 	_, _ = db.Exec(`ALTER TABLE user ADD COLUMN color2 TEXT`)
+	_, _ = db.Exec(`ALTER TABLE lan_participants ADD COLUMN nickname TEXT`)
 
 	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS award (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

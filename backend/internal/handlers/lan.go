@@ -256,37 +256,33 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 		lanGames = append(lanGames, database.GameResponse{Id: game.Id, Name: game.Name})
 	}
 
-	if err := database.RemoveLanParticipants(h.db, id); err != nil {
-		fmt.Println("Failed to clear lan participants", err)
-		return
-	}
-
-	participants := []database.UserResponse{}
+	var participantIds []int
 	for _, participantId := range req.Form["participants"] {
 		userId, err := strconv.Atoi(participantId)
 		if err != nil {
 			fmt.Println("Invalid participant ID:", participantId)
 			continue
 		}
+		participantIds = append(participantIds, userId)
+	}
 
-		_, err = database.AddLanParticipant(h.db, int64(id), userId)
-		if err != nil {
-			fmt.Println("Failed to add lan user", err)
-			return
-		}
+	if err := database.UpdateLanParticipants(h.db, id, participantIds); err != nil {
+		fmt.Println("Failed to update lan participants", err)
+		return
+	}
 
+	participants := []database.UserResponse{}
+	for _, userId := range participantIds {
 		user, err := database.GetUserWithId(h.db, userId)
 		if err != nil {
 			fmt.Println("Failed to get lan user", err)
 			return
 		}
-
-		participant := database.UserResponse{
+		participants = append(participants, database.UserResponse{
 			Id:    user.Id,
 			Name:  user.Name,
 			Color: user.Color,
-		}
-		participants = append(participants, participant)
+		})
 	}
 
 	if err := database.RemoveLanAwards(h.db, id); err != nil {
@@ -658,4 +654,26 @@ func (h *LanHandlers) AddParticipantToLan(writer http.ResponseWriter, req *http.
 	}
 
 	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) SetParticipantNickname(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	userId, err := strconv.Atoi(r.PathValue("userId"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+	if err := database.SetParticipantNickname(h.db, lanId, userId, r.FormValue("nickname")); err != nil {
+		http.Error(w, "failed to set nickname", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

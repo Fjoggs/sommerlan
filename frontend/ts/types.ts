@@ -7,6 +7,7 @@ export type LAN = {
   event: Event;
   fromDisplay?: string;
   games?: Game[];
+  imageCount?: number;
   lanId: number;
   participants?: User[];
   startDate: string;
@@ -17,6 +18,7 @@ export type User = {
   id: number;
   name: string;
   nickname?: string;
+  eventNickname?: string;
   color: string;
   color2?: string;
 };

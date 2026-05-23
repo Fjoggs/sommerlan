@@ -57,10 +57,12 @@ func main() {
 	)
 	router.HandleFunc("DELETE /api/lan/{id}/", handlers.EnableCORS(lan.DeleteLanWithId))
 	router.HandleFunc("POST /api/lan/{id}/participant/", handlers.EnableCORS(lan.AddParticipantToLan))
+	router.HandleFunc("PATCH /api/lan/{id}/participant/{userId}/nickname/", handlers.EnableCORS(lan.SetParticipantNickname))
 	router.HandleFunc(
 		"OPTIONS /api/lan/{id}/participant/",
 		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}),
 	)
+	router.HandleFunc("OPTIONS /api/lan/{id}/participant/{userId}/nickname/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("POST /api/lan/{id}/attend/", handlers.EnableCORS(lan.AttendLan))
 	router.HandleFunc("DELETE /api/lan/{id}/attend/", handlers.EnableCORS(lan.UnattendLan))
 	router.HandleFunc(
@@ -82,6 +84,7 @@ func main() {
 	router.HandleFunc("OPTIONS /api/tags/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// Game routes
+	router.HandleFunc("GET /api/game/stats/", handlers.EnableCORS(game.GetGameStats))
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))
 	router.HandleFunc("PATCH /api/game/", handlers.EnableCORS(user.AlterUser))
 	router.HandleFunc("POST /api/game/", handlers.EnableCORS(game.AddGame))
@@ -101,6 +104,7 @@ func main() {
 	router.HandleFunc("OPTIONS /api/award/{id}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// User routes
+	router.HandleFunc("GET /api/user/stats/", handlers.EnableCORS(user.GetUserStats))
 	router.HandleFunc("GET /api/user/", handlers.EnableCORS(user.GetUsers))
 	router.HandleFunc("POST /api/user/", handlers.EnableCORS(user.AddUser))
 	router.HandleFunc("PATCH /api/user/", handlers.EnableCORS(user.AlterUser))

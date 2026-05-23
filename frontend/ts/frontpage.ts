@@ -5,11 +5,26 @@ import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
 
 let viewAsUser: User | null = null; // re-enable "view as" feature when needed
 
+function applyPillColor(el: HTMLElement, color: string, color2?: string, extra?: string) {
+  const base = extra ? `; ${extra}` : "";
+  el.setAttribute("style", `background-color: color-mix(in srgb, ${color} 20%, var(--bg)); color: ${color}; font-weight: 700${base}`);
+}
+
 export const fetchLans = async () => {
   const lans: LAN[] | undefined = await fetchAll("lan");
   if (!lans) return;
 
   const firstTimerMap = buildFirstTimerMap(lans);
+
+  const years = [...new Set(lans.map(l => l.startDate.substring(0, 4)))];
+  const tweetCounts = new Map<string, number>();
+  await Promise.all(years.map(async (year) => {
+    const res = await fetch(`/data/tweets/${year}.json`);
+    if (res.ok) {
+      const tweets: unknown[] = await res.json();
+      tweetCounts.set(year, tweets.length);
+    }
+  }));
 
   const preContainer = document.getElementById("pre");
   const mainContainer = document.getElementById("main");
@@ -17,12 +32,13 @@ export const fetchLans = async () => {
 
   for (const lan of lans) {
     const firstTimers = firstTimerMap.get(lan.lanId) ?? new Set<number>();
+    const tweetCount = tweetCounts.get(lan.startDate.substring(0, 4)) ?? 0;
     if (lan.event === "pre") {
-      preContainer?.appendChild(await buildEntry(lan, firstTimers));
+      preContainer?.appendChild(await buildEntry(lan, firstTimers, tweetCount));
     } else if (lan.event === "main") {
-      mainContainer?.appendChild(await buildEntry(lan, firstTimers));
+      mainContainer?.appendChild(await buildEntry(lan, firstTimers, tweetCount));
     } else if (lan.event === "side") {
-      sideContainer?.appendChild(await buildEntry(lan, firstTimers));
+      sideContainer?.appendChild(await buildEntry(lan, firstTimers, tweetCount));
     }
   }
 };
@@ -50,7 +66,7 @@ const fetchLanById = async (id: number) => {
   console.log("lan", lan);
 };
 
-const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
+const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetCount: number = 0) => {
   const id = `id-${lan.lanId}`;
   const container = createElement("form", id);
   container.className = lan.lanId === 30 ? "timeline-event lan-30-bg" : "timeline-event";
@@ -193,8 +209,9 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     if (!datesDisplay.textContent) datesDisplay.style.display = "none";
     for (const element of Array.from(pillContainer.children)) {
       const color = element.getAttribute("data-color");
+      const color2 = element.getAttribute("data-color2") ?? undefined;
       if (color) {
-        element.setAttribute("style", `background-color: color-mix(in srgb, ${color} 20%, var(--bg)); color: ${color}; font-weight: 700; cursor: pointer`);
+        applyPillColor(element as HTMLElement, color, color2, "cursor: pointer");
       } else {
         element.setAttribute("style", "display: none");
       }
@@ -207,7 +224,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     for (const element of Array.from(gamePillContainer.children)) {
       const input = element.querySelector<HTMLInputElement>("input");
       if (input?.checked) {
-        element.removeAttribute("style");
+        element.setAttribute("style", "background-color: var(--bg-dark)");
       } else {
         element.setAttribute("style", "display: none");
       }
@@ -219,13 +236,17 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     for (const element of Array.from(awardPillContainer.children)) {
       const input = element.querySelector<HTMLInputElement>("input");
       if (input?.checked) {
-        element.removeAttribute("style");
+        element.setAttribute("style", "background-color: var(--bg-dark)");
       } else {
         element.setAttribute("style", "display: none");
       }
     }
     newAwardInput.style.display = "none";
     newAwardInput.value = "";
+    nicknameSection.style.display = "none";
+    for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
+      input.removeEventListener("change", refreshNicknameSection);
+    }
   }
 
   function outsideClickHandler(e: MouseEvent) {
@@ -269,6 +290,10 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
       element.removeAttribute("style");
     }
     newAwardInput.style.display = "";
+    refreshNicknameSection();
+    for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
+      input.addEventListener("change", refreshNicknameSection);
+    }
     document.addEventListener("mousedown", outsideClickHandler);
     document.addEventListener("keydown", escHandler);
     container.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -320,6 +345,12 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
           element.removeAttribute("data-color");
         }
       }
+      const newEvent = checkedRadio?.value ?? lan.event;
+      if (newEvent !== lan.event) {
+        lan.event = newEvent as typeof lan.event;
+        const sectionId = newEvent === "pre" ? "pre" : newEvent === "main" ? "main" : "side";
+        document.getElementById(sectionId)?.appendChild(container);
+      }
     }
 
     closeEdit();
@@ -335,6 +366,28 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   }
   hContainer.appendChild(editButton);
   container.appendChild(hContainer);
+
+  if ((lan.imageCount ?? 0) > 0 || tweetCount > 0) {
+    const badges = createElement("div") as HTMLDivElement;
+    badges.className = "content-badges";
+    if ((lan.imageCount ?? 0) > 0) {
+      const b = createElement("a") as HTMLAnchorElement;
+      b.className = "content-badge";
+      b.href = `lan-event.html?id=${lan.lanId}#event-images`;
+      b.title = "Bilder";
+      b.innerHTML = `📷 <span>${lan.imageCount}</span>`;
+      badges.appendChild(b);
+    }
+    if (tweetCount > 0) {
+      const b = createElement("a") as HTMLAnchorElement;
+      b.className = "content-badge";
+      b.href = `lan-event.html?id=${lan.lanId}#event-tweets`;
+      b.title = "Tweets";
+      b.innerHTML = `💬 <span>${tweetCount}</span>`;
+      badges.appendChild(b);
+    }
+    container.appendChild(badges);
+  }
 
   container.appendChild(fromToRow);
   container.appendChild(descriptionDisplay);
@@ -404,13 +457,75 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
         attendBtn.textContent = `- ${me!.nickname || me!.name}`;
         if (pill) {
           pill.setAttribute("data-color", me!.color);
-          pill.setAttribute("style", `background-color: color-mix(in srgb, ${me!.color} 20%, var(--bg)); color: ${me!.color}; font-weight: 700`);
+          if (me!.color2) pill.setAttribute("data-color2", me!.color2);
+          applyPillColor(pill, me!.color, me!.color2);
         }
       }
     }
   });
   pillRow.appendChild(attendBtn);
   participants.appendChild(pillRow);
+
+  const nicknameSection = createElement("div") as HTMLDivElement;
+  nicknameSection.className = "nickname-section";
+  nicknameSection.style.display = "none";
+  const nicknameHeader = createElement("h5") as HTMLHeadingElement;
+  nicknameHeader.className = "nickname-section-header";
+  nicknameHeader.textContent = "Kallenavn";
+  const nicknameList = createElement("div") as HTMLDivElement;
+  nicknameList.className = "nickname-list";
+  nicknameSection.appendChild(nicknameHeader);
+  nicknameSection.appendChild(nicknameList);
+  participants.appendChild(nicknameSection);
+
+  function refreshNicknameSection() {
+    nicknameList.innerHTML = "";
+    for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input:checked"))) {
+      const label = input.closest<HTMLLabelElement>("label");
+      if (!label) continue;
+      const userId = parseInt(input.value);
+      const baseName = label.dataset.baseName ?? input.value;
+      const eventNick = label.getAttribute("data-event-nickname") ?? "";
+
+      const row = createElement("div") as HTMLDivElement;
+      row.className = "nickname-row";
+
+      const nameSpan = createElement("span") as HTMLSpanElement;
+      nameSpan.className = "nickname-row-name";
+      nameSpan.textContent = baseName;
+
+      const nickInput = createElement("input") as HTMLInputElement;
+      nickInput.type = "text";
+      nickInput.className = "nickname-input lan-text-input";
+      nickInput.value = eventNick;
+      nickInput.placeholder = "Tilleggsnavn...";
+
+      const save = async () => {
+        const val = nickInput.value.trim();
+        const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/participant/${userId}/nickname/`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: new URLSearchParams({ nickname: val }),
+        });
+        if (res.ok) {
+          label.setAttribute("data-event-nickname", val);
+          const pillText = label.querySelector<HTMLSpanElement>(".pill-text");
+          if (pillText) pillText.textContent = val || baseName;
+        }
+      };
+
+      nickInput.addEventListener("blur", save);
+      nickInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); nickInput.blur(); }
+      });
+
+      row.appendChild(nameSpan);
+      row.appendChild(nickInput);
+      nicknameList.appendChild(row);
+    }
+    nicknameSection.style.display = nicknameList.children.length > 0 ? "" : "none";
+  }
+
   container.appendChild(participants);
 
   container.appendChild(fieldset);
@@ -530,13 +645,13 @@ const renderAllUsers = async (
         (participant) => participant.id === user.id,
       );
       if (participant) {
-        const row = createCheckbox(user, "participants", "var(--bg-light)", true);
+        const row = createCheckbox(participant, "participants", "var(--bg-light)", true);
         row.setAttribute("data-color", participant.color);
+        if (participant.color2) row.setAttribute("data-color2", participant.color2);
+        if (participant.eventNickname) row.setAttribute("data-event-nickname", participant.eventNickname);
         row.dataset.userId = String(user.id);
-        row.style.backgroundColor = `color-mix(in srgb, ${participant.color} 20%, var(--bg))`;
-        row.style.color = participant.color;
-        row.style.fontWeight = "700";
-        row.style.cursor = "pointer";
+        row.dataset.baseName = (user.nickname || user.name);
+        applyPillColor(row, participant.color, participant.color2);
         container.appendChild(row);
       } else {
         const row = createCheckbox(user, "participants");
@@ -584,7 +699,11 @@ const createCheckbox = (
   checked: boolean = false,
 ) => {
   const label = createElement("label");
-  label.textContent = ('nickname' in data && data.nickname) ? data.nickname : data.name;
+  const displayName = ('nickname' in data && data.nickname) ? data.nickname : data.name;
+  const textSpan = createElement("span") as HTMLSpanElement;
+  textSpan.className = "pill-text";
+  textSpan.textContent = displayName;
+  label.appendChild(textSpan);
   const checkbox = createElement("input", data.id.toString()) as HTMLInputElement;
   checkbox.setAttribute("type", "checkbox");
   checkbox.setAttribute("name", name);

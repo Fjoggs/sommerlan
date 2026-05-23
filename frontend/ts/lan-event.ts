@@ -1,6 +1,6 @@
 import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
-import { LAN } from "./types.js";
+import { LAN, User, Game, Award } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
 
 type Tag = { id: number; name: string };
@@ -109,6 +109,7 @@ function renderLan(
   const prev = idx > 0 ? sorted[idx - 1] : null;
   const next = idx < sorted.length - 1 ? sorted[idx + 1] : null;
 
+  // === Title row ===
   const titleRow = createElement("div") as HTMLDivElement;
   titleRow.className = "event-title-row";
 
@@ -138,27 +139,48 @@ function renderLan(
   }
 
   titleRow.appendChild(prevLink);
-  titleRow.appendChild(lan.lanId === 30 ? buildSommerlanLogo(me!.color, me!.color2 ?? me!.color) : title);
+  const titleOrLogo = lan.lanId === 30 ? buildSommerlanLogo(me!.color, me!.color2 ?? me!.color) : title;
+  const titleCenter = createElement("div") as HTMLDivElement;
+  titleCenter.className = "event-title-center";
+  titleCenter.appendChild(titleOrLogo);
+  titleRow.appendChild(titleCenter);
   titleRow.appendChild(nextLink);
   content.appendChild(titleRow);
 
-  if (lan.fromDisplay || lan.toDisplay) {
-    const dates = createElement("p") as HTMLParagraphElement;
-    dates.className = "event-dates";
-    const from = lan.fromDisplay ?? "";
-    const to = lan.toDisplay ?? "";
-    if (from && to && from === to) dates.textContent = from;
-    else if (from && to) dates.textContent = `${from} – ${to}`;
-    else dates.textContent = from || to;
-    content.appendChild(dates);
-  }
+  // === Dates display ===
+  const datesDisplay = createElement("p") as HTMLParagraphElement;
+  datesDisplay.className = "event-dates";
+  const buildDatesText = (from: string, to: string) =>
+    from && to && from === to ? from : from && to ? `${from} – ${to}` : from || to;
+  datesDisplay.textContent = buildDatesText(lan.fromDisplay ?? "", lan.toDisplay ?? "");
+  if (datesDisplay.textContent) content.appendChild(datesDisplay);
 
-  if (lan.description) {
-    const desc = createElement("p") as HTMLParagraphElement;
-    desc.className = "event-description";
-    desc.textContent = lan.description;
-    content.appendChild(desc);
+  // === Content badges ===
+  const badgeRow = createElement("div") as HTMLDivElement;
+  badgeRow.className = "content-badges";
+  if (lanImages.length > 0) {
+    const b = createElement("a") as HTMLAnchorElement;
+    b.className = "content-badge";
+    b.href = "#event-images";
+    b.title = "Bilder";
+    b.innerHTML = `📷 <span>${lanImages.length}</span>`;
+    badgeRow.appendChild(b);
   }
+  if (tweets.length > 0) {
+    const b = createElement("a") as HTMLAnchorElement;
+    b.className = "content-badge";
+    b.href = "#event-tweets";
+    b.title = "Tweets";
+    b.innerHTML = `💬 <span>${tweets.length}</span>`;
+    badgeRow.appendChild(b);
+  }
+  if (badgeRow.children.length > 0) content.appendChild(badgeRow);
+
+  // === Description display ===
+  const descDisplay = createElement("p") as HTMLParagraphElement;
+  descDisplay.className = "event-description";
+  descDisplay.textContent = lan.description ?? "";
+  if (lan.description) content.appendChild(descDisplay);
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -168,22 +190,23 @@ function renderLan(
     if (e.key === "ArrowRight" && next) window.location.href = `lan-event.html?id=${next.lanId}`;
   });
 
-  if (lan.participants && lan.participants.length > 0) {
-    const section = createElement("section");
-    section.className = "event-section";
-    const h2 = createElement("h2");
-    h2.innerHTML = `<span class="hash">#</span>Deltakere`;
-    section.appendChild(h2);
-    const pillList = createElement("div");
-    pillList.className = "pill-list event-pills";
-    for (const p of lan.participants) {
+  // === Participants section ===
+  const pSection = createElement("section") as HTMLElement;
+  pSection.className = "event-section";
+  const pH2 = createElement("h2");
+  pH2.innerHTML = `<span class="hash">#</span>Deltakere`;
+  pSection.appendChild(pH2);
+  const pPillList = createElement("div") as HTMLDivElement;
+  pPillList.className = "pill-list event-pills";
+  const buildParticipantViewPills = () => {
+    pPillList.innerHTML = "";
+    for (const p of lan.participants ?? []) {
       const pill = createElement("a") as HTMLAnchorElement;
       pill.className = "event-pill";
       pill.href = `participant.html?id=${p.id}`;
       pill.style.backgroundColor = `color-mix(in srgb, ${p.color} 20%, var(--bg))`;
       pill.style.color = p.color;
       pill.style.fontWeight = "bold";
-      pill.style.cursor = "pointer";
       pill.append(p.nickname || p.name);
       if (firstTimers.has(p.id)) {
         const badge = createElement("span") as HTMLSpanElement;
@@ -192,49 +215,394 @@ function renderLan(
         badge.title = "Første LAN!";
         pill.appendChild(badge);
       }
-      pillList.appendChild(pill);
+      pPillList.appendChild(pill);
     }
-    section.appendChild(pillList);
-    content.appendChild(section);
-  }
+  };
+  buildParticipantViewPills();
+  pSection.appendChild(pPillList);
+  if (lan.participants && lan.participants.length > 0) content.appendChild(pSection);
 
-  if (lan.games && lan.games.length > 0) {
-    const section = createElement("section");
-    section.className = "event-section";
-    const h2 = createElement("h2");
-    h2.innerHTML = `<span class="hash">#</span>Spill`;
-    section.appendChild(h2);
-    const pillList = createElement("div");
-    pillList.className = "pill-list event-pills";
-    for (const game of lan.games) {
+  // === Games section ===
+  const gSection = createElement("section") as HTMLElement;
+  gSection.className = "event-section";
+  const gH2 = createElement("h2");
+  gH2.innerHTML = `<span class="hash">#</span>Spill`;
+  gSection.appendChild(gH2);
+  const gPillList = createElement("div") as HTMLDivElement;
+  gPillList.className = "pill-list event-pills";
+  const buildGameViewPills = () => {
+    gPillList.innerHTML = "";
+    for (const game of lan.games ?? []) {
       const pill = createElement("span");
       pill.className = "event-pill game-pill";
       pill.textContent = game.name;
-      pillList.appendChild(pill);
+      gPillList.appendChild(pill);
     }
-    section.appendChild(pillList);
-    content.appendChild(section);
-  }
+  };
+  buildGameViewPills();
+  gSection.appendChild(gPillList);
+  if (lan.games && lan.games.length > 0) content.appendChild(gSection);
 
-  if (lan.awards && lan.awards.length > 0) {
-    const section = createElement("section");
-    section.className = "event-section";
-    const h2 = createElement("h2");
-    h2.innerHTML = `<span class="hash">#</span>Kåringer`;
-    section.appendChild(h2);
-    const pillList = createElement("div");
-    pillList.className = "pill-list event-pills";
-    for (const award of lan.awards) {
+  // === Awards section ===
+  const aSection = createElement("section") as HTMLElement;
+  aSection.className = "event-section";
+  const aH2 = createElement("h2");
+  aH2.innerHTML = `<span class="hash">#</span>Kåringer`;
+  aSection.appendChild(aH2);
+  const aPillList = createElement("div") as HTMLDivElement;
+  aPillList.className = "pill-list event-pills";
+  const buildAwardViewPills = () => {
+    aPillList.innerHTML = "";
+    for (const award of lan.awards ?? []) {
       const pill = createElement("span");
       pill.className = "event-pill game-pill";
       pill.textContent = award.name;
-      pillList.appendChild(pill);
+      aPillList.appendChild(pill);
     }
-    section.appendChild(pillList);
-    content.appendChild(section);
-  }
+  };
+  buildAwardViewPills();
+  aSection.appendChild(aPillList);
+  if (lan.awards && lan.awards.length > 0) content.appendChild(aSection);
 
   renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames, allTags);
+
+  // === Edit mode (admin only) ===
+  if (me?.role !== "admin") return;
+
+  // Caches so we only fetch once
+  let cachedUsers: User[] | null = null;
+  let cachedGames: Game[] | null = null;
+  let cachedAwards: Award[] | null = null;
+
+  // Edit button in title row
+  const editBtn = createElement("button") as HTMLButtonElement;
+  editBtn.type = "button";
+  editBtn.textContent = "✎";
+  editBtn.className = "edit-button lan-event-edit-btn";
+  editBtn.addEventListener("click", openEdit);
+  titleCenter.appendChild(editBtn);
+
+  // Edit actions bar
+  const editBar = createElement("div") as HTMLDivElement;
+  editBar.className = "edit-actions";
+  editBar.style.display = "none";
+  const saveBtn = createElement("button") as HTMLButtonElement;
+  saveBtn.type = "button"; saveBtn.className = "save-btn"; saveBtn.textContent = "Lagre";
+  const cancelBtn = createElement("button") as HTMLButtonElement;
+  cancelBtn.type = "button"; cancelBtn.className = "delete-btn"; cancelBtn.textContent = "Avbryt";
+  editBar.appendChild(cancelBtn);
+  editBar.appendChild(saveBtn);
+  titleRow.after(editBar);
+
+  // Year + era inputs
+  const editMetaRow = createElement("div") as HTMLDivElement;
+  editMetaRow.className = "from-to-row";
+  editMetaRow.style.display = "none";
+  const yearInput = createElement("input") as HTMLInputElement;
+  yearInput.type = "number"; yearInput.className = "lan-year-input"; yearInput.value = year;
+  editMetaRow.appendChild(yearInput);
+  const eraGroup = createElement("div") as HTMLDivElement;
+  eraGroup.className = "radio-group";
+  for (const { value: val, label: lbl } of [
+    { value: "pre", label: "Classical era" },
+    { value: "main", label: "SommerLAN" },
+    { value: "side", label: "Side-event" },
+  ] as const) {
+    const l = createElement("label") as HTMLLabelElement;
+    const r = createElement("input") as HTMLInputElement;
+    r.type = "radio"; r.name = "lan-event-era"; r.value = val; r.checked = lan.event === val;
+    l.appendChild(r); l.append(lbl);
+    eraGroup.appendChild(l);
+  }
+  editMetaRow.appendChild(eraGroup);
+  editBar.after(editMetaRow);
+
+  // From / to display inputs
+  const editDatesRow = createElement("div") as HTMLDivElement;
+  editDatesRow.className = "from-to-row";
+  editDatesRow.style.display = "none";
+  const fromInput = createElement("input") as HTMLInputElement;
+  fromInput.type = "text"; fromInput.placeholder = "Fra"; fromInput.className = "lan-text-input";
+  fromInput.value = lan.fromDisplay ?? "";
+  const toInput = createElement("input") as HTMLInputElement;
+  toInput.type = "text"; toInput.placeholder = "Til"; toInput.className = "lan-text-input";
+  toInput.value = lan.toDisplay ?? "";
+  const sep = createElement("span"); sep.textContent = "–";
+  editDatesRow.appendChild(fromInput); editDatesRow.appendChild(sep); editDatesRow.appendChild(toInput);
+  editMetaRow.after(editDatesRow);
+
+  // Description input
+  const descInput = createElement("input") as HTMLInputElement;
+  descInput.type = "text"; descInput.className = "lan-text-input";
+  descInput.placeholder = "Beskrivelse"; descInput.value = lan.description ?? "";
+  descInput.style.display = "none";
+  editDatesRow.after(descInput);
+
+  // Nickname section (built fresh each time edit opens)
+  const nicknameSection = createElement("div") as HTMLDivElement;
+  nicknameSection.className = "nickname-section";
+  const nicknameHeader = createElement("h5") as HTMLHeadingElement;
+  nicknameHeader.className = "nickname-section-header";
+  nicknameHeader.textContent = "Kallenavn";
+  const nicknameList = createElement("div") as HTMLDivElement;
+  nicknameList.className = "nickname-list";
+  nicknameSection.appendChild(nicknameHeader);
+  nicknameSection.appendChild(nicknameList);
+
+  function buildCheckbox(item: User | Game | Award, name: string, checked: boolean): HTMLLabelElement {
+    const label = createElement("label") as HTMLLabelElement;
+    const span = createElement("span") as HTMLSpanElement;
+    span.className = "pill-text";
+    span.textContent = ("nickname" in item && item.nickname) ? item.nickname : item.name;
+    const cb = createElement("input") as HTMLInputElement;
+    cb.type = "checkbox"; cb.name = name; cb.value = String(item.id); cb.checked = checked;
+    label.appendChild(span); label.appendChild(cb);
+    return label;
+  }
+
+  function refreshNicknameSection(userCheckboxes: HTMLLabelElement[], users: User[]) {
+    nicknameList.innerHTML = "";
+    for (const label of userCheckboxes) {
+      const cb = label.querySelector<HTMLInputElement>("input");
+      if (!cb?.checked) continue;
+      const userId = parseInt(cb.value);
+      const user = users.find(u => u.id === userId);
+      const participant = lan.participants?.find(p => p.id === userId);
+      const baseName = user?.nickname || user?.name || cb.value;
+      const eventNick = participant?.eventNickname ?? "";
+
+      const row = createElement("div") as HTMLDivElement;
+      row.className = "nickname-row";
+      const nameSpan = createElement("span") as HTMLSpanElement;
+      nameSpan.className = "nickname-row-name";
+      nameSpan.textContent = baseName;
+      const nickInput = createElement("input") as HTMLInputElement;
+      nickInput.type = "text"; nickInput.className = "nickname-input lan-text-input";
+      nickInput.value = eventNick; nickInput.placeholder = "Tilleggsnavn...";
+
+      const save = async () => {
+        const val = nickInput.value.trim();
+        const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/participant/${userId}/nickname/`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: new URLSearchParams({ nickname: val }),
+        });
+        if (res.ok && participant) participant.eventNickname = val;
+      };
+      nickInput.addEventListener("blur", save);
+      nickInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); nickInput.blur(); } });
+
+      row.appendChild(nameSpan); row.appendChild(nickInput);
+      nicknameList.appendChild(row);
+    }
+    nicknameSection.style.display = nicknameList.children.length ? "" : "none";
+  }
+
+  // New game input for edit mode
+  const newGameInput = createElement("input") as HTMLInputElement;
+  newGameInput.type = "text"; newGameInput.className = "lan-text-input";
+  newGameInput.placeholder = "Nytt spill..."; newGameInput.style.display = "none";
+
+  // New award input for edit mode
+  const newAwardInput = createElement("input") as HTMLInputElement;
+  newAwardInput.type = "text"; newAwardInput.className = "lan-text-input";
+  newAwardInput.placeholder = "Ny kåring..."; newAwardInput.style.display = "none";
+
+  let userCheckboxes: HTMLLabelElement[] = [];
+  let gameCheckboxes: HTMLLabelElement[] = [];
+  let awardCheckboxes: HTMLLabelElement[] = [];
+
+  async function openEdit() {
+    [cachedUsers, cachedGames, cachedAwards] = await Promise.all([
+      cachedUsers ?? fetchAll<User>("user").then(u => u ?? []),
+      cachedGames ?? fetchAll<Game>("game").then(g => g ?? []),
+      cachedAwards ?? fetchAll<Award>("award").then(a => a ?? []),
+    ]);
+
+    // Header / meta
+    datesDisplay.style.display = "none";
+    descDisplay.style.display = "none";
+    editBar.style.display = "";
+    editMetaRow.style.display = "flex";
+    editDatesRow.style.display = "flex";
+    descInput.style.display = "";
+
+    // Participants: rebuild as checkboxes
+    pPillList.className = "pill-list";
+    pPillList.innerHTML = "";
+    userCheckboxes = (cachedUsers ?? []).map(user => {
+      const isOn = lan.participants?.some(p => p.id === user.id) ?? false;
+      const participant = lan.participants?.find(p => p.id === user.id);
+      const row = buildCheckbox(participant ?? user, "participants", isOn);
+      if (participant?.eventNickname) row.setAttribute("data-event-nickname", participant.eventNickname);
+      row.dataset.userId = String(user.id);
+      if (isOn) {
+        row.style.backgroundColor = `color-mix(in srgb, ${user.color} 20%, var(--bg))`;
+        row.style.color = user.color;
+        row.style.fontWeight = "700";
+      }
+      row.querySelector<HTMLInputElement>("input")!.addEventListener("change", () =>
+        refreshNicknameSection(userCheckboxes, cachedUsers ?? [])
+      );
+      pPillList.appendChild(row);
+      return row;
+    });
+    pSection.appendChild(nicknameSection);
+    refreshNicknameSection(userCheckboxes, cachedUsers ?? []);
+    if (!pSection.parentElement) content.insertBefore(pSection, gSection.parentElement ? gSection : null);
+
+    // Games: rebuild as checkboxes
+    gPillList.className = "pill-list";
+    gPillList.innerHTML = "";
+    gameCheckboxes = (cachedGames ?? []).map(game => {
+      const isOn = lan.games?.some(g => g.id === game.id) ?? false;
+      const row = buildCheckbox(game, "games", isOn);
+      if (!isOn) row.style.display = "none";
+      else row.style.backgroundColor = "var(--bg-dark)";
+      gPillList.appendChild(row);
+      return row;
+    });
+    newGameInput.style.display = "";
+    gSection.appendChild(newGameInput);
+    if (!gSection.parentElement) content.insertBefore(gSection, aSection.parentElement ? aSection : null);
+
+    // Awards: rebuild as checkboxes
+    aPillList.className = "pill-list";
+    aPillList.innerHTML = "";
+    awardCheckboxes = (cachedAwards ?? []).map(award => {
+      const isOn = lan.awards?.some(a => a.id === award.id) ?? false;
+      const row = buildCheckbox(award, "awards", isOn);
+      if (!isOn) row.style.display = "none";
+      else row.style.backgroundColor = "var(--bg-dark)";
+      aPillList.appendChild(row);
+      return row;
+    });
+    newAwardInput.style.display = "";
+    aSection.appendChild(newAwardInput);
+    if (!aSection.parentElement) content.insertBefore(aSection, null);
+
+    // Show all unchecked game/award pills in edit mode
+    for (const row of [...gameCheckboxes, ...awardCheckboxes]) row.style.display = "";
+
+    editBtn.style.display = "none";
+    content.classList.add("editing");
+  }
+
+  function closeEdit() {
+    // Restore header
+    datesDisplay.style.display = "";
+    descDisplay.style.display = "";
+    editBar.style.display = "none";
+    editMetaRow.style.display = "none";
+    editDatesRow.style.display = "none";
+    descInput.style.display = "none";
+
+    // Restore participants
+    pPillList.className = "pill-list event-pills";
+    buildParticipantViewPills();
+    nicknameSection.remove();
+    if (!lan.participants?.length) pSection.remove();
+
+    // Restore games
+    gPillList.className = "pill-list event-pills";
+    buildGameViewPills();
+    newGameInput.remove();
+    if (!lan.games?.length) gSection.remove();
+
+    // Restore awards
+    aPillList.className = "pill-list event-pills";
+    buildAwardViewPills();
+    newAwardInput.remove();
+    if (!lan.awards?.length) aSection.remove();
+
+    editBtn.style.display = "";
+    content.classList.remove("editing");
+  }
+
+  async function handleSave() {
+    const fd = new FormData();
+    fd.append("lanId", String(lan.lanId));
+    fd.append("description", descInput.value);
+    fd.append("startDate", `${yearInput.value}-01-01`);
+    fd.append("endDate", `${yearInput.value}-12-31`);
+    fd.append("fromDisplay", fromInput.value);
+    fd.append("toDisplay", toInput.value);
+    const eraRadio = eraGroup.querySelector<HTMLInputElement>("input:checked");
+    fd.append("event", eraRadio?.value ?? lan.event);
+    for (const lbl of userCheckboxes) {
+      if (lbl.querySelector<HTMLInputElement>("input")?.checked) fd.append("participants", lbl.querySelector<HTMLInputElement>("input")!.value);
+    }
+    for (const lbl of gameCheckboxes) {
+      if (lbl.querySelector<HTMLInputElement>("input")?.checked) fd.append("games", lbl.querySelector<HTMLInputElement>("input")!.value);
+    }
+    for (const lbl of awardCheckboxes) {
+      if (lbl.querySelector<HTMLInputElement>("input")?.checked) fd.append("awards", lbl.querySelector<HTMLInputElement>("input")!.value);
+    }
+
+    const res = await fetch("http://localhost:8080/api/lan/", {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: fd,
+    });
+
+    if (res.ok) {
+      const updated: LAN = await res.json();
+      lan.description = descInput.value;
+      lan.fromDisplay = fromInput.value || undefined;
+      lan.toDisplay = toInput.value || undefined;
+      lan.event = (eraRadio?.value ?? lan.event) as typeof lan.event;
+      lan.participants = updated.participants ?? [];
+      lan.games = updated.games ?? [];
+      lan.awards = updated.awards ?? [];
+
+      const newYear = yearInput.value;
+      descDisplay.textContent = lan.description;
+      const newDates = buildDatesText(fromInput.value, toInput.value);
+      datesDisplay.textContent = newDates;
+      const hashEl = createElement("span"); hashEl.className = "hash"; hashEl.textContent = "#";
+      title.innerHTML = ""; title.appendChild(hashEl);
+      title.append(`${eventLabels[lan.event] ?? lan.event} ${newYear}`);
+    }
+
+    closeEdit();
+  }
+
+  newGameInput.addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const name = newGameInput.value.trim();
+    if (!name) return;
+    const fd = new FormData(); fd.append("gameName", name);
+    const res = await fetch("http://localhost:8080/api/game/", { method: "POST", headers: authHeaders(), body: fd });
+    if (!res.ok) return;
+    const game: Game = await res.json();
+    if (cachedGames) cachedGames.push(game);
+    const row = buildCheckbox(game, "games", true);
+    row.style.backgroundColor = "var(--bg-dark)";
+    gameCheckboxes.push(row);
+    gPillList.insertBefore(row, newGameInput);
+    newGameInput.value = "";
+  });
+
+  newAwardInput.addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const name = newAwardInput.value.trim();
+    if (!name) return;
+    const fd = new FormData(); fd.append("awardName", name);
+    const res = await fetch("http://localhost:8080/api/award/", { method: "POST", headers: authHeaders(), body: fd });
+    if (!res.ok) return;
+    const award: Award = await res.json();
+    if (cachedAwards) cachedAwards.push(award);
+    const row = buildCheckbox(award, "awards", true);
+    row.style.backgroundColor = "var(--bg-dark)";
+    awardCheckboxes.push(row);
+    aPillList.insertBefore(row, newAwardInput);
+    newAwardInput.value = "";
+  });
+
+  saveBtn.addEventListener("click", handleSave);
+  cancelBtn.addEventListener("click", closeEdit);
 
   if (tweets.length) {
     renderTweetFeed(tweets, lanImageFilenames);
@@ -252,6 +620,7 @@ function renderImageSection(
 ) {
   const section = createElement("section");
   section.className = "event-section";
+  section.id = "event-images";
 
   const header = createElement("div");
   header.className = "event-section-header";
@@ -725,6 +1094,7 @@ function buildImageCard(
 function renderTweetFeed(tweets: TweetEntry[], lanImageFilenames: Set<string>) {
   const section = createElement("section");
   section.className = "event-section";
+  section.id = "event-tweets";
   const h2 = createElement("h2");
   h2.innerHTML = `<span class="hash">#</span>Twitter`;
   section.appendChild(h2);

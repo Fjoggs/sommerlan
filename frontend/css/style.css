@@ -293,6 +293,43 @@ button[id^="delete-"]:hover {
   flex-wrap: wrap;
 }
 
+.nickname-section {
+  margin-top: 0.75rem;
+}
+
+.nickname-section-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.nickname-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.nickname-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nickname-row-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 6rem;
+}
+
+.nickname-input {
+  flex: 1;
+  max-width: 14rem;
+}
+
 .attend-btn {
   cursor: pointer;
   border: 2px dashed var(--border);
@@ -371,6 +408,32 @@ button[id^="delete-"]:hover {
   box-sizing: border-box;
 }
 
+.content-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.content-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background-color: var(--bg-dark);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+
+.content-badge:hover {
+  color: var(--text);
+  border-color: var(--border);
+}
+
 .lan-year-input {
   width: 5rem;
 }
@@ -447,9 +510,10 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 0.9rem;
-  color: oklch(0.15 0.01 250);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   text-decoration: none;
   transition: all 0.2s ease;
   margin-left: auto;
@@ -749,7 +813,29 @@ header {
 .event-title-row h1 {
   margin: 0;
   text-align: center;
+}
+
+.event-title-center {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.lan-event-edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.lan-event-edit-btn:hover {
+  opacity: 1;
 }
 
 .event-nav-arrow {
@@ -822,6 +908,7 @@ a.event-pill:hover {
 .event-pill.game-pill {
   background-color: var(--bg-dark);
   color: var(--text);
+  font-weight: 700;
 }
 
 .event-section-header {
@@ -1459,4 +1546,74 @@ a.event-pill:hover {
 .plan-card-first-badge {
   font-size: 0.85rem;
   color: var(--warning);
+}
+
+/* Game stats page */
+.game-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.game-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.game-stat-name {
+  width: 200px;
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-stat-bar-outer {
+  flex: 1;
+  height: 1.2rem;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--bar-color, var(--primary)) var(--bar-pct), var(--bg-light) var(--bar-pct));
+}
+
+.game-stat-count {
+  width: 2rem;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.participant-stat-row {
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  transition: background 0.15s;
+}
+
+.participant-stat-row:hover {
+  background: var(--bg-light);
+}
+
+.participant-stat-avatar {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.participant-stat-name {
+  width: 120px;
+  text-align: left !important;
 }
