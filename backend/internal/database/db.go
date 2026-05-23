@@ -837,6 +837,74 @@ func ReorderLanImages(db *sql.DB, lanId int, ids []int) error {
 	return tx.Commit()
 }
 
+type UserLanEntry struct {
+	LanId       int    `json:"lanId"`
+	StartDate   string `json:"startDate"`
+	EndDate     string `json:"endDate"`
+	Event       string `json:"event"`
+	Description string `json:"description"`
+	FromDisplay string `json:"fromDisplay,omitempty"`
+	ToDisplay   string `json:"toDisplay,omitempty"`
+}
+
+type UserProfile struct {
+	Id       int           `json:"id"`
+	Name     string        `json:"name"`
+	Nickname string        `json:"nickname,omitempty"`
+	Color    string        `json:"color"`
+	Color2   string        `json:"color2,omitempty"`
+	Lans     []UserLanEntry `json:"lans"`
+}
+
+func GetUserProfile(db *sql.DB, userId int) (UserProfile, error) {
+	user, err := GetUserWithId(db, userId)
+	if err != nil {
+		return UserProfile{}, err
+	}
+
+	query := `
+		SELECT lan.id, lan.start_date, lan.end_date, lan.event, lan.description,
+		       lan.from_display, lan.to_display
+		FROM lan
+		JOIN lan_participants ON lan.id = lan_participants.lan_id
+		WHERE lan_participants.user_id = ?
+		ORDER BY lan.start_date ASC
+	`
+	rows, err := db.Query(query, userId)
+	if err != nil {
+		return UserProfile{}, err
+	}
+	defer rows.Close()
+
+	var lans []UserLanEntry
+	for rows.Next() {
+		var entry UserLanEntry
+		var fromDisplay, toDisplay sql.NullString
+		if err := rows.Scan(&entry.LanId, &entry.StartDate, &entry.EndDate, &entry.Event, &entry.Description, &fromDisplay, &toDisplay); err != nil {
+			return UserProfile{}, err
+		}
+		if fromDisplay.Valid {
+			entry.FromDisplay = fromDisplay.String
+		}
+		if toDisplay.Valid {
+			entry.ToDisplay = toDisplay.String
+		}
+		lans = append(lans, entry)
+	}
+	if lans == nil {
+		lans = []UserLanEntry{}
+	}
+
+	return UserProfile{
+		Id:       user.Id,
+		Name:     user.Name,
+		Nickname: user.Nickname,
+		Color:    user.Color,
+		Color2:   user.Color2,
+		Lans:     lans,
+	}, rows.Err()
+}
+
 func GetLanImageFilename(db *sql.DB, imageId int) (lanId int, filename string, err error) {
 	row := db.QueryRow("SELECT lan_id, filename FROM lan_images WHERE id = ?", imageId)
 	err = row.Scan(&lanId, &filename)

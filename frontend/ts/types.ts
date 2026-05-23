@@ -39,3 +39,22 @@ export type RsvpEntry = {
   color2?: string;
   dates: string[];
 };
+
+export type UserLanEntry = {
+  lanId: number;
+  startDate: string;
+  endDate: string;
+  event: string;
+  description: string;
+  fromDisplay?: string;
+  toDisplay?: string;
+};
+
+export type UserProfile = {
+  id: number;
+  name: string;
+  nickname?: string;
+  color: string;
+  color2?: string;
+  lans: UserLanEntry[];
+};

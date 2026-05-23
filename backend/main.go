@@ -104,11 +104,10 @@ func main() {
 	router.HandleFunc("GET /api/user/", handlers.EnableCORS(user.GetUsers))
 	router.HandleFunc("POST /api/user/", handlers.EnableCORS(user.AddUser))
 	router.HandleFunc("PATCH /api/user/", handlers.EnableCORS(user.AlterUser))
+	router.HandleFunc("GET /api/user/{id}/", handlers.EnableCORS(user.GetUserById))
 	router.HandleFunc(
 		"OPTIONS /api/user/{id}/",
-		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {
-			// Empty handler - EnableCORS will handle the response
-		}),
+		handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}),
 	)
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 

@@ -1,7 +1,9 @@
 import { fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { Award, Game, LAN, User } from "./types.js";
-import { createElement } from "./utils.js";
+import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
+
+let viewAsUser: User | null = null; // re-enable "view as" feature when needed
 
 export const fetchLans = async () => {
   const lans: LAN[] | undefined = await fetchAll("lan");
@@ -51,7 +53,19 @@ const fetchLanById = async (id: number) => {
 const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   const id = `id-${lan.lanId}`;
   const container = createElement("form", id);
-  container.className = "timeline-event";
+  container.className = lan.lanId === 30 ? "timeline-event lan-30-bg" : "timeline-event";
+  if (lan.lanId === 30 && me) {
+    const c1 = (viewAsUser as User | null)?.color ?? me.color;
+    const c2 = (viewAsUser as User | null)?.color2 ?? (viewAsUser as User | null)?.color ?? me.color2 ?? me.color;
+    container.style.setProperty("--event-c1", c1);
+    container.style.setProperty("--event-c2", c2);
+    const cornerLogo = buildSommerlanLogo(c1, c2);
+    cornerLogo.className = "sommerlan-logo sommerlan-logo--corner";
+    // point logo vars at the container's event vars so live updates cascade
+    cornerLogo.style.setProperty("--logo-c1", "var(--event-c1)");
+    cornerLogo.style.setProperty("--logo-c2", "var(--event-c2)");
+    container.appendChild(cornerLogo);
+  }
 
   const hContainer = createElement("div");
   hContainer.className = "timeline-event-header";
@@ -180,7 +194,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     for (const element of Array.from(pillContainer.children)) {
       const color = element.getAttribute("data-color");
       if (color) {
-        element.setAttribute("style", `background-color: color-mix(in srgb, ${color} 20%, var(--bg)); color: ${color}; font-weight: 700`);
+        element.setAttribute("style", `background-color: color-mix(in srgb, ${color} 20%, var(--bg)); color: ${color}; font-weight: 700; cursor: pointer`);
       } else {
         element.setAttribute("style", "display: none");
       }
@@ -330,6 +344,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   const participants = createElement("div");
   participants.className = "pill-container";
   const pHeader = createElement("h4");
+  pHeader.className = "deltakere-header";
   pHeader.textContent = "Deltakere";
   participants.appendChild(pHeader);
   pillContainer.className = "pill-list";
@@ -340,7 +355,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
     if (label) {
       const badge = createElement("span") as HTMLSpanElement;
       badge.className = "first-event-badge";
-      badge.textContent = "★";
+      badge.appendChild(createStarIcon());
       badge.title = "Første LAN!";
       const checkboxEl = label.querySelector("input");
       label.insertBefore(badge, checkboxEl);
@@ -348,6 +363,14 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set()) => {
   }
   for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
     input.disabled = true;
+  }
+
+  for (const label of Array.from(pillContainer.querySelectorAll<HTMLLabelElement>("label[data-user-id]"))) {
+    label.addEventListener("click", (e: Event) => {
+      if (container.classList.contains("editing")) return;
+      e.preventDefault();
+      window.location.href = `participant.html?id=${label.dataset.userId}`;
+    });
   }
 
   const pillRow = createElement("div");
@@ -509,9 +532,11 @@ const renderAllUsers = async (
       if (participant) {
         const row = createCheckbox(user, "participants", "var(--bg-light)", true);
         row.setAttribute("data-color", participant.color);
+        row.dataset.userId = String(user.id);
         row.style.backgroundColor = `color-mix(in srgb, ${participant.color} 20%, var(--bg))`;
         row.style.color = participant.color;
         row.style.fontWeight = "700";
+        row.style.cursor = "pointer";
         container.appendChild(row);
       } else {
         const row = createCheckbox(user, "participants");
@@ -828,4 +853,5 @@ if (me) {
       });
     }
   }
+
 }

@@ -1,7 +1,7 @@
 import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN } from "./types.js";
-import { createElement } from "./utils.js";
+import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
 
 type Tag = { id: number; name: string };
 
@@ -88,31 +88,6 @@ if (!lan) {
   renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags);
 }
 
-function buildSommerlanLogo(): HTMLElement {
-  const wrap = createElement("div") as HTMLDivElement;
-  wrap.className = "sommerlan-logo";
-
-  const sommer = createElement("span") as HTMLSpanElement;
-  sommer.className = "logo-sommer";
-  sommer.textContent = "Sommer";
-
-  const right = createElement("span") as HTMLSpanElement;
-  right.className = "logo-right";
-
-  const lan = createElement("span") as HTMLSpanElement;
-  lan.className = "logo-lan";
-  lan.textContent = "LAN";
-
-  const ten = createElement("span") as HTMLSpanElement;
-  ten.className = "logo-ten";
-  ten.textContent = "10";
-
-  right.appendChild(lan);
-  right.appendChild(ten);
-  wrap.appendChild(sommer);
-  wrap.appendChild(right);
-  return wrap;
-}
 
 function renderLan(
   lan: LAN,
@@ -163,13 +138,9 @@ function renderLan(
   }
 
   titleRow.appendChild(prevLink);
-  titleRow.appendChild(title);
+  titleRow.appendChild(lan.lanId === 30 ? buildSommerlanLogo(me!.color, me!.color2 ?? me!.color) : title);
   titleRow.appendChild(nextLink);
   content.appendChild(titleRow);
-
-  if (lan.lanId === 30) {
-    content.appendChild(buildSommerlanLogo());
-  }
 
   if (lan.fromDisplay || lan.toDisplay) {
     const dates = createElement("p") as HTMLParagraphElement;
@@ -206,16 +177,18 @@ function renderLan(
     const pillList = createElement("div");
     pillList.className = "pill-list event-pills";
     for (const p of lan.participants) {
-      const pill = createElement("span") as HTMLSpanElement;
+      const pill = createElement("a") as HTMLAnchorElement;
       pill.className = "event-pill";
+      pill.href = `participant.html?id=${p.id}`;
       pill.style.backgroundColor = `color-mix(in srgb, ${p.color} 20%, var(--bg))`;
       pill.style.color = p.color;
       pill.style.fontWeight = "bold";
+      pill.style.cursor = "pointer";
       pill.append(p.nickname || p.name);
       if (firstTimers.has(p.id)) {
         const badge = createElement("span") as HTMLSpanElement;
         badge.className = "first-event-badge";
-        badge.textContent = "★";
+        badge.appendChild(createStarIcon());
         badge.title = "Første LAN!";
         pill.appendChild(badge);
       }
@@ -363,7 +336,8 @@ function renderImageSection(
     let dragSrc: HTMLElement | null = null;
 
     grid.addEventListener("dragstart", (e) => {
-      dragSrc = (e.target as HTMLElement).closest(".image-card");
+      const de = e as DragEvent;
+      dragSrc = (de.target as HTMLElement).closest(".image-card");
       if (!dragSrc) return;
       if (!selected.has(dragSrc)) {
         selected.forEach((c) => c.classList.remove("selected"));
@@ -371,7 +345,7 @@ function renderImageSection(
       }
       const dragging = selected.size > 0 ? Array.from(selected) : [dragSrc];
       dragging.forEach((c) => c.classList.add("dragging"));
-      e.dataTransfer!.effectAllowed = "move";
+      de.dataTransfer!.effectAllowed = "move";
     });
 
     grid.addEventListener("dragend", () => {
@@ -587,8 +561,9 @@ function buildImageCard(
   const tweet = carousel[index]?.tweet;
   card.style.cursor = "pointer";
   card.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).closest(".image-delete-btn, .image-tag-strip, .image-tag-add")) return;
-    if (e.shiftKey && me!.role === "admin") {
+    const click = e as MouseEvent;
+    if ((click.target as HTMLElement).closest(".image-delete-btn, .image-tag-strip, .image-tag-add")) return;
+    if (click.shiftKey && me!.role === "admin") {
       if (selected.has(card)) {
         selected.delete(card);
         card.classList.remove("selected");

@@ -10,7 +10,7 @@ export const authHeaders = (): Record<string, string> => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-export type AuthUser = { id: number; name: string; nickname?: string; color: string; role?: string };
+export type AuthUser = { id: number; name: string; nickname?: string; color: string; color2?: string; role?: string };
 
 export async function requireAuth(): Promise<AuthUser | null> {
   const token = getToken();

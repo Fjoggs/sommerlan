@@ -176,6 +176,7 @@ button[id^="delete-"]:hover {
   display: flex;
   flex-direction: column;
   align-items: baseline;
+  position: relative;
   width: 100%;
   max-width: 620px;
   box-sizing: border-box;
@@ -393,6 +394,15 @@ button[id^="delete-"]:hover {
   box-shadow: var(--shadow);
 }
 
+.pill-list label[data-user-id] {
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.timeline-event:not(.editing) .pill-list label[data-user-id]:hover {
+  filter: brightness(1.2);
+}
+
 .pill-list label::before {
   display: none;
 }
@@ -562,6 +572,31 @@ header {
   }
 }
 
+/* Admin view-as bar */
+.view-as-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  background: var(--bg-light);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.view-as-bar select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 /* Sub-navigation for admin pages */
 .admin-nav {
   display: flex;
@@ -652,7 +687,6 @@ header {
 .sommerlan-logo {
   display: inline-flex;
   align-items: baseline;
-  margin-bottom: 1.5rem;
   font-family: 'Permanent Marker', cursive;
   line-height: 1;
   text-transform: none;
@@ -660,9 +694,13 @@ header {
 
 .logo-sommer {
   font-family: 'Rage Italic', cursive;
-  font-size: 2.6rem;
-  color: #fff;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  font-size: 3rem;
+  position: relative;
+  z-index: 3;
+  background: linear-gradient(in oklab to right, var(--logo-c1), color-mix(in oklab, var(--logo-c1), var(--logo-c2)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .logo-right {
@@ -670,26 +708,33 @@ header {
   display: inline-flex;
   align-items: flex-end;
   padding-right: 1em;
-}
-
-.logo-lan {
-  font-size: 2.8rem;
-  color: #ffd700;
-  -webkit-text-stroke: 2px #000;
-  position: relative;
   z-index: 2;
 }
 
+.logo-lan {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 2.8rem;
+  position: relative;
+  z-index: 3;
+  background: linear-gradient(in oklab to right, color-mix(in oklab, var(--logo-c1), var(--logo-c2)), var(--logo-c2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 2px #000;
+  paint-order: stroke fill;
+}
+
 .logo-ten {
-  font-family: 'Pricedown', cursive;
+  font-family: 'Rage Italic', cursive;
   position: absolute;
-  left: 0.55em;
-  bottom: 0;
-  font-size: 4.5rem;
-  color: #e91e8c;
+  left: 0.3em;
+  bottom: -0.25em;
+  font-size: 5.5rem;
+  color: var(--logo-c1);
   z-index: 1;
   line-height: 1;
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  transform: rotate(-15deg);
 }
 
 .event-title-row {
@@ -766,6 +811,12 @@ header {
   padding: 0.5rem 0.9rem;
   font-size: 0.9rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+a.event-pill:hover {
+  filter: brightness(1.2);
 }
 
 .event-pill.game-pill {
@@ -1198,10 +1249,12 @@ header {
 }
 
 .first-event-badge {
-  font-size: 0.7em;
-  margin-left: 0.15em;
-  opacity: 0.85;
-  font-variant-emoji: text;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75em;
+  margin-left: 0.2em;
+  opacity: 0.9;
+  color: var(--warning);
 }
 
 @media (max-width: 600px) {
@@ -1264,4 +1317,146 @@ header {
   .rsvp-container {
     flex-direction: column;
   }
+}
+
+/* LAN 30 (SommerLAN 2024) custom background */
+.timeline-event.lan-30-bg {
+  background: linear-gradient(
+    in oklab to bottom,
+    var(--event-c1) 0%,
+    var(--event-c2) 50%,
+    #1A0018 50%,
+    #060008 100%
+  );
+  background-origin: border-box;
+}
+
+.timeline-event.lan-30-bg .lan-event-link,
+.timeline-event.lan-30-bg .dates-display,
+.timeline-event.lan-30-bg > p,
+.timeline-event.lan-30-bg .deltakere-header {
+  color: #1A0018;
+}
+
+.sommerlan-logo--corner {
+  position: absolute;
+  bottom: 1rem;
+  right: 1.5rem;
+  pointer-events: none;
+}
+
+.editing .sommerlan-logo--corner {
+  display: none;
+}
+
+/* Participant profile page */
+.participant-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.participant-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.participant-name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.participant-display-name {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.participant-real-name {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.participant-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.participant-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  border-radius: var(--border-radius);
+  padding: 0.75rem 1.5rem;
+  min-width: 80px;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.participant-lan-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.participant-lan-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  border-radius: var(--border-radius);
+  padding: 0.75rem 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.participant-lan-card:hover {
+  background: var(--bg-light);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+}
+
+.plan-card-year {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.plan-card-type {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.plan-card-first-badge {
+  font-size: 0.85rem;
+  color: var(--warning);
 }
