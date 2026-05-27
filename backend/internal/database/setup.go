@@ -126,6 +126,21 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		FOREIGN KEY (award_id) REFERENCES award(id) ON DELETE CASCADE
 	)`)
 
+	_, _ = db.Exec(`ALTER TABLE lan ADD COLUMN invitation TEXT`)
+	_, _ = db.Exec(`ALTER TABLE lan ADD COLUMN is_romjulslan INTEGER NOT NULL DEFAULT 0`)
+	_, _ = db.Exec(`ALTER TABLE rsvp ADD COLUMN lan_id INTEGER REFERENCES lan(id) ON DELETE CASCADE`)
+
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS lan_quote (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		lan_id INTEGER NOT NULL,
+		quote TEXT NOT NULL,
+		attributed_to TEXT,
+		created_by INTEGER,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE,
+		FOREIGN KEY (created_by) REFERENCES user(id)
+	)`)
+
 	log.Println("Database initialized successfully")
 	return db, nil
 }

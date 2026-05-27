@@ -4,12 +4,14 @@ import { requireAuth, authHeaders } from "./auth.js";
 import type { RsvpEntry } from "./types.js";
 
 const API_URL = "http://localhost:8080/api";
+const lanId = new URLSearchParams(location.search).get("lan");
 
 let me: { id: number; name: string; nickname?: string; color: string } | null = null;
 
 async function init() {
   me = await requireAuth();
   if (!me) return;
+  if (!lanId) { showError("Mangler LAN-ID i URL (?lan=ID)"); return; }
 
   setupDayCheckboxes();
   await loadExistingRsvp();
@@ -17,7 +19,7 @@ async function init() {
 }
 
 async function loadExistingRsvp() {
-  const entries = await apiFetch<RsvpEntry[]>("rsvp");
+  const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
   if (!entries) return;
   const myEntry = entries.find((e) => e.userId === me!.id);
   if (!myEntry) return;
@@ -35,11 +37,12 @@ function setupDayCheckboxes() {
     const game = GAMES[date];
     if (game) {
       const label = cb.closest<HTMLElement>(".day-card")!;
+      const dateEl = label.querySelector(".day-date")!;
       const icon = document.createElement("span");
       icon.className = "day-card-game";
-      icon.textContent = "⚽";
+      icon.textContent = " ⚽";
       icon.title = game;
-      label.appendChild(icon);
+      dateEl.appendChild(icon);
     }
   });
 }
@@ -68,7 +71,7 @@ async function handleSubmit() {
   btn.textContent = "Sender…";
 
   try {
-    const res = await fetch(`${API_URL}/rsvp/`, {
+    const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ dates }),
@@ -98,7 +101,7 @@ async function showConfirmation(myDates: string[]) {
   document.querySelector<HTMLElement>(".rsvp-header")!.hidden = true;
   document.getElementById("rsvp-confirmation")!.hidden = false;
 
-  const entries = await apiFetch<RsvpEntry[]>("rsvp");
+  const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
   if (entries) renderMatrix(document.getElementById("participant-matrix")!, entries);
 }
 

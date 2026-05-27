@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 )
 
 type Lan struct {
@@ -24,6 +25,9 @@ type LanEvent struct {
 	Games        []GameResponse  `json:"games"`
 	Id           int             `json:"lanId"`
 	ImageCount   int             `json:"imageCount"`
+	Invitation    string          `json:"invitation,omitempty"`
+	IsRomjulsLAN  bool            `json:"isRomjulsLAN"`
+	QuoteCount   int             `json:"quoteCount"`
 	Participants []UserResponse  `json:"participants"`
 	Start_date   string          `json:"startDate"`
 	ToDisplay    string          `json:"toDisplay"`
@@ -293,14 +297,17 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		lan.id,
 		lan.start_date,
 		lan.from_display,
-		lan.to_display
+		lan.to_display,
+		lan.invitation,
+		lan.is_romjulslan
 		FROM lan
 		WHERE id = ?;
 	`
 	lanRow := queryLanWithId(db, lanQuery, id)
 
 	var lan Lan
-	var fromDisplay, toDisplay sql.NullString
+	var fromDisplay, toDisplay, invitation sql.NullString
+	var isRomjulsLAN bool
 
 	err := lanRow.Scan(
 		&lan.Description,
@@ -310,6 +317,8 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		&lan.Start_date,
 		&fromDisplay,
 		&toDisplay,
+		&invitation,
+		&isRomjulsLAN,
 	)
 	if err != nil {
 		return event, err
@@ -353,56 +362,91 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		return event, err
 	}
 
-	paricipantsQuery := `
-		SELECT
-			user.id, user.name, user.color, user.color2,
-			COALESCE(lp.nickname, user.nickname), lp.nickname
-		FROM lan
-		JOIN lan_participants lp ON lan.id = lp.lan_id
-		JOIN user ON lp.user_id = user.id
-		WHERE lan.id = ?;
-`
 	var participants []UserResponse
+	isUpcoming := lan.End_date > time.Now().Format("2006-01-02")
 
-	participantRows, err := doQueryWithId(db, paricipantsQuery, id)
-	if err != nil {
-		return event, err
-	}
-	defer participantRows.Close()
-
-	for participantRows.Next() {
-		var participant UserResponse
-		var color, color2, nickname, eventNickname sql.NullString
-		err := participantRows.Scan(
-			&participant.Id,
-			&participant.Name,
-			&color,
-			&color2,
-			&nickname,
-			&eventNickname,
-		)
+	if isUpcoming {
+		rsvpQuery := `
+			SELECT DISTINCT u.id, u.name, u.color, u.color2, u.nickname
+			FROM rsvp r
+			JOIN user u ON r.user_id = u.id
+			WHERE r.lan_id = ?
+			ORDER BY u.name;
+		`
+		rsvpRows, err := db.Query(rsvpQuery, id)
 		if err != nil {
-			fmt.Println("Scanning participant blew up", err)
 			return event, err
 		}
-		if color.Valid {
-			participant.Color = color.String
+		defer rsvpRows.Close()
+		for rsvpRows.Next() {
+			var p UserResponse
+			var color, color2, nickname sql.NullString
+			if err := rsvpRows.Scan(&p.Id, &p.Name, &color, &color2, &nickname); err != nil {
+				return event, err
+			}
+			if color.Valid {
+				p.Color = color.String
+			}
+			if color2.Valid {
+				p.Color2 = color2.String
+			}
+			if nickname.Valid {
+				p.Nickname = nickname.String
+			}
+			participants = append(participants, p)
 		}
-		if color2.Valid {
-			participant.Color2 = color2.String
+		if err = rsvpRows.Err(); err != nil {
+			return event, err
 		}
-		if nickname.Valid {
-			participant.Nickname = nickname.String
+	} else {
+		paricipantsQuery := `
+			SELECT
+				user.id, user.name, user.color, user.color2,
+				COALESCE(lp.nickname, user.nickname), lp.nickname
+			FROM lan
+			JOIN lan_participants lp ON lan.id = lp.lan_id
+			JOIN user ON lp.user_id = user.id
+			WHERE lan.id = ?;
+		`
+		participantRows, err := doQueryWithId(db, paricipantsQuery, id)
+		if err != nil {
+			return event, err
 		}
-		if eventNickname.Valid {
-			participant.EventNickname = eventNickname.String
-		}
-		participants = append(participants, participant)
-	}
+		defer participantRows.Close()
 
-	err = participantRows.Err()
-	if err != nil {
-		return event, err
+		for participantRows.Next() {
+			var participant UserResponse
+			var color, color2, nickname, eventNickname sql.NullString
+			err := participantRows.Scan(
+				&participant.Id,
+				&participant.Name,
+				&color,
+				&color2,
+				&nickname,
+				&eventNickname,
+			)
+			if err != nil {
+				fmt.Println("Scanning participant blew up", err)
+				return event, err
+			}
+			if color.Valid {
+				participant.Color = color.String
+			}
+			if color2.Valid {
+				participant.Color2 = color2.String
+			}
+			if nickname.Valid {
+				participant.Nickname = nickname.String
+			}
+			if eventNickname.Valid {
+				participant.EventNickname = eventNickname.String
+			}
+			participants = append(participants, participant)
+		}
+
+		if err = participantRows.Err(); err != nil {
+			return event, err
+		}
 	}
 
 	lanAwardsQuery := `
@@ -433,6 +477,8 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 
 	var imageCount int
 	db.QueryRow("SELECT COUNT(*) FROM lan_images WHERE lan_id = ?", id).Scan(&imageCount)
+	var quoteCount int
+	db.QueryRow("SELECT COUNT(*) FROM lan_quote WHERE lan_id = ?", id).Scan(&quoteCount)
 
 	event = LanEvent{
 		Awards:       lanAwards,
@@ -442,6 +488,9 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		Games:        lanGames,
 		Id:           lan.Id,
 		ImageCount:   imageCount,
+		Invitation:    invitation.String,
+		IsRomjulsLAN:  isRomjulsLAN,
+		QuoteCount:   quoteCount,
 		Participants: participants,
 		Start_date:   lan.Start_date,
 		FromDisplay:  fromDisplay.String,
@@ -518,10 +567,12 @@ func AlterLan(
 	start_date string,
 	from_display string,
 	to_display string,
+	invitation string,
+	isRomjulsLAN bool,
 ) error {
-	query := `UPDATE lan set description = ?, end_date = ?, event = ?, start_date = ?, from_display = NULLIF(?, ''), to_display = NULLIF(?, '') where id = ?`
+	query := `UPDATE lan SET description = ?, end_date = ?, event = ?, start_date = ?, from_display = NULLIF(?, ''), to_display = NULLIF(?, ''), invitation = NULLIF(?, ''), is_romjulslan = ? WHERE id = ?`
 
-	_, err := db.Exec(query, description, end_date, event, start_date, from_display, to_display, id)
+	_, err := db.Exec(query, description, end_date, event, start_date, from_display, to_display, invitation, isRomjulsLAN, id)
 	if err != nil {
 		return fmt.Errorf("LAN UPDATE ERROR: %v", err)
 	}
@@ -554,6 +605,24 @@ func AlterUser(db *sql.DB, id int, name string, color string, color2 string) err
 	}
 
 	return nil
+}
+
+func GetOrCreateGame(db *sql.DB, name string) (GameResponse, error) {
+	var g GameResponse
+	err := db.QueryRow("SELECT id, name FROM game WHERE LOWER(name) = LOWER(?)", name).Scan(&g.Id, &g.Name)
+	if err == nil {
+		return g, nil
+	}
+	if err != sql.ErrNoRows {
+		return g, err
+	}
+	id, err := AddGame(db, name)
+	if err != nil {
+		return g, err
+	}
+	g.Id = int(id)
+	g.Name = name
+	return g, nil
 }
 
 func AddGame(db *sql.DB, name string) (int64, error) {
@@ -666,23 +735,23 @@ type RsvpEntry struct {
 	Dates    []string `json:"dates"`
 }
 
-func AddRsvpDates(db *sql.DB, userId int, dates []string) error {
+func AddRsvpDates(db *sql.DB, userId, lanId int, dates []string) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("RSVP BEGIN ERROR: %v", err)
 	}
-	if _, err := tx.Exec("DELETE FROM rsvp WHERE user_id = ?", userId); err != nil {
+	if _, err := tx.Exec("DELETE FROM rsvp WHERE user_id = ? AND lan_id = ?", userId, lanId); err != nil {
 		tx.Rollback()
 		return fmt.Errorf("RSVP DELETE ERROR: %v", err)
 	}
-	stmt, err := tx.Prepare("INSERT INTO rsvp(user_id, date) VALUES(?, ?)")
+	stmt, err := tx.Prepare("INSERT INTO rsvp(user_id, lan_id, date) VALUES(?, ?, ?)")
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("RSVP PREPARE ERROR: %v", err)
 	}
 	defer stmt.Close()
 	for _, date := range dates {
-		if _, err := stmt.Exec(userId, date); err != nil {
+		if _, err := stmt.Exec(userId, lanId, date); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("RSVP INSERT ERROR: %v", err)
 		}
@@ -690,14 +759,15 @@ func AddRsvpDates(db *sql.DB, userId int, dates []string) error {
 	return tx.Commit()
 }
 
-func GetRsvps(db *sql.DB) ([]RsvpEntry, error) {
+func GetRsvps(db *sql.DB, lanId int) ([]RsvpEntry, error) {
 	query := `
 		SELECT u.id, u.name, u.color, u.color2, u.nickname, r.date
 		FROM rsvp r
 		JOIN user u ON r.user_id = u.id
+		WHERE r.lan_id = ?
 		ORDER BY u.id, r.date
 	`
-	rows, err := db.Query(query)
+	rows, err := db.Query(query, lanId)
 	if err != nil {
 		return nil, fmt.Errorf("RSVP QUERY ERROR: %v", err)
 	}
@@ -1034,4 +1104,73 @@ func GetLanImageFilename(db *sql.DB, imageId int) (lanId int, filename string, e
 func DeleteLanImageById(db *sql.DB, imageId int) error {
 	_, err := db.Exec("DELETE FROM lan_images WHERE id = ?", imageId)
 	return err
+}
+
+type LanQuote struct {
+	Id           int    `json:"id"`
+	LanId        int    `json:"lanId"`
+	Quote        string `json:"quote"`
+	AttributedTo string `json:"attributedTo,omitempty"`
+	CreatedAt    string `json:"createdAt"`
+}
+
+func GetLanQuotes(db *sql.DB, lanId int) ([]LanQuote, error) {
+	rows, err := db.Query(
+		"SELECT id, lan_id, quote, COALESCE(attributed_to, ''), created_at FROM lan_quote WHERE lan_id = ? ORDER BY created_at ASC",
+		lanId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var quotes []LanQuote
+	for rows.Next() {
+		var q LanQuote
+		if err := rows.Scan(&q.Id, &q.LanId, &q.Quote, &q.AttributedTo, &q.CreatedAt); err != nil {
+			return nil, err
+		}
+		quotes = append(quotes, q)
+	}
+	if quotes == nil {
+		quotes = []LanQuote{}
+	}
+	return quotes, rows.Err()
+}
+
+func AddLanQuote(db *sql.DB, lanId, createdBy int, quote, attributedTo string) (LanQuote, error) {
+	res, err := db.Exec(
+		"INSERT INTO lan_quote(lan_id, quote, attributed_to, created_by) VALUES(?, ?, NULLIF(?, ''), ?)",
+		lanId, quote, attributedTo, createdBy,
+	)
+	if err != nil {
+		return LanQuote{}, err
+	}
+	id, _ := res.LastInsertId()
+	var q LanQuote
+	db.QueryRow(
+		"SELECT id, lan_id, quote, COALESCE(attributed_to, ''), created_at FROM lan_quote WHERE id = ?",
+		id,
+	).Scan(&q.Id, &q.LanId, &q.Quote, &q.AttributedTo, &q.CreatedAt)
+	return q, nil
+}
+
+func DeleteLanQuote(db *sql.DB, quoteId int) error {
+	_, err := db.Exec("DELETE FROM lan_quote WHERE id = ?", quoteId)
+	return err
+}
+
+func UpdateLanQuote(db *sql.DB, quoteId int, quote, attributedTo string) (LanQuote, error) {
+	_, err := db.Exec(
+		"UPDATE lan_quote SET quote = ?, attributed_to = NULLIF(?, '') WHERE id = ?",
+		quote, attributedTo, quoteId,
+	)
+	if err != nil {
+		return LanQuote{}, err
+	}
+	var q LanQuote
+	err = db.QueryRow(
+		"SELECT id, lan_id, quote, COALESCE(attributed_to, ''), created_at FROM lan_quote WHERE id = ?",
+		quoteId,
+	).Scan(&q.Id, &q.LanId, &q.Quote, &q.AttributedTo, &q.CreatedAt)
+	return q, err
 }

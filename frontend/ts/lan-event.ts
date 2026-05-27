@@ -1,7 +1,8 @@
 import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
-import { LAN, User, Game, Award } from "./types.js";
+import { LAN, User, Game, Award, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
+import { BLOCKS, GAMES, renderMatrix } from "./matrix.js";
 
 type Tag = { id: number; name: string };
 
@@ -55,18 +56,22 @@ if (!lan) {
   const p = createElement("p");
   p.textContent = "LAN ikke funnet.";
   content.appendChild(p);
+} else if (new Date(lan.startDate) > new Date()) {
+  await renderUpcoming(lan);
 } else {
   const year = lan.startDate.substring(0, 4);
 
-  const [tweetRes, imageRes, tagsRes] = await Promise.all([
+  const [tweetRes, imageRes, tagsRes, quotesRes] = await Promise.all([
     fetch(`/data/tweets/${year}.json`),
     fetch(`http://localhost:8080/api/lan/${lan.lanId}/images/`, { headers: authHeaders() }),
     fetch(`http://localhost:8080/api/tags/`, { headers: authHeaders() }),
+    fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() }),
   ]);
 
   const tweets: TweetEntry[] = tweetRes.ok ? await tweetRes.json() : [];
   const lanImages: LanImage[] = imageRes.ok ? await imageRes.json() : [];
   const allTags: Tag[] = tagsRes.ok ? await tagsRes.json() : [];
+  const lanQuotes: LanQuote[] = quotesRes.ok ? await quotesRes.json() : [];
   const datalist = document.getElementById("tag-suggestions")!;
   for (const tag of allTags) {
     const opt = document.createElement("option");
@@ -85,9 +90,164 @@ if (!lan) {
   // set of filenames currently on this LAN (for tweet cards to check)
   const lanImageFilenames = new Set(lanImages.map((i) => i.filename));
 
-  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags);
+  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags, lanQuotes);
 }
 
+
+async function renderUpcoming(lan: LAN) {
+  const sorted = [...(allLans ?? [])].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const idx = sorted.findIndex((l) => l.lanId === lan.lanId);
+  const prev = idx > 0 ? sorted[idx - 1] : null;
+  const next = idx < sorted.length - 1 ? sorted[idx + 1] : null;
+
+  // Title row
+  const titleRow = createElement("div") as HTMLDivElement;
+  titleRow.className = "event-title-row";
+  const prevLink = createElement("a") as HTMLAnchorElement;
+  prevLink.className = "event-nav-arrow";
+  if (prev) { prevLink.href = `lan-event.html?id=${prev.lanId}`; prevLink.innerHTML = `&#8592; <span>${prev.startDate.substring(0, 4)}</span>`; }
+  else prevLink.setAttribute("aria-hidden", "true");
+  const title = createElement("h1") as HTMLHeadingElement;
+  const hash = createElement("span"); hash.className = "hash"; hash.textContent = "#";
+  title.appendChild(hash);
+  title.append(`SommerLAN ${lan.startDate.substring(0, 4)}`);
+  const nextLink = createElement("a") as HTMLAnchorElement;
+  nextLink.className = "event-nav-arrow";
+  if (next) { nextLink.href = `lan-event.html?id=${next.lanId}`; nextLink.innerHTML = `<span>${next.startDate.substring(0, 4)}</span> &#8594;`; }
+  else nextLink.setAttribute("aria-hidden", "true");
+  const titleCenter = createElement("div") as HTMLDivElement;
+  titleCenter.className = "event-title-center";
+  titleCenter.appendChild(title);
+  titleRow.appendChild(prevLink); titleRow.appendChild(titleCenter); titleRow.appendChild(nextLink);
+  content.appendChild(titleRow);
+
+  if (lan.invitation) {
+    const inv = createElement("p") as HTMLParagraphElement;
+    inv.className = "event-invitation";
+    inv.textContent = lan.invitation;
+    content.appendChild(inv);
+  }
+
+  // RSVP form
+  const wrapper = createElement("div") as HTMLDivElement;
+  wrapper.className = "rsvp-wrapper";
+  wrapper.style.padding = "0";
+  wrapper.style.maxWidth = "100%";
+
+  const blocksEl = createElement("div") as HTMLDivElement;
+  blocksEl.className = "event-blocks";
+
+  for (const block of BLOCKS) {
+    const blockEl = createElement("div") as HTMLDivElement;
+    blockEl.className = "event-block";
+    if (block.key === "main") blockEl.classList.add("event-block-main");
+
+    const blockHeader = createElement("div") as HTMLDivElement;
+    blockHeader.className = "event-block-header";
+    const badge = createElement("span") as HTMLSpanElement;
+    badge.className = `event-badge badge-${block.key}`;
+    badge.textContent = block.label;
+    blockHeader.appendChild(badge);
+    blockEl.appendChild(blockHeader);
+
+    const dayGrid = createElement("div") as HTMLDivElement;
+    dayGrid.className = "day-grid";
+
+    for (const date of block.dates) {
+      const d = new Date(date + "T00:00:00");
+      const dayName = d.toLocaleDateString("nb-NO", { weekday: "long" });
+      const dayNum = d.getDate();
+      const monthName = d.toLocaleDateString("nb-NO", { month: "long" });
+      const game = GAMES[date as keyof typeof GAMES];
+
+      const label = createElement("label") as HTMLLabelElement;
+      label.className = "day-card";
+      const cb = createElement("input") as HTMLInputElement;
+      cb.type = "checkbox"; cb.name = "day"; cb.value = date;
+      const nameSpan = createElement("span") as HTMLSpanElement;
+      nameSpan.className = "day-name";
+      nameSpan.textContent = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+      const dateSpan = createElement("span") as HTMLSpanElement;
+      dateSpan.className = "day-date";
+      dateSpan.textContent = `${dayNum}. ${monthName}`;
+      if (game) {
+        const gameSpan = createElement("span") as HTMLSpanElement;
+        gameSpan.className = "day-card-game"; gameSpan.textContent = " ⚽"; gameSpan.title = game;
+        dateSpan.appendChild(gameSpan);
+      }
+      label.appendChild(cb); label.appendChild(nameSpan); label.appendChild(dateSpan);
+      dayGrid.appendChild(label);
+    }
+    blockEl.appendChild(dayGrid);
+    blocksEl.appendChild(blockEl);
+  }
+  wrapper.appendChild(blocksEl);
+
+  const footer = createElement("div") as HTMLDivElement;
+  footer.className = "rsvp-footer";
+  const submitBtn = createElement("button") as HTMLButtonElement;
+  submitBtn.id = "rsvp-submit"; submitBtn.disabled = true; submitBtn.className = "inactive";
+  submitBtn.textContent = "Meld på";
+  footer.appendChild(submitBtn);
+  wrapper.appendChild(footer);
+  content.appendChild(wrapper);
+
+  // Matrix
+  const matrixSection = createElement("section") as HTMLElement;
+  matrixSection.className = "event-section";
+  const matrixH2 = createElement("h2");
+  matrixH2.innerHTML = `<span class="hash">#</span>Påmeldte`;
+  matrixSection.appendChild(matrixH2);
+  const matrixContainer = createElement("div") as HTMLDivElement;
+  matrixContainer.style.overflowX = "auto";
+  matrixSection.appendChild(matrixContainer);
+  content.appendChild(matrixSection);
+
+  const loadMatrix = async () => {
+    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+    if (res.ok) { const entries: RsvpEntry[] = await res.json(); renderMatrix(matrixContainer, entries); }
+  };
+  await loadMatrix();
+
+  // Pre-check existing RSVP for current user
+  const existingRes = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+  if (existingRes.ok) {
+    const entries: RsvpEntry[] = await existingRes.json();
+    const mine = entries.find((e) => e.userId === me!.id);
+    if (mine) {
+      for (const date of mine.dates) {
+        const cb = wrapper.querySelector<HTMLInputElement>(`input[value="${date}"]`);
+        if (cb) cb.checked = true;
+      }
+    }
+  }
+
+  const updateBtn = () => {
+    const anyChecked = wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked").length > 0;
+    submitBtn.disabled = !anyChecked;
+    submitBtn.classList.toggle("inactive", !anyChecked);
+  };
+  wrapper.querySelectorAll<HTMLInputElement>("input[name=day]").forEach((cb) => cb.addEventListener("change", updateBtn));
+  updateBtn();
+
+  submitBtn.addEventListener("click", async () => {
+    const dates = Array.from(wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked")).map((cb) => cb.value);
+    submitBtn.disabled = true; submitBtn.textContent = "Sender…";
+    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ dates }),
+    });
+    if (res.ok) {
+      submitBtn.textContent = "Lagret ✓";
+      await loadMatrix();
+      setTimeout(() => { submitBtn.textContent = "Meld på"; submitBtn.disabled = false; }, 2000);
+    } else {
+      submitBtn.textContent = "Feil – prøv igjen";
+      submitBtn.disabled = false;
+    }
+  });
+}
 
 function renderLan(
   lan: LAN,
@@ -96,7 +256,10 @@ function renderLan(
   imageToTweet: Map<string, TweetEntry>,
   lanImageFilenames: Set<string>,
   allTags: Tag[],
+  lanQuotes: LanQuote[],
 ) {
+  const now = new Date();
+  const isHappening = new Date(lan.startDate) <= now && new Date(lan.endDate) >= now;
   const year = lan.startDate.substring(0, 4);
   const eventLabels: Record<string, string> = {
     pre: "Classical Era",
@@ -128,6 +291,12 @@ function renderLan(
   hash.textContent = "#";
   title.appendChild(hash);
   title.append(`${eventLabels[lan.event] ?? lan.event} ${year}`);
+  if (isHappening) {
+    const pill = createElement("span") as HTMLSpanElement;
+    pill.className = "upcoming-badge happening-badge";
+    pill.textContent = "HAPPENING STATUS: IT'S";
+    title.appendChild(pill);
+  }
 
   const nextLink = createElement("a") as HTMLAnchorElement;
   nextLink.className = "event-nav-arrow";
@@ -147,40 +316,31 @@ function renderLan(
   titleRow.appendChild(nextLink);
   content.appendChild(titleRow);
 
+  if (isHappening) content.classList.add("happening");
+
   // === Dates display ===
   const datesDisplay = createElement("p") as HTMLParagraphElement;
   datesDisplay.className = "event-dates";
   const buildDatesText = (from: string, to: string) =>
     from && to && from === to ? from : from && to ? `${from} – ${to}` : from || to;
-  datesDisplay.textContent = buildDatesText(lan.fromDisplay ?? "", lan.toDisplay ?? "");
-  if (datesDisplay.textContent) content.appendChild(datesDisplay);
+  const datesText = buildDatesText(lan.fromDisplay ?? "", lan.toDisplay ?? "");
+  datesDisplay.textContent = datesText;
+  if (datesText) content.appendChild(datesDisplay);
 
-  // === Content badges ===
-  const badgeRow = createElement("div") as HTMLDivElement;
-  badgeRow.className = "content-badges";
-  if (lanImages.length > 0) {
-    const b = createElement("a") as HTMLAnchorElement;
-    b.className = "content-badge";
-    b.href = "#event-images";
-    b.title = "Bilder";
-    b.innerHTML = `📷 <span>${lanImages.length}</span>`;
-    badgeRow.appendChild(b);
-  }
-  if (tweets.length > 0) {
-    const b = createElement("a") as HTMLAnchorElement;
-    b.className = "content-badge";
-    b.href = "#event-tweets";
-    b.title = "Tweets";
-    b.innerHTML = `💬 <span>${tweets.length}</span>`;
-    badgeRow.appendChild(b);
-  }
-  if (badgeRow.children.length > 0) content.appendChild(badgeRow);
 
   // === Description display ===
   const descDisplay = createElement("p") as HTMLParagraphElement;
   descDisplay.className = "event-description";
   descDisplay.textContent = lan.description ?? "";
   if (lan.description) content.appendChild(descDisplay);
+
+  // === Invitation display ===
+  const invitationDisplay = createElement("p") as HTMLParagraphElement;
+  invitationDisplay.className = "event-invitation";
+  invitationDisplay.textContent = lan.invitation ?? "";
+  invitationDisplay.style.display = lan.invitation ? "" : "none";
+  content.appendChild(invitationDisplay);
+  if (lan.isRomjulsLAN) content.classList.add("romjulslan");
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
@@ -194,7 +354,7 @@ function renderLan(
   const pSection = createElement("section") as HTMLElement;
   pSection.className = "event-section";
   const pH2 = createElement("h2");
-  pH2.innerHTML = `<span class="hash">#</span>Deltakere`;
+  pH2.innerHTML = `<span class="hash">#</span>Deltakere <span class="section-count">(${lan.participants?.length ?? 0})</span>`;
   pSection.appendChild(pH2);
   const pPillList = createElement("div") as HTMLDivElement;
   pPillList.className = "pill-list event-pills";
@@ -226,10 +386,12 @@ function renderLan(
   const gSection = createElement("section") as HTMLElement;
   gSection.className = "event-section";
   const gH2 = createElement("h2");
-  gH2.innerHTML = `<span class="hash">#</span>Spill`;
   gSection.appendChild(gH2);
   const gPillList = createElement("div") as HTMLDivElement;
   gPillList.className = "pill-list event-pills";
+  const updateGameCount = () => {
+    gH2.innerHTML = `<span class="hash">#</span>Spill <span class="section-count">(${lan.games?.length ?? 0})</span>`;
+  };
   const buildGameViewPills = () => {
     gPillList.innerHTML = "";
     for (const game of lan.games ?? []) {
@@ -239,15 +401,74 @@ function renderLan(
       gPillList.appendChild(pill);
     }
   };
+  updateGameCount();
   buildGameViewPills();
   gSection.appendChild(gPillList);
-  if (lan.games && lan.games.length > 0) content.appendChild(gSection);
+
+  // Add game form — available to all logged-in users
+  const gameDatalist = createElement("datalist") as HTMLDataListElement;
+  gameDatalist.id = `game-suggestions-${lan.lanId}`;
+  fetch("http://localhost:8080/api/game/", { headers: authHeaders() })
+    .then(r => r.ok ? r.json() : [])
+    .then((games: Game[]) => {
+      for (const g of games) {
+        const opt = document.createElement("option");
+        opt.value = g.name;
+        gameDatalist.appendChild(opt);
+      }
+    });
+  gSection.appendChild(gameDatalist);
+
+  const gameAddForm = createElement("div") as HTMLDivElement;
+  gameAddForm.className = "quote-add-form";
+  gameAddForm.style.marginTop = "0.75rem";
+  const gameInput = createElement("input") as HTMLInputElement;
+  gameInput.type = "text";
+  gameInput.placeholder = "Legg til spill...";
+  gameInput.className = "lan-text-input";
+  gameInput.setAttribute("list", gameDatalist.id);
+  const gameAddBtn = createElement("button") as HTMLButtonElement;
+  gameAddBtn.type = "button";
+  gameAddBtn.className = "quote-submit-btn";
+  gameAddBtn.textContent = "Legg til";
+
+  const submitGame = async () => {
+    const name = gameInput.value.trim();
+    if (!name) return;
+    const fd = new URLSearchParams({ name });
+    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/games/`, {
+      method: "POST", headers: authHeaders(), body: fd,
+    });
+    if (res.ok) {
+      const game: Game = await res.json();
+      if (!lan.games) lan.games = [];
+      if (!lan.games.some(g => g.id === game.id)) {
+        lan.games.push(game);
+        buildGameViewPills();
+        updateGameCount();
+        if (!gameDatalist.querySelector(`option[value="${game.name}"]`)) {
+          const opt = document.createElement("option");
+          opt.value = game.name;
+          gameDatalist.appendChild(opt);
+        }
+      }
+      gameInput.value = "";
+    }
+  };
+
+  gameAddBtn.addEventListener("click", submitGame);
+  gameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitGame(); } });
+  gameAddForm.appendChild(gameInput);
+  gameAddForm.appendChild(gameAddBtn);
+  gSection.appendChild(gameAddForm);
+
+  content.appendChild(gSection);
 
   // === Awards section ===
   const aSection = createElement("section") as HTMLElement;
   aSection.className = "event-section";
   const aH2 = createElement("h2");
-  aH2.innerHTML = `<span class="hash">#</span>Kåringer`;
+  aH2.innerHTML = `<span class="hash">#</span>Kåringer <span class="section-count">(${lan.awards?.length ?? 0})</span>`;
   aSection.appendChild(aH2);
   const aPillList = createElement("div") as HTMLDivElement;
   aPillList.className = "pill-list event-pills";
@@ -264,6 +485,7 @@ function renderLan(
   aSection.appendChild(aPillList);
   if (lan.awards && lan.awards.length > 0) content.appendChild(aSection);
 
+  renderQuoteSection(lan.lanId, lanQuotes);
   renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames, allTags);
 
   // === Edit mode (admin only) ===
@@ -294,10 +516,15 @@ function renderLan(
   editBar.appendChild(saveBtn);
   titleRow.after(editBar);
 
+  // All edit form fields grouped in one wrapper
+  const editFields = createElement("div") as HTMLDivElement;
+  editFields.className = "edit-fields";
+  editFields.style.display = "none";
+  editBar.after(editFields);
+
   // Year + era inputs
   const editMetaRow = createElement("div") as HTMLDivElement;
   editMetaRow.className = "from-to-row";
-  editMetaRow.style.display = "none";
   const yearInput = createElement("input") as HTMLInputElement;
   yearInput.type = "number"; yearInput.className = "lan-year-input"; yearInput.value = year;
   editMetaRow.appendChild(yearInput);
@@ -315,12 +542,11 @@ function renderLan(
     eraGroup.appendChild(l);
   }
   editMetaRow.appendChild(eraGroup);
-  editBar.after(editMetaRow);
+  editFields.appendChild(editMetaRow);
 
   // From / to display inputs
   const editDatesRow = createElement("div") as HTMLDivElement;
   editDatesRow.className = "from-to-row";
-  editDatesRow.style.display = "none";
   const fromInput = createElement("input") as HTMLInputElement;
   fromInput.type = "text"; fromInput.placeholder = "Fra"; fromInput.className = "lan-text-input";
   fromInput.value = lan.fromDisplay ?? "";
@@ -329,14 +555,29 @@ function renderLan(
   toInput.value = lan.toDisplay ?? "";
   const sep = createElement("span"); sep.textContent = "–";
   editDatesRow.appendChild(fromInput); editDatesRow.appendChild(sep); editDatesRow.appendChild(toInput);
-  editMetaRow.after(editDatesRow);
+  editFields.appendChild(editDatesRow);
 
-  // Description input
-  const descInput = createElement("input") as HTMLInputElement;
-  descInput.type = "text"; descInput.className = "lan-text-input";
+  // Description textarea
+  const descInput = createElement("textarea") as HTMLTextAreaElement;
+  descInput.className = "lan-text-input";
   descInput.placeholder = "Beskrivelse"; descInput.value = lan.description ?? "";
-  descInput.style.display = "none";
-  editDatesRow.after(descInput);
+  editFields.appendChild(descInput);
+
+  // Invitation textarea
+  const invitationInput = createElement("textarea") as HTMLTextAreaElement;
+  invitationInput.className = "lan-text-input lan-invitation-input";
+  invitationInput.placeholder = "Invitasjonstekst..."; invitationInput.value = lan.invitation ?? "";
+  editFields.appendChild(invitationInput);
+
+  // RomjulsLAN checkbox
+  const romjulsLabel = createElement("label") as HTMLLabelElement;
+  romjulsLabel.className = "romjulslan-checkbox-row";
+  const romjulsCheckbox = createElement("input") as HTMLInputElement;
+  romjulsCheckbox.type = "checkbox";
+  romjulsCheckbox.checked = lan.isRomjulsLAN ?? false;
+  romjulsLabel.appendChild(romjulsCheckbox);
+  romjulsLabel.append(" RomjulsLAN ❄");
+  editFields.appendChild(romjulsLabel);
 
   // Nickname section (built fresh each time edit opens)
   const nicknameSection = createElement("div") as HTMLDivElement;
@@ -422,10 +663,11 @@ function renderLan(
     // Header / meta
     datesDisplay.style.display = "none";
     descDisplay.style.display = "none";
+    invitationDisplay.style.display = "none";
     editBar.style.display = "";
-    editMetaRow.style.display = "flex";
-    editDatesRow.style.display = "flex";
-    descInput.style.display = "";
+    editFields.style.display = "flex";
+    document.getElementById("event-images")?.style.setProperty("display", "none");
+    document.getElementById("event-quotes")?.style.setProperty("display", "none");
 
     // Participants: rebuild as checkboxes
     pPillList.className = "pill-list";
@@ -492,10 +734,11 @@ function renderLan(
     // Restore header
     datesDisplay.style.display = "";
     descDisplay.style.display = "";
+    invitationDisplay.style.display = lan.invitation ? "" : "none";
     editBar.style.display = "none";
-    editMetaRow.style.display = "none";
-    editDatesRow.style.display = "none";
-    descInput.style.display = "none";
+    editFields.style.display = "none";
+    document.getElementById("event-images")?.style.removeProperty("display");
+    document.getElementById("event-quotes")?.style.removeProperty("display");
 
     // Restore participants
     pPillList.className = "pill-list event-pills";
@@ -529,6 +772,8 @@ function renderLan(
     fd.append("toDisplay", toInput.value);
     const eraRadio = eraGroup.querySelector<HTMLInputElement>("input:checked");
     fd.append("event", eraRadio?.value ?? lan.event);
+    fd.append("invitation", invitationInput.value);
+    fd.append("isRomjulsLAN", romjulsCheckbox.checked ? "1" : "0");
     for (const lbl of userCheckboxes) {
       if (lbl.querySelector<HTMLInputElement>("input")?.checked) fd.append("participants", lbl.querySelector<HTMLInputElement>("input")!.value);
     }
@@ -548,15 +793,20 @@ function renderLan(
     if (res.ok) {
       const updated: LAN = await res.json();
       lan.description = descInput.value;
+      lan.invitation = invitationInput.value || undefined;
       lan.fromDisplay = fromInput.value || undefined;
       lan.toDisplay = toInput.value || undefined;
       lan.event = (eraRadio?.value ?? lan.event) as typeof lan.event;
       lan.participants = updated.participants ?? [];
       lan.games = updated.games ?? [];
       lan.awards = updated.awards ?? [];
+      lan.isRomjulsLAN = romjulsCheckbox.checked;
+      content.classList.toggle("romjulslan", lan.isRomjulsLAN);
 
       const newYear = yearInput.value;
       descDisplay.textContent = lan.description;
+      invitationDisplay.textContent = lan.invitation ?? "";
+      invitationDisplay.style.display = lan.invitation ? "" : "none";
       const newDates = buildDatesText(fromInput.value, toInput.value);
       datesDisplay.textContent = newDates;
       const hashEl = createElement("span"); hashEl.className = "hash"; hashEl.textContent = "#";
@@ -609,6 +859,162 @@ function renderLan(
   }
 }
 
+function renderQuoteSection(lanId: number, quotes: LanQuote[]) {
+  const section = createElement("section");
+  section.className = "event-section";
+  section.id = "event-quotes";
+
+  const h2 = createElement("h2");
+  h2.innerHTML = `<span class="hash">#</span>Sitater <span class="section-count">(${quotes.length})</span>`;
+  section.appendChild(h2);
+
+  const quoteList = createElement("div") as HTMLDivElement;
+  quoteList.className = "quote-list";
+
+  function buildQuoteEl(q: LanQuote): HTMLElement {
+    const bq = createElement("blockquote") as HTMLElement;
+    bq.className = "lan-quote";
+
+    const p = createElement("p") as HTMLParagraphElement;
+    p.className = "quote-text";
+    p.textContent = `«${q.quote}»`;
+    bq.appendChild(p);
+
+    const footer = createElement("footer") as HTMLElement;
+    footer.className = "quote-attribution";
+    footer.textContent = q.attributedTo ? `— ${q.attributedTo}` : "";
+    footer.style.display = q.attributedTo ? "" : "none";
+    bq.appendChild(footer);
+
+    if (me?.role === "admin") {
+      const actions = createElement("div") as HTMLDivElement;
+      actions.className = "quote-actions";
+
+      const edit = createElement("button") as HTMLButtonElement;
+      edit.type = "button"; edit.className = "quote-edit-btn"; edit.textContent = "✎";
+
+      const del = createElement("button") as HTMLButtonElement;
+      del.type = "button"; del.className = "quote-delete-btn"; del.textContent = "✕";
+      del.addEventListener("click", async () => {
+        const res = await fetch(`http://localhost:8080/api/lan/${lanId}/quotes/${q.id}/`, {
+          method: "DELETE", headers: authHeaders(),
+        });
+        if (res.ok) bq.remove();
+      });
+
+      edit.addEventListener("click", () => {
+        const quoteEditInput = createElement("input") as HTMLInputElement;
+        quoteEditInput.type = "text"; quoteEditInput.className = "lan-text-input quote-edit-input";
+        quoteEditInput.value = q.quote;
+
+        const attrEditInput = createElement("input") as HTMLInputElement;
+        attrEditInput.type = "text"; attrEditInput.className = "lan-text-input quote-edit-input";
+        attrEditInput.value = q.attributedTo ?? "";
+        attrEditInput.placeholder = "Hvem sa det?";
+
+        const save = createElement("button") as HTMLButtonElement;
+        save.type = "button"; save.className = "quote-submit-btn"; save.textContent = "Lagre";
+
+        const cancel = createElement("button") as HTMLButtonElement;
+        cancel.type = "button"; cancel.className = "quote-delete-btn"; cancel.textContent = "Avbryt";
+
+        const editForm = createElement("div") as HTMLDivElement;
+        editForm.className = "quote-edit-form";
+        editForm.appendChild(quoteEditInput); editForm.appendChild(attrEditInput);
+        editForm.appendChild(save); editForm.appendChild(cancel);
+
+        p.style.display = "none";
+        if (footer) footer.style.display = "none";
+        bq.insertBefore(editForm, actions);
+
+        cancel.addEventListener("click", () => {
+          editForm.remove();
+          p.style.display = ""; if (footer) footer.style.display = "";
+        });
+
+        save.addEventListener("click", async () => {
+          const text = quoteEditInput.value.trim();
+          if (!text) return;
+          const fd = new URLSearchParams({ quote: text, attributedTo: attrEditInput.value.trim() });
+          const res = await fetch(`http://localhost:8080/api/lan/${lanId}/quotes/${q.id}/`, {
+            method: "PATCH", headers: authHeaders(), body: fd,
+          });
+          if (res.ok) {
+            const updated: LanQuote = await res.json();
+            q.quote = updated.quote; q.attributedTo = updated.attributedTo;
+            p.textContent = `«${updated.quote}»`;
+            if (footer) footer.textContent = updated.attributedTo ? `— ${updated.attributedTo}` : "";
+            if (footer) footer.style.display = updated.attributedTo ? "" : "none";
+            editForm.remove();
+            p.style.display = "";
+          }
+        });
+
+        quoteEditInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); attrEditInput.focus(); } });
+        attrEditInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); save.click(); } });
+        quoteEditInput.focus();
+      });
+
+      actions.appendChild(edit); actions.appendChild(del);
+      bq.appendChild(actions);
+    }
+
+    return bq;
+  }
+
+  for (const q of quotes) {
+    quoteList.appendChild(buildQuoteEl(q));
+  }
+  section.appendChild(quoteList);
+
+  // Add form — available to all logged-in users
+  const form = createElement("div") as HTMLDivElement;
+  form.className = "quote-add-form";
+
+  const quoteInput = createElement("input") as HTMLInputElement;
+  quoteInput.type = "text";
+  quoteInput.placeholder = "Sitat...";
+  quoteInput.className = "lan-text-input";
+
+  const attrInput = createElement("input") as HTMLInputElement;
+  attrInput.type = "text";
+  attrInput.placeholder = "Hvem sa det?";
+  attrInput.className = "lan-text-input";
+
+  const submitBtn = createElement("button") as HTMLButtonElement;
+  submitBtn.type = "button";
+  submitBtn.className = "quote-submit-btn";
+  submitBtn.textContent = "Legg til";
+
+  const submit = async () => {
+    const text = quoteInput.value.trim();
+    if (!text) return;
+    const fd = new URLSearchParams({ quote: text, attributedTo: attrInput.value.trim() });
+    const res = await fetch(`http://localhost:8080/api/lan/${lanId}/quotes/`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: fd,
+    });
+    if (res.ok) {
+      const q: LanQuote = await res.json();
+      quoteList.appendChild(buildQuoteEl(q));
+      quoteInput.value = "";
+      attrInput.value = "";
+    }
+  };
+
+  submitBtn.addEventListener("click", submit);
+  quoteInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); attrInput.focus(); } });
+  attrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } });
+
+  form.appendChild(quoteInput);
+  form.appendChild(attrInput);
+  form.appendChild(submitBtn);
+  section.appendChild(form);
+
+  content.appendChild(section);
+}
+
 type CarouselEntry = { src: string; tweet: TweetEntry | undefined };
 
 function renderImageSection(
@@ -625,7 +1031,7 @@ function renderImageSection(
   const header = createElement("div");
   header.className = "event-section-header";
   const h2 = createElement("h2");
-  h2.innerHTML = `<span class="hash">#</span>Bilder`;
+  h2.innerHTML = `<span class="hash">#</span>Bilder <span class="section-count">(${lanImages.length})</span>`;
   header.appendChild(h2);
 
   const fileInput = createElement("input") as HTMLInputElement;
@@ -1096,7 +1502,7 @@ function renderTweetFeed(tweets: TweetEntry[], lanImageFilenames: Set<string>) {
   section.className = "event-section";
   section.id = "event-tweets";
   const h2 = createElement("h2");
-  h2.innerHTML = `<span class="hash">#</span>Twitter`;
+  h2.innerHTML = `<span class="hash">#</span>Twitter <span class="section-count">(${tweets.length})</span>`;
   section.appendChild(h2);
 
   const feed = createElement("div");

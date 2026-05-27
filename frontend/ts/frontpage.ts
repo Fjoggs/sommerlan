@@ -1,6 +1,6 @@
 import { fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
-import { Award, Game, LAN, User } from "./types.js";
+import { Award, Game, LAN, LanQuote, User } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
 
 let viewAsUser: User | null = null; // re-enable "view as" feature when needed
@@ -30,7 +30,7 @@ export const fetchLans = async () => {
   const mainContainer = document.getElementById("main");
   const sideContainer = document.getElementById("side");
 
-  for (const lan of lans) {
+  for (const lan of [...lans].reverse()) {
     const firstTimers = firstTimerMap.get(lan.lanId) ?? new Set<number>();
     const tweetCount = tweetCounts.get(lan.startDate.substring(0, 4)) ?? 0;
     if (lan.event === "pre") {
@@ -68,8 +68,14 @@ const fetchLanById = async (id: number) => {
 
 const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetCount: number = 0) => {
   const id = `id-${lan.lanId}`;
+  const now = new Date();
+  const isUpcoming = new Date(lan.startDate) > now;
+  const isHappening = new Date(lan.startDate) <= now && new Date(lan.endDate) >= now;
   const container = createElement("form", id);
   container.className = lan.lanId === 30 ? "timeline-event lan-30-bg" : "timeline-event";
+  if (lan.isRomjulsLAN) container.classList.add("romjulslan");
+  if (isUpcoming) container.classList.add("upcoming");
+  if (isHappening) container.classList.add("happening");
   if (lan.lanId === 30 && me) {
     const c1 = (viewAsUser as User | null)?.color ?? me.color;
     const c2 = (viewAsUser as User | null)?.color2 ?? (viewAsUser as User | null)?.color ?? me.color2 ?? me.color;
@@ -133,8 +139,15 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   };
   const datesDisplay = createElement("p") as HTMLParagraphElement;
   datesDisplay.className = "dates-display";
-  datesDisplay.textContent = buildDatesText(lan.fromDisplay ?? "", lan.toDisplay ?? "");
-  if (!datesDisplay.textContent) datesDisplay.style.display = "none";
+  const datesText = buildDatesText(lan.fromDisplay ?? "", lan.toDisplay ?? "");
+  datesDisplay.appendChild(document.createTextNode(datesText));
+  if (isUpcoming || isHappening) {
+    const badge = createElement("span") as HTMLSpanElement;
+    badge.className = isHappening ? "upcoming-badge happening-badge" : "upcoming-badge";
+    badge.textContent = isHappening ? "HAPPENING STATUS: IT'S" : "Soon...";
+    datesDisplay.appendChild(badge);
+  }
+  if (!datesText && !isUpcoming && !isHappening) datesDisplay.style.display = "none";
   headerLeft.appendChild(datesDisplay);
 
   hContainer.appendChild(headerLeft);
@@ -163,13 +176,24 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   const descriptionDisplay = createElement("p");
   descriptionDisplay.textContent = lan.description;
 
-  const descriptionInput = createElement("input") as HTMLInputElement;
+  const invitationDisplay = createElement("p") as HTMLParagraphElement;
+  invitationDisplay.className = "event-invitation";
+  invitationDisplay.textContent = lan.invitation ?? "";
+  if (!lan.invitation) invitationDisplay.style.display = "none";
+
+  const descriptionInput = createElement("textarea") as HTMLTextAreaElement;
   descriptionInput.className = "lan-text-input";
   descriptionInput.style.display = "none";
-  descriptionInput.type = "text";
   descriptionInput.name = "description";
   descriptionInput.value = lan.description;
   descriptionInput.placeholder = "Beskrivelse";
+
+  const invitationInput = createElement("textarea") as HTMLTextAreaElement;
+  invitationInput.className = "lan-text-input lan-invitation-input";
+  invitationInput.style.display = "none";
+  invitationInput.name = "invitation";
+  invitationInput.value = lan.invitation ?? "";
+  invitationInput.placeholder = "Invitasjonstekst...";
 
   const eventTypeGroup = createElement("div") as HTMLDivElement;
   eventTypeGroup.className = "radio-group";
@@ -191,10 +215,20 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     eventTypeGroup.appendChild(label);
   }
 
+  const romjulsLabel = createElement("label") as HTMLLabelElement;
+  romjulsLabel.className = "romjulslan-checkbox-row";
+  romjulsLabel.style.display = "none";
+  const romjulsCheckbox = createElement("input") as HTMLInputElement;
+  romjulsCheckbox.type = "checkbox";
+  romjulsCheckbox.checked = lan.isRomjulsLAN ?? false;
+  romjulsLabel.appendChild(romjulsCheckbox);
+  romjulsLabel.append(" RomjulsLAN ❄");
+
   function closeEdit() {
     document.removeEventListener("mousedown", outsideClickHandler);
     document.removeEventListener("keydown", escHandler);
     container.className = "timeline-event";
+    if (lan.isRomjulsLAN) container.classList.add("romjulslan");
     fieldset.setAttribute("disabled", "true");
     editActionsRow.style.display = "none";
     editButton.style.display = "";
@@ -203,8 +237,11 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     yearInput.style.display = "none";
     fromToRow.style.display = "none";
     descriptionDisplay.style.display = "";
+    invitationDisplay.style.display = lan.invitation ? "" : "none";
     descriptionInput.style.display = "none";
+    invitationInput.style.display = "none";
     eventTypeGroup.style.display = "none";
+    romjulsLabel.style.display = "none";
     attendBtn.style.display = "";
     if (!datesDisplay.textContent) datesDisplay.style.display = "none";
     for (const element of Array.from(pillContainer.children)) {
@@ -247,6 +284,9 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
       input.removeEventListener("change", refreshNicknameSection);
     }
+    quotesSection.style.display = "none";
+    quoteTextInput.value = "";
+    quoteAttrInput.value = "";
   }
 
   function outsideClickHandler(e: MouseEvent) {
@@ -271,8 +311,11 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     datesDisplay.style.display = "none";
     fromToRow.style.display = "flex";
     descriptionDisplay.style.display = "none";
+    invitationDisplay.style.display = "none";
     descriptionInput.style.display = "block";
+    invitationInput.style.display = "block";
     eventTypeGroup.style.display = "flex";
+    romjulsLabel.style.display = "";
     attendBtn.style.display = "none";
     for (const element of Array.from(pillContainer.children)) {
       element.removeAttribute("style");
@@ -294,6 +337,8 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     for (const input of Array.from(pillContainer.querySelectorAll<HTMLInputElement>("input"))) {
       input.addEventListener("change", refreshNicknameSection);
     }
+    quotesSection.style.display = "";
+    loadQuotes();
     document.addEventListener("mousedown", outsideClickHandler);
     document.addEventListener("keydown", escHandler);
     container.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -305,12 +350,14 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     const formData = new FormData();
     formData.append("lanId", lan.lanId.toString());
     formData.append("description", descriptionInput.value);
+    formData.append("invitation", invitationInput.value);
     formData.append("startDate", `${yearInput.value}-01-01`);
     formData.append("endDate", `${yearInput.value}-12-31`);
     formData.append("fromDisplay", fromInput.value);
     formData.append("toDisplay", toInput.value);
     const checkedRadio = eventTypeGroup.querySelector<HTMLInputElement>("input:checked");
     formData.append("event", checkedRadio?.value ?? lan.event);
+    formData.append("isRomjulsLAN", romjulsCheckbox.checked ? "1" : "0");
     for (const input of Array.from(gamePillContainer.querySelectorAll<HTMLInputElement>("input:checked"))) {
       formData.append("games", input.value);
     }
@@ -331,6 +378,10 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
       const updated: LAN = await res.json();
       headerLink.textContent = yearInput.value;
       descriptionDisplay.textContent = descriptionInput.value;
+      lan.isRomjulsLAN = romjulsCheckbox.checked;
+      lan.invitation = invitationInput.value || undefined;
+      invitationDisplay.textContent = lan.invitation ?? "";
+      invitationDisplay.style.display = lan.invitation ? "" : "none";
       const newDatesText = buildDatesText(fromInput.value, toInput.value);
       datesDisplay.textContent = newDatesText;
       datesDisplay.style.display = newDatesText ? "" : "none";
@@ -383,7 +434,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
       b.className = "content-badge";
       b.href = `lan-event.html?id=${lan.lanId}#event-tweets`;
       b.title = "Tweets";
-      b.innerHTML = `💬 <span>${tweetCount}</span>`;
+      b.innerHTML = `🐦 <span>${tweetCount}</span>`;
       badges.appendChild(b);
     }
     container.appendChild(badges);
@@ -392,7 +443,9 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   container.appendChild(fromToRow);
   container.appendChild(descriptionDisplay);
   container.appendChild(descriptionInput);
+  container.appendChild(invitationInput);
   container.appendChild(eventTypeGroup);
+  container.appendChild(romjulsLabel);
 
   const participants = createElement("div");
   participants.className = "pill-container";
@@ -622,6 +675,100 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   editActionsRow.appendChild(deleteButton);
   editActionsRow.appendChild(saveButton);
   container.appendChild(editActionsRow);
+
+  // Quotes section — shown only in edit mode
+  const quotesSection = createElement("div") as HTMLDivElement;
+  quotesSection.className = "pill-container quotes-section";
+  quotesSection.style.display = "none";
+
+  const quoteList = createElement("div") as HTMLDivElement;
+  quoteList.className = "quote-list";
+  quotesSection.appendChild(quoteList);
+
+  let quotesLoaded = false;
+  const loadQuotes = async () => {
+    if (quotesLoaded) return;
+    quotesLoaded = true;
+    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const fetched: LanQuote[] = await res.json();
+    for (const q of fetched) quoteList.appendChild(buildQuoteItem(q));
+  };
+
+  function buildQuoteItem(q: LanQuote): HTMLElement {
+    const bq = createElement("blockquote") as HTMLElement;
+    bq.className = "lan-quote";
+    const p = createElement("p") as HTMLParagraphElement;
+    p.className = "quote-text";
+    p.textContent = `«${q.quote}»`;
+    bq.appendChild(p);
+    if (q.attributedTo) {
+      const footer = createElement("footer") as HTMLElement;
+      footer.className = "quote-attribution";
+      footer.textContent = `— ${q.attributedTo}`;
+      bq.appendChild(footer);
+    }
+    return bq;
+  }
+
+  const quoteForm = createElement("div") as HTMLDivElement;
+  quoteForm.className = "quote-add-form";
+  const quoteTextInput = createElement("input") as HTMLInputElement;
+  quoteTextInput.type = "text";
+  quoteTextInput.placeholder = "Sitat...";
+  quoteTextInput.className = "lan-text-input";
+  const quoteAttrInput = createElement("input") as HTMLInputElement;
+  quoteAttrInput.type = "text";
+  quoteAttrInput.placeholder = "Hvem sa det?";
+  quoteAttrInput.className = "lan-text-input";
+  const quoteSubmitBtn = createElement("button") as HTMLButtonElement;
+  quoteSubmitBtn.type = "button";
+  quoteSubmitBtn.className = "quote-submit-btn";
+  quoteSubmitBtn.textContent = "Legg til";
+
+  const submitQuote = async () => {
+    const text = quoteTextInput.value.trim();
+    if (!text) return;
+    const fd = new URLSearchParams({ quote: text, attributedTo: quoteAttrInput.value.trim() });
+    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: fd,
+    });
+    if (res.ok) {
+      const q: LanQuote = await res.json();
+      quoteList.appendChild(buildQuoteItem(q));
+      quoteTextInput.value = "";
+      quoteAttrInput.value = "";
+      lan.quoteCount = (lan.quoteCount ?? 0) + 1;
+      quoteBadge.textContent = `💬 ${lan.quoteCount}`;
+      quoteBadge.style.display = "";
+    }
+  };
+
+  quoteSubmitBtn.addEventListener("click", submitQuote);
+  quoteTextInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); quoteAttrInput.focus(); } });
+  quoteAttrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitQuote(); } });
+  quoteForm.appendChild(quoteTextInput);
+  quoteForm.appendChild(quoteAttrInput);
+  quoteForm.appendChild(quoteSubmitBtn);
+  quotesSection.appendChild(quoteForm);
+  container.appendChild(quotesSection);
+
+  // Static quote badge (link to sub-page)
+  let badgesRow = container.querySelector<HTMLElement>(".content-badges");
+  if (!badgesRow) {
+    badgesRow = createElement("div") as HTMLDivElement;
+    badgesRow.className = "content-badges";
+    container.insertBefore(badgesRow, container.querySelector(".from-to-row") ?? null);
+  }
+  const quoteBadge = createElement("a") as HTMLAnchorElement;
+  quoteBadge.className = "content-badge";
+  quoteBadge.href = `lan-event.html?id=${lan.lanId}#event-quotes`;
+  quoteBadge.title = "Sitater";
+  quoteBadge.textContent = `💬 ${lan.quoteCount ?? 0}`;
+  if (!(lan.quoteCount ?? 0)) quoteBadge.style.display = "none";
+  badgesRow.appendChild(quoteBadge);
 
   container.addEventListener("click", (e) => {
     if (container.classList.contains("editing")) return;

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"backend/internal/database"
@@ -222,7 +223,9 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	startDate := req.FormValue("startDate")
 	fromDisplay := req.FormValue("fromDisplay")
 	toDisplay := req.FormValue("toDisplay")
-	err = database.AlterLan(h.db, id, description, endDate, event, startDate, fromDisplay, toDisplay)
+	invitation := req.FormValue("invitation")
+	isRomjulsLAN := req.FormValue("isRomjulsLAN") == "1"
+	err = database.AlterLan(h.db, id, description, endDate, event, startDate, fromDisplay, toDisplay, invitation, isRomjulsLAN)
 	if err != nil {
 		fmt.Println("Failed to add user", err)
 		return
@@ -317,6 +320,7 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 		FromDisplay:  fromDisplay,
 		Games:        lanGames,
 		Id:           id,
+		Invitation:   invitation,
 		Participants: participants,
 		Start_date:   startDate,
 		ToDisplay:    toDisplay,
@@ -350,6 +354,35 @@ func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Requ
 
 	fmt.Println("Deleted rows", rowsDeleted)
 	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) AddGameToLan(w http.ResponseWriter, r *http.Request) {
+	if _, err := GetUserFromRequest(h.db, r); err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+	game, err := database.GetOrCreateGame(h.db, name)
+	if err != nil {
+		http.Error(w, "failed to get or create game", http.StatusInternalServerError)
+		return
+	}
+	if _, err := database.AddLanGame(h.db, int64(lanId), game.Id); err != nil {
+		http.Error(w, "failed to add game to lan", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(game)
 }
 
 func (a *LanHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) {
@@ -676,4 +709,87 @@ func (h *LanHandlers) SetParticipantNickname(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) GetLanQuotes(w http.ResponseWriter, r *http.Request) {
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	quotes, err := database.GetLanQuotes(h.db, lanId)
+	if err != nil {
+		http.Error(w, "failed to get quotes", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(quotes)
+}
+
+func (h *LanHandlers) AddLanQuote(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromRequest(h.db, r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	quote := r.FormValue("quote")
+	if quote == "" {
+		http.Error(w, "quote is required", http.StatusBadRequest)
+		return
+	}
+	attributedTo := r.FormValue("attributedTo")
+	q, err := database.AddLanQuote(h.db, lanId, user.Id, quote, attributedTo)
+	if err != nil {
+		http.Error(w, "failed to add quote", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(q)
+}
+
+func (h *LanHandlers) DeleteLanQuote(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	quoteId, err := strconv.Atoi(r.PathValue("quoteId"))
+	if err != nil {
+		http.Error(w, "invalid quote id", http.StatusBadRequest)
+		return
+	}
+	if err := database.DeleteLanQuote(h.db, quoteId); err != nil {
+		http.Error(w, "failed to delete quote", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LanHandlers) PatchLanQuote(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	quoteId, err := strconv.Atoi(r.PathValue("quoteId"))
+	if err != nil {
+		http.Error(w, "invalid quote id", http.StatusBadRequest)
+		return
+	}
+	quote := r.FormValue("quote")
+	if quote == "" {
+		http.Error(w, "quote is required", http.StatusBadRequest)
+		return
+	}
+	q, err := database.UpdateLanQuote(h.db, quoteId, quote, r.FormValue("attributedTo"))
+	if err != nil {
+		http.Error(w, "failed to update quote", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(q)
 }

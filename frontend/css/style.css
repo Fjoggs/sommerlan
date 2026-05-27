@@ -408,10 +408,31 @@ button[id^="delete-"]:hover {
   box-sizing: border-box;
 }
 
+textarea.lan-text-input {
+  resize: vertical;
+  min-height: 3.5rem;
+  line-height: 1.5;
+}
+
+textarea.lan-invitation-input {
+  min-height: 10rem;
+}
+
+.event-invitation {
+  white-space: pre-wrap;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  border-left: 2px solid var(--border);
+  padding-left: 1rem;
+  margin: 1.5rem 0 0;
+}
+
 .content-badges {
   display: flex;
   gap: 0.4rem;
-  margin-bottom: 0.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0;
 }
 
 .content-badge {
@@ -424,7 +445,7 @@ button[id^="delete-"]:hover {
   color: var(--text-muted);
   font-size: 0.78rem;
   text-decoration: none;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-muted);
   transition: color 0.15s, border-color 0.15s;
   cursor: pointer;
 }
@@ -432,6 +453,112 @@ button[id^="delete-"]:hover {
 .content-badge:hover {
   color: var(--text);
   border-color: var(--border);
+}
+
+.quotes-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.quote-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.lan-quote {
+  margin: 0;
+  padding: 0.75rem 1rem 0.75rem 1.1rem;
+  border-left: 3px solid var(--primary);
+  background-color: var(--bg-dark);
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  position: relative;
+}
+
+.quote-text {
+  margin: 0 0 0.3rem 0;
+  font-style: italic;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.quote-attribution {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.quote-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.2rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.lan-quote:hover .quote-actions {
+  opacity: 1;
+}
+
+.quote-delete-btn,
+.quote-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.quote-edit-btn:hover {
+  color: var(--text);
+}
+
+.quote-delete-btn:hover {
+  color: var(--danger);
+}
+
+.quote-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-right: 2rem;
+}
+
+.quote-edit-input {
+  font-size: 0.9rem;
+}
+
+.quote-add-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.quote-add-form input {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.quote-submit-btn {
+  background-color: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.quote-submit-btn:hover {
+  color: var(--text);
+  border-color: var(--primary);
 }
 
 .lan-year-input {
@@ -872,17 +999,39 @@ header {
 .event-dates {
   color: var(--text-muted);
   font-size: 1rem;
-  margin: 0 0 0.5rem;
+  margin: 1.5rem 0 0;
+}
+
+.event-dates::before {
+  content: "📅 ";
+  font-style: normal;
+  filter: grayscale(1);
+}
+
+.edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.75rem;
 }
 
 .event-description {
   color: var(--text-muted);
-  margin: 0 0 1.5rem;
+  margin: 1.5rem 0 0;
+  white-space: pre-wrap;
 }
 
 .event-section {
   width: 100%;
   margin-top: 3rem;
+}
+
+.section-count {
+  font-size: 0.65em;
+  color: var(--text-muted);
+  font-weight: 400;
+  vertical-align: middle;
 }
 
 .event-pills {
@@ -1616,4 +1765,92 @@ a.event-pill:hover {
 .participant-stat-name {
   width: 120px;
   text-align: left !important;
+}
+
+/* RomjulsLAN winter/xmas theme */
+.timeline-event.romjulslan {
+  background: linear-gradient(160deg, oklch(0.16 0.04 240), oklch(0.20 0.05 225));
+}
+
+.timeline-event.romjulslan .lan-event-link::after {
+  content: " ❄";
+  color: oklch(0.82 0.12 210);
+}
+
+
+#content.romjulslan {
+  --romjuls-accent: oklch(0.78 0.13 210);
+}
+
+#content.romjulslan h1::after {
+  content: " ❄";
+  color: var(--romjuls-accent);
+}
+
+#content.romjulslan .event-section h2 {
+  color: oklch(0.88 0.08 215);
+}
+
+.romjulslan-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.15rem 0;
+}
+
+/* Upcoming event */
+.timeline-event.upcoming {
+  border-color: var(--primary);
+  background: linear-gradient(160deg, oklch(0.17 0.03 260), oklch(0.15 0.01 260));
+}
+
+.timeline-event.upcoming:not(.editing):hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--primary);
+}
+
+/* Happening now */
+.timeline-event.happening {
+  border-color: oklch(0.75 0.18 60);
+  background: linear-gradient(160deg, oklch(0.17 0.03 60), oklch(0.15 0.01 60));
+  box-shadow: var(--shadow), 0 0 18px oklch(0.75 0.18 60 / 0.25);
+  animation: happening-pulse 3s ease-in-out infinite;
+}
+
+.timeline-event.happening:not(.editing):hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 28px oklch(0.75 0.18 60 / 0.4);
+}
+
+@keyframes happening-pulse {
+  0%, 100% { box-shadow: var(--shadow), 0 0 18px oklch(0.75 0.18 60 / 0.25); }
+  50%       { box-shadow: var(--shadow), 0 0 32px oklch(0.75 0.18 60 / 0.45); }
+}
+
+.happening-badge {
+  background: color-mix(in srgb, oklch(0.75 0.18 60) 15%, transparent) !important;
+  color: oklch(0.82 0.18 60) !important;
+  border-color: color-mix(in srgb, oklch(0.75 0.18 60) 40%, transparent) !important;
+}
+
+#content.happening .hash {
+  color: oklch(0.75 0.18 60);
+}
+
+.upcoming-badge {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  border-radius: 999px;
+  vertical-align: middle;
+  position: relative;
+  top: -0.1em;
 }

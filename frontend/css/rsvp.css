@@ -212,9 +212,8 @@
 }
 
 .day-card-game {
-  font-size: 0.65rem;
-  line-height: 1;
-  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  vertical-align: middle;
   cursor: default;
 }
 

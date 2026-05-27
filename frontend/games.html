@@ -3,13 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SommerLAN — Event</title>
+    <title>SommerLAN — Spill</title>
     <link href="css/headings.css" rel="stylesheet" />
-    <link href="css/inputs.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet" />
     <link href="css/style.css" rel="stylesheet" />
-    <link href="css/rsvp.css" rel="stylesheet" />
-    <script defer type="module" src="dist/ts/lan-event.js"></script>
+    <script defer type="module" src="dist/ts/games.js"></script>
     <script defer type="module" src="dist/ts/nav.js"></script>
   </head>
   <body>
@@ -17,8 +14,7 @@
       <nav class="menu">
         <a class="menu-item" href="/">Oversikt</a>
         <a class="menu-item" href="countdown.html">Nedtelling</a>
-        <a class="menu-item" href="games.html">Spill</a>
-        <a class="menu-item" href="participants.html">Deltakere</a>
+        <a class="menu-item active" href="games.html">Spill</a>
         <a class="menu-item nav-pre-lan" href="rsvp.html">RSVP</a>
         <a class="menu-item nav-pre-lan" href="pameldte.html">Påmeldte</a>
         <a id="profile-avatar" href="profile.html"></a>
@@ -27,7 +23,6 @@
     <main class="event-subpage">
       <div id="content"></div>
     </main>
-    <datalist id="tag-suggestions"></datalist>
     <div id="toast-container"></div>
   </body>
 </html>

@@ -1,12 +1,4 @@
-import { requireAuth } from "./auth.js";
-
-const LAN_START = new Date("2026-07-14T00:00:00");
-
-if (new Date() >= LAN_START) {
-  document.querySelectorAll<HTMLElement>(".nav-pre-lan").forEach((el) => {
-    el.hidden = true;
-  });
-}
+import { requireAuth, authHeaders } from "./auth.js";
 
 const me = await requireAuth();
 if (me) {
@@ -55,3 +47,24 @@ if (nav) {
     }
   });
 }
+
+// Wire up RSVP/Påmeldte nav links to the next upcoming LAN
+try {
+  const res = await fetch("http://localhost:8080/api/lan/", { headers: authHeaders() });
+  if (res.ok) {
+    const lans: { lanId: number; startDate: string }[] = await res.json();
+    const today = new Date().toISOString().substring(0, 10);
+    const upcoming = lans
+      .filter((l) => l.startDate > today)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+    document.querySelectorAll<HTMLAnchorElement>("a.nav-pre-lan").forEach((el) => {
+      if (upcoming) {
+        const url = new URL(el.href, location.href);
+        url.searchParams.set("lan", String(upcoming.lanId));
+        el.href = url.toString();
+      } else {
+        el.hidden = true;
+      }
+    });
+  }
+} catch { /* ignore */ }

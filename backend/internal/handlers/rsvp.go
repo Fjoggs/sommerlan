@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"backend/internal/database"
 )
@@ -18,6 +19,11 @@ func NewRsvpHandlers(db *sql.DB) *RsvpHandlers {
 }
 
 func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
+	lanId, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil {
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
+		return
+	}
 	user, err := GetUserFromRequest(h.db, req)
 	if err != nil {
 		http.Error(writer, "unauthorized", http.StatusUnauthorized)
@@ -36,7 +42,7 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := database.AddRsvpDates(h.db, user.Id, body.Dates); err != nil {
+	if err := database.AddRsvpDates(h.db, user.Id, lanId, body.Dates); err != nil {
 		fmt.Println("AddRsvp failed:", err)
 		http.Error(writer, "failed to save rsvp", http.StatusInternalServerError)
 		return
@@ -45,10 +51,15 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 	writer.WriteHeader(http.StatusNoContent)
 }
 
-func (h *RsvpHandlers) GetRsvps(writer http.ResponseWriter, _ *http.Request) {
+func (h *RsvpHandlers) GetRsvps(writer http.ResponseWriter, req *http.Request) {
+	lanId, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil {
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	entries, err := database.GetRsvps(h.db)
+	entries, err := database.GetRsvps(h.db, lanId)
 	if err != nil {
 		fmt.Println("GetRsvps failed:", err)
 		http.Error(writer, "failed to fetch rsvps", http.StatusInternalServerError)

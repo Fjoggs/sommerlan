@@ -8,6 +8,9 @@ export type LAN = {
   fromDisplay?: string;
   games?: Game[];
   imageCount?: number;
+  invitation?: string;
+  isRomjulsLAN?: boolean;
+  quoteCount?: number;
   lanId: number;
   participants?: User[];
   startDate: string;
@@ -31,6 +34,14 @@ export type Game = {
 export type Award = {
   id: number;
   name: string;
+};
+
+export type LanQuote = {
+  id: number;
+  lanId: number;
+  quote: string;
+  attributedTo?: string;
+  createdAt: string;
 };
 
 export type RsvpEntry = {
