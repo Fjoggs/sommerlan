@@ -9,119 +9,18 @@
     <link href="css/style.css" rel="stylesheet" />
     <link href="css/rsvp.css" rel="stylesheet" />
     <script defer type="module" src="dist/ts/rsvp.js"></script>
-    <script defer type="module" src="dist/ts/nav.js"></script>
   </head>
   <body>
-    <nav class="menu">
-      <a href="index.html" class="menu-item">Oversikt</a>
-      <a href="countdown.html" class="menu-item">Nedtelling</a>
-        <a class="menu-item" href="games.html">Spill</a>
-        <a class="menu-item" href="participants.html">Deltakere</a>
-      <a href="rsvp.html" class="menu-item active nav-pre-lan">RSVP</a>
-      <a href="pameldte.html" class="menu-item nav-pre-lan">Påmeldte</a>
-      <a id="profile-avatar" href="profile.html"></a>
-    </nav>
+
 
     <main class="rsvp-wrapper">
       <header class="rsvp-header">
-        <h1>SommerLAN 2026</h1>
+        <h1><span class="hash">#</span>SommerLAN 2026</h1>
       </header>
 
       <!-- Which days? -->
       <section class="rsvp-step" id="step-days">
-        <div class="event-blocks">
-          <div class="event-block" data-block="pre-pre">
-            <div class="event-block-header">
-              <span class="event-badge badge-pre-pre">Pre-pre-LAN</span>
-              <span class="event-block-dates">14.–16. juli</span>
-            </div>
-            <div class="day-grid">
-              <label class="day-card">
-                <input type="checkbox" name="day" value="14" />
-                <span class="day-name">Tirsdag</span>
-                <span class="day-date">14. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="15" />
-                <span class="day-name">Onsdag</span>
-                <span class="day-date">15. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="16" />
-                <span class="day-name">Torsdag</span>
-                <span class="day-date">16. juli</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="event-block" data-block="pre">
-            <div class="event-block-header">
-              <span class="event-badge badge-pre">Pre-LAN</span>
-              <span class="event-block-dates">17.–19. juli</span>
-            </div>
-            <div class="day-grid">
-              <label class="day-card">
-                <input type="checkbox" name="day" value="17" />
-                <span class="day-name">Fredag</span>
-                <span class="day-date">17. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="18" />
-                <span class="day-name">Lørdag</span>
-                <span class="day-date">18. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="19" />
-                <span class="day-name">Søndag</span>
-                <span class="day-date">19. juli</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="event-block event-block-main" data-block="main">
-            <div class="event-block-header">
-              <span class="event-badge badge-main">SommerLAN 2026</span>
-              <span class="event-block-dates">20.–26. juli</span>
-            </div>
-            <div class="day-grid">
-              <label class="day-card">
-                <input type="checkbox" name="day" value="20" />
-                <span class="day-name">Mandag</span>
-                <span class="day-date">20. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="21" />
-                <span class="day-name">Tirsdag</span>
-                <span class="day-date">21. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="22" />
-                <span class="day-name">Onsdag</span>
-                <span class="day-date">22. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="23" />
-                <span class="day-name">Torsdag</span>
-                <span class="day-date">23. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="24" />
-                <span class="day-name">Fredag</span>
-                <span class="day-date">24. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="25" />
-                <span class="day-name">Lørdag</span>
-                <span class="day-date">25. juli</span>
-              </label>
-              <label class="day-card">
-                <input type="checkbox" name="day" value="26" />
-                <span class="day-name">Søndag</span>
-                <span class="day-date">26. juli</span>
-              </label>
-            </div>
-          </div>
-        </div>
+        <div id="day-picker"></div>
       </section>
 
       <!-- Submit -->
@@ -131,15 +30,9 @@
       </div>
 
       <!-- Confirmation (shown after submit) -->
-      <section id="rsvp-confirmation" hidden>
-        <div class="confirmation-heading">
-          <span class="checkmark">✓</span>
-          <div>
-            <h2 id="confirmation-title"></h2>
-            <p id="confirmation-subtitle" class="rsvp-subtitle"></p>
-          </div>
-        </div>
+      <section id="rsvp-confirmation" style="display:none">
         <div id="participant-matrix"></div>
+        <button id="rsvp-endre" type="button" class="rsvp-endre-btn desktop-endre">Endre datoer</button>
       </section>
     </main>
 

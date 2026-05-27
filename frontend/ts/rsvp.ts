@@ -1,5 +1,5 @@
 import { showError } from "./errorHandler.js";
-import { GAMES, renderMatrix } from "./matrix.js";
+import { BLOCKS, GAMES, renderMatrix, renderCards } from "./matrix.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import type { RsvpEntry } from "./types.js";
 
@@ -7,80 +7,123 @@ const API_URL = "http://localhost:8080/api";
 const lanId = new URLSearchParams(location.search).get("lan");
 
 let me: { id: number; name: string; nickname?: string; color: string } | null = null;
+let cachedEntries: RsvpEntry[] | null = null;
 
-async function init() {
-  me = await requireAuth();
-  if (!me) return;
-  if (!lanId) { showError("Mangler LAN-ID i URL (?lan=ID)"); return; }
+const selectedDates = new Set<string>();
+let onDateToggle: (() => void) | null = null;
 
-  setupDayCheckboxes();
-  await loadExistingRsvp();
-  updateSubmitButton();
-}
+const BLOCK_SATURATION: Record<string, number> = {
+  "pre-pre": 0.25,
+  "pre":     0.55,
+  "main":    1.0,
+};
 
-async function loadExistingRsvp() {
-  const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
-  if (!entries) return;
-  const myEntry = entries.find((e) => e.userId === me!.id);
-  if (!myEntry) return;
-  for (const date of myEntry.dates) {
-    const day = String(parseInt(date.split("-")[2], 10));
-    const cb = document.querySelector<HTMLInputElement>(`input[name="day"][value="${day}"]`);
-    if (cb) cb.checked = true;
-  }
-}
+function buildPickerContent(): HTMLElement {
+  const daysWrap = document.createElement("div");
+  daysWrap.className = "mc-days";
 
-function setupDayCheckboxes() {
-  document.querySelectorAll<HTMLInputElement>('input[name="day"]').forEach((cb) => {
-    cb.addEventListener("change", updateSubmitButton);
-    const date = `2026-07-${cb.value.padStart(2, "0")}`;
-    const game = GAMES[date];
-    if (game) {
-      const label = cb.closest<HTMLElement>(".day-card")!;
-      const dateEl = label.querySelector(".day-date")!;
-      const icon = document.createElement("span");
-      icon.className = "day-card-game";
-      icon.textContent = " ⚽";
-      icon.title = game;
-      dateEl.appendChild(icon);
+  for (const block of BLOCKS) {
+    const blockWrap = document.createElement("div");
+    blockWrap.className = "mc-block";
+
+    const blockLabel = document.createElement("span");
+    blockLabel.className = "mc-block-label";
+    blockLabel.textContent = block.label;
+    blockWrap.appendChild(blockLabel);
+
+    const badgeRow = document.createElement("div");
+    badgeRow.className = "mc-block-days";
+    const sat = BLOCK_SATURATION[block.key] ?? 1;
+
+    for (const date of block.dates) {
+      const d = new Date(date + "T00:00:00");
+      const badge = document.createElement("span");
+      badge.className = "mc-day day-picker-badge";
+
+      const applyState = () => {
+        const on = selectedDates.has(date);
+        badge.classList.toggle("mc-day-on", on);
+        badge.classList.toggle("mc-day-off", !on);
+        if (on) {
+          badge.style.backgroundColor = me!.color + "33";
+          badge.style.borderColor = me!.color;
+          badge.style.color = me!.color;
+          badge.style.filter = `saturate(${sat})`;
+        } else {
+          badge.style.cssText = "";
+          badge.classList.add("mc-day-off");
+        }
+      };
+
+      badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}</span>`;
+
+      const game = GAMES[date as keyof typeof GAMES];
+      if (game) {
+        const gameSpan = document.createElement("span");
+        gameSpan.className = "mc-day-game";
+        gameSpan.textContent = "⚽";
+        gameSpan.title = game;
+        badge.appendChild(gameSpan);
+      }
+
+      badge.addEventListener("click", () => {
+        if (selectedDates.has(date)) selectedDates.delete(date);
+        else selectedDates.add(date);
+        applyState();
+        updateSubmitButton();
+        onDateToggle?.();
+      });
+
+      applyState();
+      badgeRow.appendChild(badge);
     }
-  });
+
+    blockWrap.appendChild(badgeRow);
+    daysWrap.appendChild(blockWrap);
+  }
+
+  return daysWrap;
+}
+
+function buildDayPicker() {
+  const container = document.getElementById("day-picker")!;
+  container.innerHTML = "";
+  container.appendChild(buildPickerContent());
 }
 
 function getSelectedDates(): string[] {
-  return Array.from(
-    document.querySelectorAll<HTMLInputElement>('input[name="day"]:checked'),
-  ).map((cb) => `2026-07-${cb.value.padStart(2, "0")}`);
+  return Array.from(selectedDates);
 }
 
 function updateSubmitButton() {
-  const btn = document.getElementById("rsvp-submit") as HTMLButtonElement;
-  const dates = getSelectedDates();
-  const canSubmit = dates.length > 0;
+  const btn = document.getElementById("rsvp-submit") as HTMLButtonElement | null;
+  if (!btn || btn.closest("#rsvp-confirmation")) return;
+  const canSubmit = selectedDates.size > 0;
   btn.disabled = !canSubmit;
   btn.classList.toggle("inactive", !canSubmit);
   btn.textContent = "Meld på";
 }
 
+async function postRsvp(dates: string[]): Promise<RsvpEntry[] | null> {
+  const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ dates }),
+  });
+  if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
+  return apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
+}
+
 async function handleSubmit() {
   const dates = getSelectedDates();
   if (dates.length === 0) return;
-
   const btn = document.getElementById("rsvp-submit") as HTMLButtonElement;
   btn.disabled = true;
   btn.textContent = "Sender…";
-
   try {
-    const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ dates }),
-    });
-    if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
-
-    await new Promise((r) => setTimeout(r, 600));
-    updateSubmitButton();
-    await showConfirmation(dates);
+    const entries = await postRsvp(dates);
+    btn.textContent = "Meld på";
+    showConfirmation(entries ?? undefined);
   } catch (err) {
     console.error(err);
     showError("Kunne ikke sende påmelding");
@@ -90,19 +133,87 @@ async function handleSubmit() {
   }
 }
 
-async function showConfirmation(myDates: string[]) {
-  document.getElementById("confirmation-title")!.textContent =
-    `${me!.name} er påmeldt!`;
-  document.getElementById("confirmation-subtitle")!.textContent =
-    `${myDates.length} dag${myDates.length > 1 ? "er" : ""}`;
+async function transformCardToForm(card: HTMLElement) {
+  const originalDates = new Set(selectedDates);
 
-  document.getElementById("step-days")!.hidden = true;
-  document.querySelector<HTMLElement>(".rsvp-footer")!.hidden = true;
-  document.querySelector<HTMLElement>(".rsvp-header")!.hidden = true;
-  document.getElementById("rsvp-confirmation")!.hidden = false;
+  card.querySelector(".mc-days")?.remove();
+  card.querySelector(".rsvp-endre-btn")?.remove();
 
-  const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
-  if (entries) renderMatrix(document.getElementById("participant-matrix")!, entries);
+  card.appendChild(buildPickerContent());
+
+  const actions = document.createElement("div");
+  actions.className = "mc-card-actions";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "rsvp-endre-btn";
+  cancelBtn.textContent = "Avbryt";
+  cancelBtn.addEventListener("click", () => {
+    selectedDates.clear();
+    originalDates.forEach((d) => selectedDates.add(d));
+    buildDayPicker();
+    onDateToggle = null;
+    showConfirmation(cachedEntries ?? undefined);
+  });
+
+  const submitBtn = document.createElement("button");
+  submitBtn.type = "button";
+  submitBtn.textContent = "Lagre";
+  submitBtn.disabled = selectedDates.size === 0;
+  submitBtn.classList.toggle("inactive", selectedDates.size === 0);
+
+  onDateToggle = () => {
+    submitBtn.disabled = selectedDates.size === 0;
+    submitBtn.classList.toggle("inactive", selectedDates.size === 0);
+  };
+
+  submitBtn.addEventListener("click", async () => {
+    const dates = getSelectedDates();
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sender…";
+    try {
+      const entries = await postRsvp(dates);
+      onDateToggle = null;
+      buildDayPicker();
+      showConfirmation(entries ?? undefined);
+    } catch {
+      submitBtn.textContent = "Feil – prøv igjen";
+      submitBtn.disabled = false;
+    }
+  });
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(submitBtn);
+  card.appendChild(actions);
+}
+
+function showConfirmation(entries?: RsvpEntry[]) {
+  if (entries) cachedEntries = entries;
+
+  document.querySelector(".rsvp-wrapper")!.classList.add("wide");
+  document.getElementById("step-days")!.style.display = "none";
+  document.querySelector<HTMLElement>(".rsvp-footer")!.style.display = "none";
+  document.getElementById("rsvp-confirmation")!.style.display = "";
+
+  const matrixEl = document.getElementById("participant-matrix")!;
+  matrixEl.innerHTML = "";
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "matrix-table-wrap";
+  const cardWrap = document.createElement("div");
+  cardWrap.className = "matrix-card-wrap";
+  renderMatrix(tableWrap, cachedEntries ?? []);
+  renderCards(cardWrap, cachedEntries ?? [], { currentUserId: me?.id, onEdit: transformCardToForm });
+  matrixEl.appendChild(tableWrap);
+  matrixEl.appendChild(cardWrap);
+}
+
+function showForm() {
+  onDateToggle = null;
+  document.querySelector(".rsvp-wrapper")!.classList.remove("wide");
+  document.getElementById("step-days")!.style.display = "";
+  document.querySelector<HTMLElement>(".rsvp-footer")!.style.display = "";
+  document.getElementById("rsvp-confirmation")!.style.display = "none";
+  updateSubmitButton();
 }
 
 async function apiFetch<T>(path: string): Promise<T | null> {
@@ -119,16 +230,30 @@ async function apiFetch<T>(path: string): Promise<T | null> {
   }
 }
 
-document.getElementById("rsvp-submit")!.addEventListener("click", handleSubmit);
+async function init() {
+  me = await requireAuth();
+  if (!me) return;
+  if (!lanId) { showError("Mangler LAN-ID i URL (?lan=ID)"); return; }
 
-// Full form reset when page is restored from bfcache
+  const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
+  const myEntry = entries?.find((e) => e.userId === me!.id);
+  if (myEntry) for (const date of myEntry.dates) selectedDates.add(date);
+
+  buildDayPicker();
+
+  if (myEntry && myEntry.dates.length > 0) {
+    showConfirmation(entries ?? undefined);
+  } else {
+    updateSubmitButton();
+  }
+}
+
+document.getElementById("rsvp-submit")!.addEventListener("click", handleSubmit);
+document.getElementById("rsvp-endre")!.addEventListener("click", showForm);
+
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
-  document.getElementById("step-days")!.hidden = false;
-  document.querySelector<HTMLElement>(".rsvp-footer")!.hidden = false;
-  document.querySelector<HTMLElement>(".rsvp-header")!.hidden = false;
-  document.getElementById("rsvp-confirmation")!.hidden = true;
-  updateSubmitButton();
+  showForm();
 });
 
 init();

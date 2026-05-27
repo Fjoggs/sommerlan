@@ -33,8 +33,8 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
     return;
   }
 
-  const activeDates = new Set(entries.flatMap((e) => e.dates));
-  const visibleDates = BLOCKS.flatMap((b) => b.dates.filter((d) => activeDates.has(d)));
+  const sorted = [...entries].sort((a, b) => b.dates.length - a.dates.length);
+  const visibleDates = BLOCKS.flatMap((b) => b.dates);
 
   const table = document.createElement("table");
   table.className = "rsvp-matrix";
@@ -46,10 +46,8 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
   const cornerTh = document.createElement("th");
   groupRow.appendChild(cornerTh);
   for (const block of BLOCKS) {
-    const blockVisible = block.dates.filter((d) => activeDates.has(d));
-    if (blockVisible.length === 0) continue;
     const th = document.createElement("th");
-    th.colSpan = blockVisible.length;
+    th.colSpan = block.dates.length;
     th.className = `matrix-block-label block-start block-${block.key}`;
     th.textContent = block.label;
     groupRow.appendChild(th);
@@ -73,7 +71,7 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
 
   // Body: one row per participant
   const tbody = table.createTBody();
-  for (const entry of entries) {
+  for (const entry of sorted) {
     const row = tbody.insertRow();
     const nameCell = row.insertCell();
     nameCell.className = "matrix-name";
@@ -93,4 +91,101 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
   }
 
   container.appendChild(table);
+}
+
+const BLOCK_SATURATION: Record<string, number> = {
+  "pre-pre": 0.25,
+  "pre":     0.55,
+  "main":    1.0,
+};
+
+export function renderCards(
+  container: HTMLElement,
+  entries: RsvpEntry[],
+  options?: { currentUserId?: number; onEdit?: (card: HTMLElement) => void },
+): void {
+  container.innerHTML = "";
+
+  if (entries.length === 0) {
+    container.innerHTML = `<p class="loading-text">Ingen påmeldte ennå.</p>`;
+    return;
+  }
+
+  const sorted = [...entries].sort((a, b) => {
+    if (a.userId === options?.currentUserId) return -1;
+    if (b.userId === options?.currentUserId) return 1;
+    return b.dates.length - a.dates.length;
+  });
+  const list = document.createElement("div");
+  list.className = "mc-card-list";
+
+  for (const entry of sorted) {
+    const card = document.createElement("div");
+    card.className = "mc-card";
+
+    const totalDays = BLOCKS.flatMap(b => b.dates).length;
+    const nameRow = document.createElement("div");
+    nameRow.className = "mc-card-name";
+    const dot = document.createElement("span");
+    dot.className = "mc-dot";
+    dot.style.backgroundColor = entry.color;
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = entry.nickname || entry.name;
+    const countSpan = document.createElement("span");
+    countSpan.className = "mc-day-count";
+    countSpan.textContent = entry.dates.length === totalDays ? "(Full L)" : `(${entry.dates.length} dager)`;
+    nameRow.appendChild(dot);
+    nameRow.appendChild(nameSpan);
+    nameRow.appendChild(countSpan);
+    card.appendChild(nameRow);
+
+    const daysRow = document.createElement("div");
+    daysRow.className = "mc-days";
+
+    for (const block of BLOCKS) {
+      const blockWrap = document.createElement("div");
+      blockWrap.className = "mc-block";
+
+      const blockLabel = document.createElement("span");
+      blockLabel.className = "mc-block-label";
+      blockLabel.textContent = block.label;
+      blockWrap.appendChild(blockLabel);
+
+      const badgeRow = document.createElement("div");
+      badgeRow.className = "mc-block-days";
+      const sat = BLOCK_SATURATION[block.key] ?? 1;
+
+      for (const date of block.dates) {
+        const d = new Date(date + "T00:00:00");
+        const badge = document.createElement("span");
+        badge.className = "mc-day" + (entry.dates.includes(date) ? " mc-day-on" : " mc-day-off");
+        if (entry.dates.includes(date)) {
+          badge.style.backgroundColor = entry.color + "33";
+          badge.style.borderColor = entry.color;
+          badge.style.color = entry.color;
+          badge.style.filter = `saturate(${sat})`;
+        }
+        badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}</span>`;
+        badgeRow.appendChild(badge);
+      }
+
+      blockWrap.appendChild(badgeRow);
+      daysRow.appendChild(blockWrap);
+    }
+
+    card.appendChild(daysRow);
+
+    if (options?.currentUserId === entry.userId && options?.onEdit) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "rsvp-endre-btn";
+      editBtn.textContent = "Endre datoer";
+      editBtn.addEventListener("click", () => options.onEdit!(card));
+      card.appendChild(editBtn);
+    }
+
+    list.appendChild(card);
+  }
+
+  container.appendChild(list);
 }

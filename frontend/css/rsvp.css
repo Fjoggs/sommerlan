@@ -6,6 +6,7 @@
   flex-direction: column;
   gap: 2.5rem;
   padding: 2rem 1rem 4rem;
+  box-sizing: border-box;
 }
 
 .rsvp-wrapper.wide {
@@ -16,6 +17,7 @@
   font-size: 2rem;
   color: var(--text);
   margin: 0 0 0.25rem;
+  text-align: center;
 }
 
 .rsvp-subtitle {
@@ -121,6 +123,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  box-sizing: border-box;
 }
 
 .event-block-header {
@@ -245,6 +248,140 @@
   cursor: not-allowed;
 }
 
+/* ── Responsive matrix switching ─────────────────────────── */
+.matrix-table-wrap { display: none; }
+.matrix-card-wrap  { display: block; }
+.desktop-endre     { display: none; }
+
+/* ── Card view ────────────────────────────────────────────── */
+.mc-card-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.mc-card {
+  background: var(--bg);
+  border-radius: var(--border-radius);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mc-card-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.mc-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mc-day-count {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.mc-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.mc-card .rsvp-endre-btn {
+  align-self: flex-start;
+  margin-top: 1rem;
+  appearance: none;
+  background: transparent;
+  border: 1px dashed var(--primary);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  box-shadow: none;
+  transition: border-style 0.15s, background 0.15s;
+}
+
+.mc-card .rsvp-endre-btn:hover {
+  border-style: solid;
+  background: color-mix(in oklch, var(--primary) 10%, transparent);
+}
+
+.mc-days { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.mc-block { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.mc-block-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.mc-block-days { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+
+.mc-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0.25rem 0.4rem;
+  min-width: 36px;
+  text-align: center;
+}
+
+.mc-day-off {
+  border-color: var(--border-muted);
+  opacity: 0.3;
+}
+
+.day-picker-badge {
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.day-picker-badge.mc-day-off {
+  opacity: 1;
+  border-color: var(--border-muted);
+  color: var(--text-muted);
+}
+
+.day-picker-badge.mc-day-off:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.mc-day-game {
+  font-size: 0.6rem;
+  line-height: 1;
+  margin-top: 0.1rem;
+}
+
+.mc-day-name {
+  font-size: 0.65rem;
+  text-transform: capitalize;
+  color: inherit;
+}
+
+.mc-day-num {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: inherit;
+}
+
 /* ── Confirmation / matrix ────────────────────────────────── */
 #rsvp-confirmation:not([hidden]) {
   display: flex;
@@ -340,6 +477,18 @@
   font-weight: 500;
   font-size: 0.9rem;
   white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background-color: var(--bg-dark);
+  z-index: 1;
+}
+
+.rsvp-matrix tbody tr:nth-child(even) .matrix-name {
+  background-color: oklch(0.27 0.02 250);
+}
+
+.rsvp-matrix tbody tr:hover .matrix-name {
+  background-color: var(--bg-light);
 }
 
 /* Block separator rows */

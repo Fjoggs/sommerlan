@@ -192,6 +192,21 @@ async function renderUpcoming(lan: LAN) {
   submitBtn.textContent = "Meld på";
   footer.appendChild(submitBtn);
   wrapper.appendChild(footer);
+
+  // Confirmed state (shown when user already has an RSVP)
+  const confirmedDiv = createElement("div") as HTMLDivElement;
+  confirmedDiv.className = "rsvp-confirmed";
+  const confirmedMsg = createElement("p") as HTMLParagraphElement;
+  confirmedMsg.className = "rsvp-confirmed-msg";
+  confirmedMsg.textContent = "Du er påmeldt!";
+  const endreBtn = createElement("button") as HTMLButtonElement;
+  endreBtn.type = "button";
+  endreBtn.className = "rsvp-endre-btn";
+  endreBtn.textContent = "Endre datoer";
+  confirmedDiv.appendChild(confirmedMsg);
+  confirmedDiv.appendChild(endreBtn);
+
+  content.appendChild(confirmedDiv);
   content.appendChild(wrapper);
 
   // Matrix
@@ -205,24 +220,31 @@ async function renderUpcoming(lan: LAN) {
   matrixSection.appendChild(matrixContainer);
   content.appendChild(matrixSection);
 
-  const loadMatrix = async () => {
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
-    if (res.ok) { const entries: RsvpEntry[] = await res.json(); renderMatrix(matrixContainer, entries); }
-  };
-  await loadMatrix();
+  // Single fetch: populate matrix + check existing RSVP
+  const rsvpRes = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+  const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
+  renderMatrix(matrixContainer, rsvpEntries);
+  const mine = rsvpEntries.find((e) => e.userId === me!.id);
+  const myDates = mine?.dates ?? [];
 
-  // Pre-check existing RSVP for current user
-  const existingRes = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
-  if (existingRes.ok) {
-    const entries: RsvpEntry[] = await existingRes.json();
-    const mine = entries.find((e) => e.userId === me!.id);
-    if (mine) {
-      for (const date of mine.dates) {
-        const cb = wrapper.querySelector<HTMLInputElement>(`input[value="${date}"]`);
-        if (cb) cb.checked = true;
-      }
-    }
+  for (const date of myDates) {
+    const cb = wrapper.querySelector<HTMLInputElement>(`input[value="${date}"]`);
+    if (cb) cb.checked = true;
   }
+
+  const showConfirmed = () => {
+    confirmedDiv.style.display = "";
+    wrapper.style.display = "none";
+  };
+  const showForm = () => {
+    confirmedDiv.style.display = "none";
+    wrapper.style.display = "";
+    updateBtn();
+  };
+
+  if (myDates.length > 0) showConfirmed(); else showForm();
+
+  endreBtn.addEventListener("click", showForm);
 
   const updateBtn = () => {
     const anyChecked = wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked").length > 0;
@@ -241,9 +263,10 @@ async function renderUpcoming(lan: LAN) {
       body: JSON.stringify({ dates }),
     });
     if (res.ok) {
-      submitBtn.textContent = "Lagret ✓";
-      await loadMatrix();
-      setTimeout(() => { submitBtn.textContent = "Meld på"; submitBtn.disabled = false; }, 2000);
+      const updated: RsvpEntry[] = await (await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() })).json();
+      renderMatrix(matrixContainer, updated);
+      submitBtn.textContent = "Meld på";
+      showConfirmed();
     } else {
       submitBtn.textContent = "Feil – prøv igjen";
       submitBtn.disabled = false;
