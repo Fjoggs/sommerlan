@@ -763,6 +763,11 @@ func AddRsvpDates(db *sql.DB, userId, lanId int, dates []string) error {
 	return tx.Commit()
 }
 
+func DeleteRsvp(db *sql.DB, userId, lanId int) error {
+	_, err := db.Exec("DELETE FROM rsvp WHERE user_id = ? AND lan_id = ?", userId, lanId)
+	return err
+}
+
 func GetRsvps(db *sql.DB, lanId int) ([]RsvpEntry, error) {
 	query := `
 		SELECT u.id, u.name, u.color, u.color2, u.nickname, r.date

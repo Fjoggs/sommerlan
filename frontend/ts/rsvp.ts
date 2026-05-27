@@ -55,16 +55,8 @@ function buildPickerContent(): HTMLElement {
         }
       };
 
-      badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}</span>`;
-
       const game = GAMES[date as keyof typeof GAMES];
-      if (game) {
-        const gameSpan = document.createElement("span");
-        gameSpan.className = "mc-day-game";
-        gameSpan.textContent = "⚽";
-        gameSpan.title = game;
-        badge.appendChild(gameSpan);
-      }
+      badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}${game ? `<span class="mc-day-game" title="${game}">⚽</span>` : ""}</span>`;
 
       badge.addEventListener("click", () => {
         if (selectedDates.has(date)) selectedDates.delete(date);
@@ -101,10 +93,18 @@ function updateSubmitButton() {
   const canSubmit = selectedDates.size > 0;
   btn.disabled = !canSubmit;
   btn.classList.toggle("inactive", !canSubmit);
-  btn.textContent = "Meld på";
+  btn.textContent = "Snakkes på LAN";
 }
 
 async function postRsvp(dates: string[]): Promise<RsvpEntry[] | null> {
+  if (dates.length === 0) {
+    const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
+    return apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
+  }
   const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -122,13 +122,13 @@ async function handleSubmit() {
   btn.textContent = "Sender…";
   try {
     const entries = await postRsvp(dates);
-    btn.textContent = "Meld på";
+    btn.textContent = "Snakkes på LAN";
     showConfirmation(entries ?? undefined);
   } catch (err) {
     console.error(err);
     showError("Kunne ikke sende påmelding");
     btn.disabled = false;
-    btn.textContent = "Meld på";
+    btn.textContent = "Snakkes på LAN";
     updateSubmitButton();
   }
 }
@@ -158,14 +158,16 @@ async function transformCardToForm(card: HTMLElement) {
 
   const submitBtn = document.createElement("button");
   submitBtn.type = "button";
-  submitBtn.textContent = "Lagre";
-  submitBtn.disabled = selectedDates.size === 0;
-  submitBtn.classList.toggle("inactive", selectedDates.size === 0);
 
-  onDateToggle = () => {
-    submitBtn.disabled = selectedDates.size === 0;
-    submitBtn.classList.toggle("inactive", selectedDates.size === 0);
+  const syncSubmitBtn = () => {
+    const empty = selectedDates.size === 0;
+    submitBtn.textContent = empty ? "Avmeld" : "Lagre";
+    submitBtn.classList.toggle("inactive", false);
+    submitBtn.disabled = false;
   };
+  syncSubmitBtn();
+
+  onDateToggle = syncSubmitBtn;
 
   submitBtn.addEventListener("click", async () => {
     const dates = getSelectedDates();
@@ -174,8 +176,13 @@ async function transformCardToForm(card: HTMLElement) {
     try {
       const entries = await postRsvp(dates);
       onDateToggle = null;
+      selectedDates.clear();
       buildDayPicker();
-      showConfirmation(entries ?? undefined);
+      if (dates.length === 0) {
+        showForm();
+      } else {
+        showConfirmation(entries ?? undefined);
+      }
     } catch {
       submitBtn.textContent = "Feil – prøv igjen";
       submitBtn.disabled = false;
@@ -190,7 +197,6 @@ async function transformCardToForm(card: HTMLElement) {
 function showConfirmation(entries?: RsvpEntry[]) {
   if (entries) cachedEntries = entries;
 
-  document.querySelector(".rsvp-wrapper")!.classList.add("wide");
   document.getElementById("step-days")!.style.display = "none";
   document.querySelector<HTMLElement>(".rsvp-footer")!.style.display = "none";
   document.getElementById("rsvp-confirmation")!.style.display = "";
@@ -209,7 +215,6 @@ function showConfirmation(entries?: RsvpEntry[]) {
 
 function showForm() {
   onDateToggle = null;
-  document.querySelector(".rsvp-wrapper")!.classList.remove("wide");
   document.getElementById("step-days")!.style.display = "";
   document.querySelector<HTMLElement>(".rsvp-footer")!.style.display = "";
   document.getElementById("rsvp-confirmation")!.style.display = "none";

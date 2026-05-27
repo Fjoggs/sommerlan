@@ -51,6 +51,25 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 	writer.WriteHeader(http.StatusNoContent)
 }
 
+func (h *RsvpHandlers) DeleteRsvp(writer http.ResponseWriter, req *http.Request) {
+	lanId, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil {
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	user, err := GetUserFromRequest(h.db, req)
+	if err != nil {
+		http.Error(writer, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if err := database.DeleteRsvp(h.db, user.Id, lanId); err != nil {
+		fmt.Println("DeleteRsvp failed:", err)
+		http.Error(writer, "failed to delete rsvp", http.StatusInternalServerError)
+		return
+	}
+	writer.WriteHeader(http.StatusNoContent)
+}
+
 func (h *RsvpHandlers) GetRsvps(writer http.ResponseWriter, req *http.Request) {
 	lanId, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {

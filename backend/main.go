@@ -41,6 +41,7 @@ func main() {
 	// RSVP routes (scoped to a LAN)
 	router.HandleFunc("GET /api/lan/{id}/rsvp/", handlers.EnableCORS(rsvp.GetRsvps))
 	router.HandleFunc("POST /api/lan/{id}/rsvp/", handlers.EnableCORS(rsvp.AddRsvp))
+	router.HandleFunc("DELETE /api/lan/{id}/rsvp/", handlers.EnableCORS(rsvp.DeleteRsvp))
 	router.HandleFunc("OPTIONS /api/lan/{id}/rsvp/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// LAN routes

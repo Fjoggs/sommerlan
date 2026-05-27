@@ -86,18 +86,14 @@
         font-weight: 700;
         color: var(--primary);
       }
+
+      .countdown-rsvp {
+        pointer-events: auto;
+        margin-top: 0.5rem;
+      }
     </style>
   </head>
   <body>
-    <nav class="menu">
-      <a href="index.html" class="menu-item">Oversikt</a>
-      <a href="countdown.html" class="menu-item active">Nedtelling</a>
-        <a class="menu-item" href="games.html">Spill</a>
-        <a class="menu-item" href="participants.html">Deltakere</a>
-      <a href="rsvp.html" class="menu-item nav-pre-lan">RSVP</a>
-      <a id="profile-avatar" href="profile.html"></a>
-    </nav>
-
     <main class="countdown-main">
       <div id="countdown-units" class="countdown-units">
         <div class="countdown-unit">
@@ -122,6 +118,9 @@
       </div>
 
       <p id="countdown-started" class="countdown-started" hidden>LAN er i gang! 🎮</p>
+      <a href="rsvp.html" class="nav-pre-lan countdown-rsvp">
+        <button type="button">SLEPP MEG INN</button>
+      </a>
     </main>
   </body>
 </html>

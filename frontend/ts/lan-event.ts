@@ -2,7 +2,7 @@ import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
-import { BLOCKS, GAMES, renderMatrix } from "./matrix.js";
+import { BLOCKS, GAMES, renderMatrix, renderCards } from "./matrix.js";
 
 type Tag = { id: number; name: string };
 
@@ -189,41 +189,25 @@ async function renderUpcoming(lan: LAN) {
   footer.className = "rsvp-footer";
   const submitBtn = createElement("button") as HTMLButtonElement;
   submitBtn.id = "rsvp-submit"; submitBtn.disabled = true; submitBtn.className = "inactive";
-  submitBtn.textContent = "Meld på";
+  submitBtn.textContent = "Snakkes på LAN";
   footer.appendChild(submitBtn);
   wrapper.appendChild(footer);
 
-  // Confirmed state (shown when user already has an RSVP)
-  const confirmedDiv = createElement("div") as HTMLDivElement;
-  confirmedDiv.className = "rsvp-confirmed";
-  const confirmedMsg = createElement("p") as HTMLParagraphElement;
-  confirmedMsg.className = "rsvp-confirmed-msg";
-  confirmedMsg.textContent = "Du er påmeldt!";
-  const endreBtn = createElement("button") as HTMLButtonElement;
-  endreBtn.type = "button";
-  endreBtn.className = "rsvp-endre-btn";
-  endreBtn.textContent = "Endre datoer";
-  confirmedDiv.appendChild(confirmedMsg);
-  confirmedDiv.appendChild(endreBtn);
-
-  content.appendChild(confirmedDiv);
   content.appendChild(wrapper);
 
-  // Matrix
+  // Påmeldte cards section
   const matrixSection = createElement("section") as HTMLElement;
   matrixSection.className = "event-section";
   const matrixH2 = createElement("h2");
   matrixH2.innerHTML = `<span class="hash">#</span>Påmeldte`;
   matrixSection.appendChild(matrixH2);
   const matrixContainer = createElement("div") as HTMLDivElement;
-  matrixContainer.style.overflowX = "auto";
   matrixSection.appendChild(matrixContainer);
   content.appendChild(matrixSection);
 
-  // Single fetch: populate matrix + check existing RSVP
+  // Single fetch: populate cards + check existing RSVP
   const rsvpRes = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
   const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
-  renderMatrix(matrixContainer, rsvpEntries);
   const mine = rsvpEntries.find((e) => e.userId === me!.id);
   const myDates = mine?.dates ?? [];
 
@@ -232,25 +216,24 @@ async function renderUpcoming(lan: LAN) {
     if (cb) cb.checked = true;
   }
 
-  const showConfirmed = () => {
-    confirmedDiv.style.display = "";
-    wrapper.style.display = "none";
-  };
-  const showForm = () => {
-    confirmedDiv.style.display = "none";
-    wrapper.style.display = "";
-    updateBtn();
-  };
-
-  if (myDates.length > 0) showConfirmed(); else showForm();
-
-  endreBtn.addEventListener("click", showForm);
-
   const updateBtn = () => {
     const anyChecked = wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked").length > 0;
     submitBtn.disabled = !anyChecked;
     submitBtn.classList.toggle("inactive", !anyChecked);
   };
+
+  const showConfirmed = () => {
+    wrapper.style.display = "none";
+  };
+  const showForm = () => {
+    wrapper.style.display = "";
+    updateBtn();
+  };
+
+  renderCards(matrixContainer, rsvpEntries, { currentUserId: me!.id, onEdit: showForm });
+
+  if (myDates.length > 0) showConfirmed(); else showForm();
+
   wrapper.querySelectorAll<HTMLInputElement>("input[name=day]").forEach((cb) => cb.addEventListener("change", updateBtn));
   updateBtn();
 
@@ -264,8 +247,8 @@ async function renderUpcoming(lan: LAN) {
     });
     if (res.ok) {
       const updated: RsvpEntry[] = await (await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() })).json();
-      renderMatrix(matrixContainer, updated);
-      submitBtn.textContent = "Meld på";
+      renderCards(matrixContainer, updated, { currentUserId: me!.id, onEdit: showForm });
+      submitBtn.textContent = "Snakkes på LAN";
       showConfirmed();
     } else {
       submitBtn.textContent = "Feil – prøv igjen";
