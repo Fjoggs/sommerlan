@@ -28,6 +28,7 @@ type LanEvent struct {
 	Invitation    string          `json:"invitation,omitempty"`
 	IsRomjulsLAN  bool            `json:"isRomjulsLAN"`
 	QuoteCount   int             `json:"quoteCount"`
+	GuestCount   int             `json:"guestCount"`
 	Participants []UserResponse  `json:"participants"`
 	Start_date   string          `json:"startDate"`
 	ToDisplay    string          `json:"toDisplay"`
@@ -479,6 +480,8 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 	db.QueryRow("SELECT COUNT(*) FROM lan_images WHERE lan_id = ?", id).Scan(&imageCount)
 	var quoteCount int
 	db.QueryRow("SELECT COUNT(*) FROM lan_quote WHERE lan_id = ?", id).Scan(&quoteCount)
+	var guestCount int
+	db.QueryRow("SELECT COUNT(*) FROM lan_guest WHERE lan_id = ?", id).Scan(&guestCount)
 
 	event = LanEvent{
 		Awards:       lanAwards,
@@ -491,6 +494,7 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 		Invitation:    invitation.String,
 		IsRomjulsLAN:  isRomjulsLAN,
 		QuoteCount:   quoteCount,
+		GuestCount:   guestCount,
 		Participants: participants,
 		Start_date:   lan.Start_date,
 		FromDisplay:  fromDisplay.String,
@@ -1173,4 +1177,56 @@ func UpdateLanQuote(db *sql.DB, quoteId int, quote, attributedTo string) (LanQuo
 		quoteId,
 	).Scan(&q.Id, &q.LanId, &q.Quote, &q.AttributedTo, &q.CreatedAt)
 	return q, err
+}
+
+type LanGuest struct {
+	Id        int    `json:"id"`
+	LanId     int    `json:"lanId"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"createdAt"`
+}
+
+func GetLanGuests(db *sql.DB, lanId int) ([]LanGuest, error) {
+	rows, err := db.Query(
+		"SELECT id, lan_id, name, created_at FROM lan_guest WHERE lan_id = ? ORDER BY created_at ASC",
+		lanId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var guests []LanGuest
+	for rows.Next() {
+		var g LanGuest
+		if err := rows.Scan(&g.Id, &g.LanId, &g.Name, &g.CreatedAt); err != nil {
+			return nil, err
+		}
+		guests = append(guests, g)
+	}
+	if guests == nil {
+		guests = []LanGuest{}
+	}
+	return guests, rows.Err()
+}
+
+func AddLanGuest(db *sql.DB, lanId int, name string) (LanGuest, error) {
+	res, err := db.Exec(
+		"INSERT INTO lan_guest(lan_id, name) VALUES(?, ?)",
+		lanId, name,
+	)
+	if err != nil {
+		return LanGuest{}, err
+	}
+	id, _ := res.LastInsertId()
+	var g LanGuest
+	db.QueryRow(
+		"SELECT id, lan_id, name, created_at FROM lan_guest WHERE id = ?",
+		id,
+	).Scan(&g.Id, &g.LanId, &g.Name, &g.CreatedAt)
+	return g, nil
+}
+
+func DeleteLanGuest(db *sql.DB, guestId int) error {
+	_, err := db.Exec("DELETE FROM lan_guest WHERE id = ?", guestId)
+	return err
 }

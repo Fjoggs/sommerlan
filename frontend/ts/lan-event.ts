@@ -1,6 +1,6 @@
 import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
-import { LAN, User, Game, Award, LanQuote, RsvpEntry } from "./types.js";
+import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
 import { BLOCKS, GAMES, renderMatrix } from "./matrix.js";
 
@@ -61,17 +61,19 @@ if (!lan) {
 } else {
   const year = lan.startDate.substring(0, 4);
 
-  const [tweetRes, imageRes, tagsRes, quotesRes] = await Promise.all([
+  const [tweetRes, imageRes, tagsRes, quotesRes, guestsRes] = await Promise.all([
     fetch(`/data/tweets/${year}.json`),
     fetch(`http://localhost:8080/api/lan/${lan.lanId}/images/`, { headers: authHeaders() }),
     fetch(`http://localhost:8080/api/tags/`, { headers: authHeaders() }),
     fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() }),
+    fetch(`http://localhost:8080/api/lan/${lan.lanId}/guests/`, { headers: authHeaders() }),
   ]);
 
   const tweets: TweetEntry[] = tweetRes.ok ? await tweetRes.json() : [];
   const lanImages: LanImage[] = imageRes.ok ? await imageRes.json() : [];
   const allTags: Tag[] = tagsRes.ok ? await tagsRes.json() : [];
   const lanQuotes: LanQuote[] = quotesRes.ok ? await quotesRes.json() : [];
+  const lanGuests: LanGuest[] = guestsRes.ok ? await guestsRes.json() : [];
   const datalist = document.getElementById("tag-suggestions")!;
   for (const tag of allTags) {
     const opt = document.createElement("option");
@@ -90,7 +92,7 @@ if (!lan) {
   // set of filenames currently on this LAN (for tweet cards to check)
   const lanImageFilenames = new Set(lanImages.map((i) => i.filename));
 
-  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags, lanQuotes);
+  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags, lanQuotes, lanGuests);
 }
 
 
@@ -257,6 +259,7 @@ function renderLan(
   lanImageFilenames: Set<string>,
   allTags: Tag[],
   lanQuotes: LanQuote[],
+  lanGuests: LanGuest[],
 ) {
   const now = new Date();
   const isHappening = new Date(lan.startDate) <= now && new Date(lan.endDate) >= now;
@@ -354,7 +357,11 @@ function renderLan(
   const pSection = createElement("section") as HTMLElement;
   pSection.className = "event-section";
   const pH2 = createElement("h2");
-  pH2.innerHTML = `<span class="hash">#</span>Deltakere <span class="section-count">(${lan.participants?.length ?? 0})</span>`;
+  const updateParticipantCount = () => {
+    const total = (lan.participants?.length ?? 0) + lanGuests.length;
+    pH2.innerHTML = `<span class="hash">#</span>Deltakere <span class="section-count">(${total})</span>`;
+  };
+  updateParticipantCount();
   pSection.appendChild(pH2);
   const pPillList = createElement("div") as HTMLDivElement;
   pPillList.className = "pill-list event-pills";
@@ -380,7 +387,84 @@ function renderLan(
   };
   buildParticipantViewPills();
   pSection.appendChild(pPillList);
-  if (lan.participants && lan.participants.length > 0) content.appendChild(pSection);
+
+  // Guest sub-row
+  const guestRow = createElement("div") as HTMLDivElement;
+  guestRow.className = "guest-row";
+  if (!lanGuests.length) guestRow.style.display = "none";
+  const guestLabel = createElement("h3") as HTMLHeadingElement;
+  guestLabel.className = "guest-row-label";
+  const guestHash = createElement("span"); guestHash.className = "hash"; guestHash.textContent = "#";
+  guestLabel.appendChild(guestHash);
+  guestLabel.append("Gjester");
+  guestRow.appendChild(guestLabel);
+  const guestPillList = createElement("div") as HTMLDivElement;
+  guestPillList.className = "pill-list guest-pill-list";
+  const buildGuestPill = (g: LanGuest): HTMLElement => {
+    const wrap = createElement("span") as HTMLSpanElement;
+    wrap.className = "guest-pill";
+    wrap.textContent = g.name;
+    if (me?.role === "admin") {
+      const del = createElement("button") as HTMLButtonElement;
+      del.type = "button";
+      del.className = "guest-delete-btn";
+      del.textContent = "✕";
+      del.title = "Fjern gjest";
+      del.addEventListener("click", async () => {
+        const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/guests/${g.id}/`, {
+          method: "DELETE", headers: authHeaders(),
+        });
+        if (res.ok) {
+          wrap.remove();
+          lanGuests.splice(lanGuests.indexOf(g), 1);
+          updateParticipantCount();
+          if (!lanGuests.length) guestRow.style.display = "none";
+        }
+      });
+      wrap.appendChild(del);
+    }
+    return wrap;
+  };
+  for (const g of lanGuests) guestPillList.appendChild(buildGuestPill(g));
+  guestRow.appendChild(guestPillList);
+  pSection.appendChild(guestRow);
+
+  // Admin: add guest form
+  if (me?.role === "admin") {
+    const guestAddForm = createElement("div") as HTMLDivElement;
+    guestAddForm.className = "quote-add-form guest-add-form";
+    const guestInput = createElement("input") as HTMLInputElement;
+    guestInput.type = "text";
+    guestInput.placeholder = "Legg til gjest...";
+    guestInput.className = "lan-text-input";
+    const guestAddBtn = createElement("button") as HTMLButtonElement;
+    guestAddBtn.type = "button";
+    guestAddBtn.className = "quote-submit-btn";
+    guestAddBtn.textContent = "Legg til";
+    const submitGuest = async () => {
+      const name = guestInput.value.trim();
+      if (!name) return;
+      const fd = new URLSearchParams({ name });
+      const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/guests/`, {
+        method: "POST", headers: authHeaders(), body: fd,
+      });
+      if (res.ok) {
+        const g: LanGuest = await res.json();
+        lanGuests.push(g);
+        guestPillList.appendChild(buildGuestPill(g));
+        guestRow.style.display = "";
+        updateParticipantCount();
+        guestInput.value = "";
+      }
+    };
+    guestAddBtn.addEventListener("click", submitGuest);
+    guestInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitGuest(); } });
+    guestAddForm.appendChild(guestInput);
+    guestAddForm.appendChild(guestAddBtn);
+    pSection.appendChild(guestAddForm);
+  }
+
+  if ((lan.participants && lan.participants.length > 0) || lanGuests.length > 0) content.appendChild(pSection);
 
   // === Games section ===
   const gSection = createElement("section") as HTMLElement;
@@ -744,7 +828,7 @@ function renderLan(
     pPillList.className = "pill-list event-pills";
     buildParticipantViewPills();
     nicknameSection.remove();
-    if (!lan.participants?.length) pSection.remove();
+    if (!lan.participants?.length && !lanGuests.length) pSection.remove();
 
     // Restore games
     gPillList.className = "pill-list event-pills";

@@ -93,6 +93,13 @@ func main() {
 	router.HandleFunc("OPTIONS /api/lan/{id}/quotes/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("OPTIONS /api/lan/{id}/quotes/{quoteId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
+	// Guest routes
+	router.HandleFunc("GET /api/lan/{id}/guests/", handlers.EnableCORS(lan.GetLanGuests))
+	router.HandleFunc("POST /api/lan/{id}/guests/", handlers.EnableCORS(lan.AddLanGuest))
+	router.HandleFunc("DELETE /api/lan/{id}/guests/{guestId}/", handlers.EnableCORS(lan.DeleteLanGuest))
+	router.HandleFunc("OPTIONS /api/lan/{id}/guests/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/lan/{id}/guests/{guestId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+
 	// Game routes
 	router.HandleFunc("GET /api/game/stats/", handlers.EnableCORS(game.GetGameStats))
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))

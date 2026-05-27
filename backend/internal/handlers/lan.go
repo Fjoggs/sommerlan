@@ -793,3 +793,60 @@ func (h *LanHandlers) PatchLanQuote(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(q)
 }
+
+func (h *LanHandlers) GetLanGuests(w http.ResponseWriter, r *http.Request) {
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	guests, err := database.GetLanGuests(h.db, lanId)
+	if err != nil {
+		http.Error(w, "failed to get guests", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(guests)
+}
+
+func (h *LanHandlers) AddLanGuest(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+	g, err := database.AddLanGuest(h.db, lanId, name)
+	if err != nil {
+		http.Error(w, "failed to add guest", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(g)
+}
+
+func (h *LanHandlers) DeleteLanGuest(w http.ResponseWriter, r *http.Request) {
+	if err := requireAdmin(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	guestId, err := strconv.Atoi(r.PathValue("guestId"))
+	if err != nil {
+		http.Error(w, "invalid guest id", http.StatusBadRequest)
+		return
+	}
+	if err := database.DeleteLanGuest(h.db, guestId); err != nil {
+		http.Error(w, "failed to delete guest", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

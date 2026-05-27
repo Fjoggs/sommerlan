@@ -11,6 +11,7 @@ export type LAN = {
   invitation?: string;
   isRomjulsLAN?: boolean;
   quoteCount?: number;
+  guestCount?: number;
   lanId: number;
   participants?: User[];
   startDate: string;
@@ -34,6 +35,13 @@ export type Game = {
 export type Award = {
   id: number;
   name: string;
+};
+
+export type LanGuest = {
+  id: number;
+  lanId: number;
+  name: string;
+  createdAt: string;
 };
 
 export type LanQuote = {

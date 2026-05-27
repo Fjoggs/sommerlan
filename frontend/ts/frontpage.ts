@@ -174,6 +174,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   const awardPillContainer = createElement("div") as HTMLDivElement;
 
   const descriptionDisplay = createElement("p");
+  descriptionDisplay.className = "event-description";
   descriptionDisplay.textContent = lan.description;
 
   const invitationDisplay = createElement("p") as HTMLParagraphElement;

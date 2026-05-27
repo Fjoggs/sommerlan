@@ -141,6 +141,14 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		FOREIGN KEY (created_by) REFERENCES user(id)
 	)`)
 
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS lan_guest (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		lan_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE
+	)`)
+
 	log.Println("Database initialized successfully")
 	return db, nil
 }

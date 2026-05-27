@@ -1767,6 +1767,57 @@ a.event-pill:hover {
   text-align: left !important;
 }
 
+.guest-row {
+  margin-top: 1.5rem;
+}
+
+.guest-row-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.5rem;
+}
+
+.guest-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bg-dark);
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.guest-delete-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.6rem;
+  line-height: 1;
+  padding: 0;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.guest-delete-btn:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+.guest-add-form {
+  margin-top: 1.5rem;
+}
+
 /* RomjulsLAN winter/xmas theme */
 .timeline-event.romjulslan {
   background: linear-gradient(160deg, oklch(0.16 0.04 240), oklch(0.20 0.05 225));
