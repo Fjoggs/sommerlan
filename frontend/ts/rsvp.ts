@@ -1,10 +1,10 @@
 import { showError } from "./errorHandler.js";
 import { BLOCKS, GAMES, renderMatrix, renderCards } from "./matrix.js";
 import { requireAuth, authHeaders } from "./auth.js";
-import type { RsvpEntry } from "./types.js";
+import type { RsvpEntry, LAN } from "./types.js";
 
 const API_URL = "/api";
-const lanId = new URLSearchParams(location.search).get("lan");
+let lanId: number | null = null;
 
 let me: { id: number; name: string; nickname?: string; color: string } | null = null;
 let cachedEntries: RsvpEntry[] | null = null;
@@ -177,6 +177,7 @@ async function transformCardToForm(card: HTMLElement) {
       const entries = await postRsvp(dates);
       onDateToggle = null;
       selectedDates.clear();
+      for (const d of dates) selectedDates.add(d);
       buildDayPicker();
       if (dates.length === 0) {
         showForm();
@@ -238,7 +239,15 @@ async function apiFetch<T>(path: string): Promise<T | null> {
 async function init() {
   me = await requireAuth();
   if (!me) return;
-  if (!lanId) { showError("Mangler LAN-ID i URL (?lan=ID)"); return; }
+
+  const lans = await apiFetch<LAN[]>(`lan`);
+  if (!lans) return;
+  const now = new Date();
+  const upcoming = lans
+    .filter(l => new Date(l.startDate) > now)
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
+  if (!upcoming) { showError("Ingen kommende LAN funnet"); return; }
+  lanId = upcoming.lanId;
 
   const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
   const myEntry = entries?.find((e) => e.userId === me!.id);
