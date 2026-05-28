@@ -122,6 +122,9 @@ async function renderUpcoming(lan: LAN) {
   titleCenter.appendChild(title);
   titleRow.appendChild(prevLink); titleRow.appendChild(titleCenter); titleRow.appendChild(nextLink);
   content.appendChild(titleRow);
+  const daysUntil = (new Date(lan.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+  const upcomingClass = daysUntil > 180 ? "upcoming-far" : daysUntil > 60 ? "upcoming-medium" : daysUntil > 14 ? "upcoming-soon" : "upcoming";
+  content.classList.add(upcomingClass);
 
   if (lan.invitation) {
     const inv = createElement("p") as HTMLParagraphElement;
@@ -269,6 +272,7 @@ function renderLan(
 ) {
   const now = new Date();
   const isHappening = new Date(lan.startDate) <= now && new Date(lan.endDate) >= now;
+  const isOver = !isHappening && (now.getTime() - new Date(lan.endDate).getTime()) < 7 * 24 * 60 * 60 * 1000 && new Date(lan.endDate) < now;
   const year = lan.startDate.substring(0, 4);
   const eventLabels: Record<string, string> = {
     pre: "Classical Era",
@@ -326,6 +330,7 @@ function renderLan(
   content.appendChild(titleRow);
 
   if (isHappening) content.classList.add("happening");
+  if (isOver) content.classList.add("over");
 
   // === Dates display ===
   const datesDisplay = createElement("p") as HTMLParagraphElement;

@@ -1,6 +1,7 @@
 import { requireAuth } from "./auth.js";
+import { LAN_START } from "./config.js";
 
-const TARGET = new Date("2026-07-20T13:37:00");
+const TARGET = LAN_START;
 
 async function init() {
   const me = await requireAuth();
@@ -14,8 +15,20 @@ function tick() {
   const diff = TARGET.getTime() - now.getTime();
 
   if (diff <= 0) {
-    document.getElementById("countdown-units")!.hidden = true;
-    document.getElementById("countdown-started")!.hidden = false;
+    const units = document.getElementById("countdown-units")!;
+    const rsvp = document.querySelector<HTMLElement>(".countdown-rsvp");
+    units.classList.add("fading-out");
+    if (rsvp) rsvp.classList.add("fading-out");
+
+    setTimeout(() => {
+      units.hidden = true;
+      if (rsvp) rsvp.hidden = true;
+      const started = document.getElementById("countdown-started")!;
+      started.hidden = false;
+      started.classList.add("active");
+      setTimeout(() => window.location.replace("/"), 4600);
+    }, 800);
+
     return;
   }
 

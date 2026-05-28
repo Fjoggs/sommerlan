@@ -911,6 +911,10 @@ header {
   box-sizing: border-box;
 }
 
+.event-subpage--narrow {
+  max-width: 800px;
+}
+
 .sommerlan-logo {
   display: inline-flex;
   align-items: baseline;
@@ -1741,6 +1745,14 @@ a.event-pill:hover {
   display: flex;
   align-items: center;
   gap: 1rem;
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  transition: background 0.15s;
+}
+
+.game-stat-row:hover {
+  background: var(--bg-light);
 }
 
 .game-stat-name {
@@ -1884,20 +1896,66 @@ a.event-pill:hover {
 }
 
 /* Upcoming event */
+/* Any day now... (> 6 months) */
+.timeline-event.upcoming-far {
+  border-color: oklch(0.48 0.07 290);
+  background: linear-gradient(160deg, oklch(0.16 0.012 290), oklch(0.15 0.004 290));
+  box-shadow: var(--shadow), 0 0 10px oklch(0.48 0.07 290 / 0.12);
+}
+.timeline-event.upcoming-far:not(.editing):hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 14px oklch(0.48 0.07 290 / 0.22);
+}
+.timeline-event.upcoming-far .upcoming-badge {
+  background: color-mix(in srgb, oklch(0.48 0.07 290) 15%, transparent);
+  color: oklch(0.6 0.07 290);
+  border-color: color-mix(in srgb, oklch(0.48 0.07 290) 40%, transparent);
+}
+
+/* Sakte men sikkert... (2–6 months) */
+.timeline-event.upcoming-medium {
+  border-color: oklch(0.55 0.13 290);
+  background: linear-gradient(160deg, oklch(0.17 0.02 290), oklch(0.15 0.007 290));
+  box-shadow: var(--shadow), 0 0 14px oklch(0.55 0.13 290 / 0.18);
+}
+.timeline-event.upcoming-medium:not(.editing):hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 20px oklch(0.55 0.13 290 / 0.32);
+}
+.timeline-event.upcoming-medium .upcoming-badge {
+  background: color-mix(in srgb, oklch(0.55 0.13 290) 15%, transparent);
+  color: oklch(0.62 0.13 290);
+  border-color: color-mix(in srgb, oklch(0.55 0.13 290) 40%, transparent);
+}
+
+/* Soon... (2 weeks–2 months) */
+.timeline-event.upcoming-soon {
+  border-color: oklch(0.6 0.18 290);
+  background: linear-gradient(160deg, oklch(0.17 0.026 290), oklch(0.15 0.009 290));
+  box-shadow: var(--shadow), 0 0 16px oklch(0.6 0.18 290 / 0.22);
+}
+.timeline-event.upcoming-soon:not(.editing):hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 24px oklch(0.6 0.18 290 / 0.38);
+}
+.timeline-event.upcoming-soon .upcoming-badge {
+  background: color-mix(in srgb, oklch(0.6 0.18 290) 15%, transparent);
+  color: oklch(0.65 0.18 290);
+  border-color: color-mix(in srgb, oklch(0.6 0.18 290) 40%, transparent);
+}
+
+/* RETT RUNDT HJØRNET (< 2 weeks) */
 .timeline-event.upcoming {
-  border-color: var(--primary);
-  background: linear-gradient(160deg, oklch(0.17 0.03 260), oklch(0.15 0.01 260));
-  box-shadow: var(--shadow), 0 0 18px oklch(0.6 0.2 250 / 0.25);
+  border-color: oklch(0.65 0.22 290);
+  background: linear-gradient(160deg, oklch(0.17 0.03 290), oklch(0.15 0.01 290));
+  box-shadow: var(--shadow), 0 0 18px oklch(0.65 0.22 290 / 0.25);
   animation: upcoming-pulse 3s ease-in-out infinite;
 }
 
 .timeline-event.upcoming:not(.editing):hover {
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 28px oklch(0.6 0.2 250 / 0.4);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 28px oklch(0.65 0.22 290 / 0.4);
 }
 
 @keyframes upcoming-pulse {
-  0%, 100% { box-shadow: var(--shadow), 0 0 18px oklch(0.6 0.2 250 / 0.25); }
-  50%       { box-shadow: var(--shadow), 0 0 32px oklch(0.6 0.2 250 / 0.45); }
+  0%, 100% { box-shadow: var(--shadow), 0 0 18px oklch(0.65 0.22 290 / 0.25); }
+  50%       { box-shadow: var(--shadow), 0 0 32px oklch(0.65 0.22 290 / 0.45); }
 }
 
 /* Happening now */
@@ -1917,6 +1975,23 @@ a.event-pill:hover {
   50%       { box-shadow: var(--shadow), 0 0 32px oklch(0.75 0.18 60 / 0.45); }
 }
 
+/* It's over */
+.timeline-event.over {
+  border-color: oklch(0.5 0.06 240);
+  background: linear-gradient(160deg, oklch(0.17 0.02 240), oklch(0.15 0.01 240));
+  box-shadow: var(--shadow), 0 0 14px oklch(0.5 0.06 240 / 0.18);
+}
+
+.timeline-event.over:not(.editing):hover {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 20px oklch(0.5 0.06 240 / 0.28);
+}
+
+.over-badge {
+  background: color-mix(in srgb, oklch(0.5 0.06 240) 15%, transparent) !important;
+  color: oklch(0.62 0.06 240) !important;
+  border-color: color-mix(in srgb, oklch(0.5 0.06 240) 40%, transparent) !important;
+}
+
 .happening-badge {
   background: color-mix(in srgb, oklch(0.75 0.18 60) 15%, transparent) !important;
   color: oklch(0.82 0.18 60) !important;
@@ -1927,6 +2002,15 @@ a.event-pill:hover {
   color: oklch(0.75 0.18 60);
 }
 
+#content.upcoming .hash      { color: oklch(0.65 0.22 290); }
+#content.upcoming-soon .hash { color: oklch(0.6 0.18 290); }
+#content.upcoming-medium .hash { color: oklch(0.55 0.13 290); }
+#content.upcoming-far .hash  { color: oklch(0.48 0.07 290); }
+
+#content.over .hash {
+  color: oklch(0.5 0.06 240);
+}
+
 .upcoming-badge {
   display: inline-block;
   margin-left: 0.6rem;
@@ -1935,9 +2019,9 @@ a.event-pill:hover {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  background: color-mix(in srgb, oklch(0.65 0.22 290) 15%, transparent);
+  color: oklch(0.65 0.22 290);
+  border: 1px solid color-mix(in srgb, oklch(0.65 0.22 290) 40%, transparent);
   border-radius: 999px;
   vertical-align: middle;
   position: relative;

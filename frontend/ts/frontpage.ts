@@ -71,11 +71,16 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   const now = new Date();
   const isUpcoming = new Date(lan.startDate) > now;
   const isHappening = new Date(lan.startDate) <= now && new Date(lan.endDate) >= now;
+  const isOver = !isHappening && !isUpcoming && (now.getTime() - new Date(lan.endDate).getTime()) < 7 * 24 * 60 * 60 * 1000;
+  const daysUntil = isUpcoming ? (new Date(lan.startDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24) : 0;
+  const upcomingClass = daysUntil > 180 ? "upcoming-far" : daysUntil > 60 ? "upcoming-medium" : daysUntil > 14 ? "upcoming-soon" : "upcoming";
+  const upcomingText = daysUntil > 180 ? "Any day now..." : daysUntil > 60 ? "Sakte men sikkert..." : daysUntil > 14 ? "Soon..." : "RETT RUNDT HJØRNET";
   const container = createElement("form", id);
   container.className = lan.lanId === 30 ? "timeline-event lan-30-bg" : "timeline-event";
   if (lan.isRomjulsLAN) container.classList.add("romjulslan");
-  if (isUpcoming) container.classList.add("upcoming");
+  if (isUpcoming) container.classList.add(upcomingClass);
   if (isHappening) container.classList.add("happening");
+  if (isOver) container.classList.add("over");
   if (lan.lanId === 30 && me) {
     const c1 = (viewAsUser as User | null)?.color ?? me.color;
     const c2 = (viewAsUser as User | null)?.color2 ?? (viewAsUser as User | null)?.color ?? me.color2 ?? me.color;
@@ -141,13 +146,13 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   datesDisplay.className = "dates-display";
   const datesText = buildDatesText(lan.fromDisplay ?? "", lan.toDisplay ?? "");
   datesDisplay.appendChild(document.createTextNode(datesText));
-  if (isUpcoming || isHappening) {
+  if (isUpcoming || isHappening || isOver) {
     const badge = createElement("span") as HTMLSpanElement;
-    badge.className = isHappening ? "upcoming-badge happening-badge" : "upcoming-badge";
-    badge.textContent = isHappening ? "HAPPENING STATUS: IT'S" : "Soon...";
+    badge.className = isHappening ? "upcoming-badge happening-badge" : isOver ? "upcoming-badge over-badge" : "upcoming-badge";
+    badge.textContent = isHappening ? "HAPPENING STATUS: IT'S" : isOver ? "GG" : upcomingText;
     datesDisplay.appendChild(badge);
   }
-  if (!datesText && !isUpcoming && !isHappening) datesDisplay.style.display = "none";
+  if (!datesText && !isUpcoming && !isHappening && !isOver) datesDisplay.style.display = "none";
   headerLeft.appendChild(datesDisplay);
 
   hContainer.appendChild(headerLeft);

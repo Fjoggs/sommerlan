@@ -121,6 +121,27 @@ func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) 
 	}
 }
 
+func (h *GameHandlers) GetGameById(writer http.ResponseWriter, req *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+
+	idPath := req.PathValue("id")
+	id, err := strconv.Atoi(idPath)
+	if err != nil {
+		http.Error(writer, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	profile, err := database.GetGameProfile(h.db, id)
+	if err != nil {
+		http.Error(writer, "game not found", http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewEncoder(writer).Encode(profile); err != nil {
+		log.Fatalf("Encoding response blew up: %v", err)
+	}
+}
+
 func (h *GameHandlers) DeleteGameWithId(writer http.ResponseWriter, req *http.Request) {
 	if err := requireAdmin(h.db, req); err != nil {
 		http.Error(writer, err.Error(), http.StatusForbidden)

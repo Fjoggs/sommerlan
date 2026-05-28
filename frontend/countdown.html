@@ -85,6 +85,36 @@
         font-size: clamp(1.5rem, 6vw, 3rem);
         font-weight: 700;
         color: var(--primary);
+        display: flex;
+        gap: 0.4em;
+      }
+
+      .countdown-word {
+        opacity: 0;
+        transform: translateY(0.3em);
+        display: inline-block;
+      }
+
+      @keyframes fade-out {
+        to { opacity: 0; }
+      }
+
+      .fading-out {
+        animation: fade-out 0.8s ease forwards;
+      }
+
+      @keyframes word-appear {
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .countdown-started.active .countdown-word:nth-child(1) {
+        animation: word-appear 0.6s ease forwards 1.0s;
+      }
+      .countdown-started.active .countdown-word:nth-child(2) {
+        animation: word-appear 0.6s ease forwards 2.0s;
+      }
+      .countdown-started.active .countdown-word:nth-child(3) {
+        animation: word-appear 0.6s ease forwards 3.0s;
       }
 
       .countdown-rsvp {
@@ -117,7 +147,11 @@
         </div>
       </div>
 
-      <p id="countdown-started" class="countdown-started" hidden>LAN er i gang! 🎮</p>
+      <p id="countdown-started" class="countdown-started" hidden>
+        <span class="countdown-word">Snakkes.</span>
+        <span class="countdown-word">på.</span>
+        <span class="countdown-word">LAN</span>
+      </p>
       <a href="rsvp.html" class="nav-pre-lan countdown-rsvp">
         <button type="button">SLEPP MEG INN</button>
       </a>

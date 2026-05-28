@@ -1104,6 +1104,58 @@ func GetUserProfile(db *sql.DB, userId int) (UserProfile, error) {
 	}, rows.Err()
 }
 
+type GameProfile struct {
+	Id   int            `json:"id"`
+	Name string         `json:"name"`
+	Lans []UserLanEntry `json:"lans"`
+}
+
+func GetGameProfile(db *sql.DB, gameId int) (GameProfile, error) {
+	game, err := GetGameWithId(db, gameId)
+	if err != nil {
+		return GameProfile{}, err
+	}
+
+	query := `
+		SELECT lan.id, lan.start_date, lan.end_date, lan.event, lan.description,
+		       lan.from_display, lan.to_display
+		FROM lan
+		JOIN lan_games ON lan.id = lan_games.lan_id
+		WHERE lan_games.game_id = ?
+		ORDER BY lan.start_date ASC
+	`
+	rows, err := db.Query(query, gameId)
+	if err != nil {
+		return GameProfile{}, err
+	}
+	defer rows.Close()
+
+	var lans []UserLanEntry
+	for rows.Next() {
+		var entry UserLanEntry
+		var fromDisplay, toDisplay sql.NullString
+		if err := rows.Scan(&entry.LanId, &entry.StartDate, &entry.EndDate, &entry.Event, &entry.Description, &fromDisplay, &toDisplay); err != nil {
+			return GameProfile{}, err
+		}
+		if fromDisplay.Valid {
+			entry.FromDisplay = fromDisplay.String
+		}
+		if toDisplay.Valid {
+			entry.ToDisplay = toDisplay.String
+		}
+		lans = append(lans, entry)
+	}
+	if lans == nil {
+		lans = []UserLanEntry{}
+	}
+
+	return GameProfile{
+		Id:   game.Id,
+		Name: game.Name,
+		Lans: lans,
+	}, rows.Err()
+}
+
 func GetLanImageFilename(db *sql.DB, imageId int) (lanId int, filename string, err error) {
 	row := db.QueryRow("SELECT lan_id, filename FROM lan_images WHERE id = ?", imageId)
 	err = row.Scan(&lanId, &filename)

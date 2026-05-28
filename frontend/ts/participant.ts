@@ -90,6 +90,12 @@ function renderProfile(profile: UserProfile, allLans: { lanId: number; startDate
   lanCount.innerHTML = `<span class="stat-value">${profile.lans.length}</span><span class="stat-label">LAN</span>`;
   stats.appendChild(lanCount);
 
+  const sommerCount = profile.lans.filter(l => l.event === "main").length;
+  const sommerStat = createElement("div") as HTMLDivElement;
+  sommerStat.className = "participant-stat";
+  sommerStat.innerHTML = `<span class="stat-value">${sommerCount}</span><span class="stat-label">SommerLAN</span>`;
+  stats.appendChild(sommerStat);
+
   content.appendChild(stats);
 
   // Events list

@@ -28,6 +28,7 @@ func main() {
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
+	router.HandleFunc("GET /api/countdown/", handlers.EnableCORS(handlers.CountdownHandler))
 
 	// Auth routes
 	router.HandleFunc("GET /api/auth/discord/", auth.DiscordLogin)
@@ -112,6 +113,7 @@ func main() {
 			// Empty handler - EnableCORS will handle the response
 		}),
 	)
+	router.HandleFunc("GET /api/game/{id}/", handlers.EnableCORS(game.GetGameById))
 	router.HandleFunc("DELETE /api/game/{id}/", handlers.EnableCORS(game.DeleteGameWithId))
 
 	// Award routes
@@ -134,7 +136,7 @@ func main() {
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 
 	// Serve frontend static files (catch-all, must be registered last)
-	router.Handle("/", http.FileServer(http.Dir("../frontend")))
+	router.Handle("/", handlers.LanGateMiddleware(http.FileServer(http.Dir("../frontend"))))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
