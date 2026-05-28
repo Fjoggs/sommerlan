@@ -2,7 +2,7 @@ import { requireAuth, authHeaders } from "./auth.js";
 import { createElement, createStarIcon } from "./utils.js";
 import type { UserProfile, UserLanEntry } from "./types.js";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 
 const params = new URLSearchParams(window.location.search);
 const idParam = params.get("id");

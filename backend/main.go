@@ -3,14 +3,24 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"backend/internal/database"
 	"backend/internal/handlers"
 )
 
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func main() {
-	// Init db
-	db, err := database.InitDB("./sommerlan.db")
+	dbPath := envOr("DB_PATH", "./sommerlan.db")
+	frontendPath := envOr("FRONTEND_PATH", "../frontend")
+
+	db, err := database.InitDB(dbPath)
 	if err != nil {
 		log.Fatal("Failed to initialise database:", err)
 	}
@@ -136,7 +146,7 @@ func main() {
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 
 	// Serve frontend static files (catch-all, must be registered last)
-	router.Handle("/", handlers.LanGateMiddleware(http.FileServer(http.Dir("../frontend"))))
+	router.Handle("/", handlers.LanGateMiddleware(http.FileServer(http.Dir(frontendPath))))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

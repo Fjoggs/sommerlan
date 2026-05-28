@@ -27,6 +27,7 @@ if (!idParam) {
 const me = await requireAuth();
 if (!me) throw new Error();
 
+
 const id = parseInt(idParam!, 10);
 const [lan, allLans] = await Promise.all([
   fetchById<LAN>("lan", id),
@@ -61,25 +62,17 @@ if (!lan) {
 } else {
   const year = lan.startDate.substring(0, 4);
 
-  const [tweetRes, imageRes, tagsRes, quotesRes, guestsRes] = await Promise.all([
+  const [tweetRes, imageRes, quotesRes, guestsRes] = await Promise.all([
     fetch(`/data/tweets/${year}.json`),
-    fetch(`http://localhost:8080/api/lan/${lan.lanId}/images/`, { headers: authHeaders() }),
-    fetch(`http://localhost:8080/api/tags/`, { headers: authHeaders() }),
-    fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() }),
-    fetch(`http://localhost:8080/api/lan/${lan.lanId}/guests/`, { headers: authHeaders() }),
+    fetch(`/api/lan/${lan.lanId}/images/`, { headers: authHeaders() }),
+    fetch(`/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() }),
+    fetch(`/api/lan/${lan.lanId}/guests/`, { headers: authHeaders() }),
   ]);
 
   const tweets: TweetEntry[] = tweetRes.ok ? await tweetRes.json() : [];
   const lanImages: LanImage[] = imageRes.ok ? await imageRes.json() : [];
-  const allTags: Tag[] = tagsRes.ok ? await tagsRes.json() : [];
   const lanQuotes: LanQuote[] = quotesRes.ok ? await quotesRes.json() : [];
   const lanGuests: LanGuest[] = guestsRes.ok ? await guestsRes.json() : [];
-  const datalist = document.getElementById("tag-suggestions")!;
-  for (const tag of allTags) {
-    const opt = document.createElement("option");
-    opt.value = tag.name;
-    datalist.appendChild(opt);
-  }
 
   // filename → tweet (for image cards to look up their tweet)
   const imageToTweet = new Map<string, TweetEntry>();
@@ -92,7 +85,7 @@ if (!lan) {
   // set of filenames currently on this LAN (for tweet cards to check)
   const lanImageFilenames = new Set(lanImages.map((i) => i.filename));
 
-  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, allTags, lanQuotes, lanGuests);
+  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, lanQuotes, lanGuests);
 }
 
 
@@ -209,7 +202,7 @@ async function renderUpcoming(lan: LAN) {
   content.appendChild(matrixSection);
 
   // Single fetch: populate cards + check existing RSVP
-  const rsvpRes = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+  const rsvpRes = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
   const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
   const mine = rsvpEntries.find((e) => e.userId === me!.id);
   const myDates = mine?.dates ?? [];
@@ -243,13 +236,13 @@ async function renderUpcoming(lan: LAN) {
   submitBtn.addEventListener("click", async () => {
     const dates = Array.from(wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked")).map((cb) => cb.value);
     submitBtn.disabled = true; submitBtn.textContent = "Sender…";
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, {
+    const res = await fetch(`/api/lan/${lan.lanId}/rsvp/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ dates }),
     });
     if (res.ok) {
-      const updated: RsvpEntry[] = await (await fetch(`http://localhost:8080/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() })).json();
+      const updated: RsvpEntry[] = await (await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() })).json();
       renderCards(matrixContainer, updated, { currentUserId: me!.id, onEdit: showForm });
       submitBtn.textContent = "Snakkes på LAN";
       showConfirmed();
@@ -266,7 +259,6 @@ function renderLan(
   lanImages: LanImage[],
   imageToTweet: Map<string, TweetEntry>,
   lanImageFilenames: Set<string>,
-  allTags: Tag[],
   lanQuotes: LanQuote[],
   lanGuests: LanGuest[],
 ) {
@@ -422,7 +414,7 @@ function renderLan(
       del.textContent = "✕";
       del.title = "Fjern gjest";
       del.addEventListener("click", async () => {
-        const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/guests/${g.id}/`, {
+        const res = await fetch(`/api/lan/${lan.lanId}/guests/${g.id}/`, {
           method: "DELETE", headers: authHeaders(),
         });
         if (res.ok) {
@@ -456,7 +448,7 @@ function renderLan(
       const name = guestInput.value.trim();
       if (!name) return;
       const fd = new URLSearchParams({ name });
-      const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/guests/`, {
+      const res = await fetch(`/api/lan/${lan.lanId}/guests/`, {
         method: "POST", headers: authHeaders(), body: fd,
       });
       if (res.ok) {
@@ -503,7 +495,7 @@ function renderLan(
   // Add game form — available to all logged-in users
   const gameDatalist = createElement("datalist") as HTMLDataListElement;
   gameDatalist.id = `game-suggestions-${lan.lanId}`;
-  fetch("http://localhost:8080/api/game/", { headers: authHeaders() })
+  fetch("/api/game/", { headers: authHeaders() })
     .then(r => r.ok ? r.json() : [])
     .then((games: Game[]) => {
       for (const g of games) {
@@ -531,7 +523,7 @@ function renderLan(
     const name = gameInput.value.trim();
     if (!name) return;
     const fd = new URLSearchParams({ name });
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/games/`, {
+    const res = await fetch(`/api/lan/${lan.lanId}/games/`, {
       method: "POST", headers: authHeaders(), body: fd,
     });
     if (res.ok) {
@@ -581,7 +573,7 @@ function renderLan(
   if (lan.awards && lan.awards.length > 0) content.appendChild(aSection);
 
   renderQuoteSection(lan.lanId, lanQuotes);
-  renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames, allTags);
+  renderImageSection(lan.lanId, lanImages, imageToTweet, lanImageFilenames);
 
   // === Edit mode (admin only) ===
   if (me?.role !== "admin") return;
@@ -718,7 +710,7 @@ function renderLan(
 
       const save = async () => {
         const val = nickInput.value.trim();
-        const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/participant/${userId}/nickname/`, {
+        const res = await fetch(`/api/lan/${lan.lanId}/participant/${userId}/nickname/`, {
           method: "PATCH",
           headers: authHeaders(),
           body: new URLSearchParams({ nickname: val }),
@@ -879,7 +871,7 @@ function renderLan(
       if (lbl.querySelector<HTMLInputElement>("input")?.checked) fd.append("awards", lbl.querySelector<HTMLInputElement>("input")!.value);
     }
 
-    const res = await fetch("http://localhost:8080/api/lan/", {
+    const res = await fetch("/api/lan/", {
       method: "PATCH",
       headers: authHeaders(),
       body: fd,
@@ -918,7 +910,7 @@ function renderLan(
     const name = newGameInput.value.trim();
     if (!name) return;
     const fd = new FormData(); fd.append("gameName", name);
-    const res = await fetch("http://localhost:8080/api/game/", { method: "POST", headers: authHeaders(), body: fd });
+    const res = await fetch("/api/game/", { method: "POST", headers: authHeaders(), body: fd });
     if (!res.ok) return;
     const game: Game = await res.json();
     if (cachedGames) cachedGames.push(game);
@@ -935,7 +927,7 @@ function renderLan(
     const name = newAwardInput.value.trim();
     if (!name) return;
     const fd = new FormData(); fd.append("awardName", name);
-    const res = await fetch("http://localhost:8080/api/award/", { method: "POST", headers: authHeaders(), body: fd });
+    const res = await fetch("/api/award/", { method: "POST", headers: authHeaders(), body: fd });
     if (!res.ok) return;
     const award: Award = await res.json();
     if (cachedAwards) cachedAwards.push(award);
@@ -991,7 +983,7 @@ function renderQuoteSection(lanId: number, quotes: LanQuote[]) {
       const del = createElement("button") as HTMLButtonElement;
       del.type = "button"; del.className = "quote-delete-btn"; del.textContent = "✕";
       del.addEventListener("click", async () => {
-        const res = await fetch(`http://localhost:8080/api/lan/${lanId}/quotes/${q.id}/`, {
+        const res = await fetch(`/api/lan/${lanId}/quotes/${q.id}/`, {
           method: "DELETE", headers: authHeaders(),
         });
         if (res.ok) bq.remove();
@@ -1031,7 +1023,7 @@ function renderQuoteSection(lanId: number, quotes: LanQuote[]) {
           const text = quoteEditInput.value.trim();
           if (!text) return;
           const fd = new URLSearchParams({ quote: text, attributedTo: attrEditInput.value.trim() });
-          const res = await fetch(`http://localhost:8080/api/lan/${lanId}/quotes/${q.id}/`, {
+          const res = await fetch(`/api/lan/${lanId}/quotes/${q.id}/`, {
             method: "PATCH", headers: authHeaders(), body: fd,
           });
           if (res.ok) {
@@ -1085,7 +1077,7 @@ function renderQuoteSection(lanId: number, quotes: LanQuote[]) {
     const text = quoteInput.value.trim();
     if (!text) return;
     const fd = new URLSearchParams({ quote: text, attributedTo: attrInput.value.trim() });
-    const res = await fetch(`http://localhost:8080/api/lan/${lanId}/quotes/`, {
+    const res = await fetch(`/api/lan/${lanId}/quotes/`, {
       method: "POST",
       headers: authHeaders(),
       body: fd,
@@ -1117,7 +1109,6 @@ function renderImageSection(
   lanImages: LanImage[],
   imageToTweet: Map<string, TweetEntry>,
   lanImageFilenames: Set<string>,
-  allTags: Tag[],
 ) {
   const section = createElement("section");
   section.className = "event-section";
@@ -1143,53 +1134,10 @@ function renderImageSection(
   header.appendChild(uploadBtn);
   section.appendChild(header);
 
-  // collect tags used in this LAN's images for the filter bar
-  const usedTagIds = new Set(lanImages.flatMap((img) => (img.tags ?? []).map((t) => t.id)));
-  const usedTags = allTags.filter((t) => usedTagIds.has(t.id));
-  const activeFilters = new Set<number>();
-
-  const filterBar = createElement("div") as HTMLDivElement;
-  filterBar.className = "image-filter-bar";
-  filterBar.style.display = usedTags.length ? "" : "none";
-
-  const filterLabel = createElement("span");
-  filterLabel.className = "image-filter-label";
-  filterLabel.textContent = "Filter:";
-  filterBar.appendChild(filterLabel);
-
-  function applyFilters() {
-    for (const card of Array.from(grid.querySelectorAll<HTMLElement>(".image-card"))) {
-      const cardTagIds = JSON.parse(card.dataset.tagIds ?? "[]") as number[];
-      const visible = activeFilters.size === 0 || cardTagIds.some((id) => activeFilters.has(id));
-      card.style.display = visible ? "" : "none";
-    }
-  }
-
-  for (const tag of usedTags) {
-    const pill = createElement("button") as HTMLButtonElement;
-    pill.type = "button";
-    pill.className = "image-filter-pill";
-    pill.textContent = tag.name;
-    pill.dataset.tagId = String(tag.id);
-    pill.addEventListener("click", () => {
-      if (activeFilters.has(tag.id)) {
-        activeFilters.delete(tag.id);
-        pill.classList.remove("active");
-      } else {
-        activeFilters.add(tag.id);
-        pill.classList.add("active");
-      }
-      applyFilters();
-    });
-    filterBar.appendChild(pill);
-  }
-  section.appendChild(filterBar);
-
   const grid = createElement("div");
   grid.className = "image-grid";
 
   const carousel: CarouselEntry[] = [];
-
   const selected = new Set<HTMLElement>();
 
   for (const img of lanImages) {
@@ -1197,7 +1145,7 @@ function renderImageSection(
     const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
     const tweet = imageToTweet.get(img.filename);
     carousel.push({ src, tweet });
-    const card = buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected, allTags, filterBar);
+    const card = buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected);
     grid.appendChild(card);
   }
   section.appendChild(grid);
@@ -1263,7 +1211,7 @@ function renderImageSection(
       const ids = Array.from(grid.querySelectorAll<HTMLElement>(".image-card")).map((c) =>
         parseInt(c.id.replace("img-", ""), 10)
       );
-      await fetch(`http://localhost:8080/api/lan/${lanId}/images/order/`, {
+      await fetch(`/api/lan/${lanId}/images/order/`, {
         method: "PUT",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
@@ -1279,7 +1227,7 @@ function renderImageSection(
       uploadBtn.textContent = files.length > 1 ? `Laster... (${i + 1}/${files.length})` : "Laster...";
       const fd = new FormData();
       fd.append("image", files[i]);
-      const uploadRes = await fetch(`http://localhost:8080/api/lan/${lanId}/images/`, {
+      const uploadRes = await fetch(`/api/lan/${lanId}/images/`, {
         method: "POST",
         headers: authHeaders(),
         body: fd,
@@ -1291,7 +1239,7 @@ function renderImageSection(
         const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
         const tweet = imageToTweet.get(img.filename);
         carousel.push({ src, tweet });
-        grid.appendChild(buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected, allTags, filterBar));
+        grid.appendChild(buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected));
       }
     }
     uploadBtn.textContent = "+ Last opp";
@@ -1413,8 +1361,6 @@ function buildImageCard(
   carousel: CarouselEntry[],
   index: number,
   selected: Set<HTMLElement> = new Set(),
-  allTags: Tag[] = [],
-  filterBar?: HTMLElement,
 ): HTMLElement {
   const card = createElement("div");
   card.className = "image-card";
@@ -1424,7 +1370,6 @@ function buildImageCard(
   const imgEl = createElement("img") as HTMLImageElement;
   imgEl.src = thumbSrc;
   imgEl.alt = "";
-  imgEl.loading = "lazy";
   imgEl.addEventListener("error", () => { imgEl.src = `/uploads/lan/${lanId}/${img.filename}`; }, { once: true });
   card.appendChild(imgEl);
 
@@ -1432,7 +1377,7 @@ function buildImageCard(
   card.style.cursor = "pointer";
   card.addEventListener("click", (e) => {
     const click = e as MouseEvent;
-    if ((click.target as HTMLElement).closest(".image-delete-btn, .image-tag-strip, .image-tag-add")) return;
+    if ((click.target as HTMLElement).closest(".image-delete-btn")) return;
     if (click.shiftKey && me!.role === "admin") {
       if (selected.has(card)) {
         selected.delete(card);
@@ -1453,125 +1398,6 @@ function buildImageCard(
     card.appendChild(badge);
   }
 
-  // tag strip
-  const tagStrip = createElement("div") as HTMLDivElement;
-  tagStrip.className = "image-tag-strip";
-
-  const cardTags: Tag[] = [...(img.tags ?? [])];
-
-  function syncTagIds() {
-    card.dataset.tagIds = JSON.stringify(cardTags.map((t) => t.id));
-    // update filter bar visibility
-    if (filterBar) {
-      const usedIds = new Set(
-        Array.from(filterBar.closest("section")!.querySelectorAll<HTMLElement>(".image-card"))
-          .flatMap((c) => JSON.parse(c.dataset.tagIds ?? "[]") as number[])
-      );
-      filterBar.querySelectorAll<HTMLElement>(".image-filter-pill").forEach((pill) => {
-        const id = parseInt(pill.dataset.tagId ?? "0", 10);
-        pill.style.display = usedIds.has(id) ? "" : "none";
-      });
-      filterBar.style.display = usedIds.size ? "" : "none";
-    }
-  }
-
-  function renderTagPill(tag: Tag) {
-    const pill = createElement("span") as HTMLSpanElement;
-    pill.className = "image-tag-pill";
-    pill.textContent = tag.name;
-
-    if (me!.role === "admin") {
-      const removeBtn = createElement("button") as HTMLButtonElement;
-      removeBtn.type = "button";
-      removeBtn.className = "image-tag-remove";
-      removeBtn.textContent = "×";
-      removeBtn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        const res = await fetch(`http://localhost:8080/api/lan/${lanId}/images/${img.id}/tags/${tag.id}/`, {
-          method: "DELETE",
-          headers: authHeaders(),
-        });
-        if (res.ok) {
-          pill.remove();
-          const idx = cardTags.findIndex((t) => t.id === tag.id);
-          if (idx !== -1) cardTags.splice(idx, 1);
-          syncTagIds();
-          // also add back to allTags suggestions if missing
-          if (!allTags.find((t) => t.id === tag.id)) allTags.push(tag);
-        }
-      });
-      pill.appendChild(removeBtn);
-    }
-    return pill;
-  }
-
-  for (const tag of cardTags) {
-    tagStrip.appendChild(renderTagPill(tag));
-  }
-
-  if (me!.role === "admin") {
-    const addBtn = createElement("button") as HTMLButtonElement;
-    addBtn.type = "button";
-    addBtn.className = "image-tag-add";
-    addBtn.textContent = "+";
-    addBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      addBtn.style.display = "none";
-      const input = createElement("input") as HTMLInputElement;
-      input.type = "text";
-      input.className = "image-tag-input";
-      input.placeholder = "Tag...";
-      input.setAttribute("list", "tag-suggestions");
-      tagStrip.appendChild(input);
-      input.focus();
-
-      async function submit() {
-        const name = input.value.trim();
-        input.remove();
-        addBtn.style.display = "";
-        if (!name) return;
-        const res = await fetch(`http://localhost:8080/api/lan/${lanId}/images/${img.id}/tags/`, {
-          method: "POST",
-          headers: { ...authHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ name }),
-        });
-        if (res.ok) {
-          const tag: Tag = await res.json();
-          if (!cardTags.find((t) => t.id === tag.id)) {
-            cardTags.push(tag);
-            tagStrip.insertBefore(renderTagPill(tag), addBtn);
-            syncTagIds();
-            if (!allTags.find((t) => t.id === tag.id)) {
-              allTags.push(tag);
-              // add to datalist
-              const opt = document.createElement("option");
-              opt.value = tag.name;
-              document.getElementById("tag-suggestions")?.appendChild(opt);
-            }
-            // add filter pill if new
-            if (filterBar && !filterBar.querySelector(`[data-tag-id="${tag.id}"]`)) {
-              const filterPill = createElement("button") as HTMLButtonElement;
-              filterPill.type = "button";
-              filterPill.className = "image-filter-pill";
-              filterPill.textContent = tag.name;
-              filterPill.dataset.tagId = String(tag.id);
-              filterBar.appendChild(filterPill);
-              filterBar.style.display = "";
-            }
-          }
-        }
-      }
-
-      input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { input.remove(); addBtn.style.display = ""; } });
-      input.addEventListener("blur", submit);
-    });
-    tagStrip.appendChild(addBtn);
-  }
-
-  if (cardTags.length > 0 || me!.role === "admin") {
-    card.appendChild(tagStrip);
-  }
-
   if (me!.role === "admin") {
     card.draggable = true;
 
@@ -1580,7 +1406,7 @@ function buildImageCard(
     deleteBtn.className = "image-delete-btn";
     deleteBtn.textContent = "🗑";
     deleteBtn.addEventListener("click", async () => {
-      const delRes = await fetch(`http://localhost:8080/api/lan/${lanId}/images/${img.id}/`, {
+      const delRes = await fetch(`/api/lan/${lanId}/images/${img.id}/`, {
         method: "DELETE",
         headers: authHeaders(),
       });

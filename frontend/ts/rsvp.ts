@@ -3,7 +3,7 @@ import { BLOCKS, GAMES, renderMatrix, renderCards } from "./matrix.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import type { RsvpEntry } from "./types.js";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 const lanId = new URLSearchParams(location.search).get("lan");
 
 let me: { id: number; name: string; nickname?: string; color: string } | null = null;

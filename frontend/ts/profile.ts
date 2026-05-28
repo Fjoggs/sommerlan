@@ -1,6 +1,6 @@
 import { requireAuth, authHeaders, setToken, clearToken, getToken } from "./auth.js";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 
 const PRESET_COLORS = [
   "#5865F2", "#EB459E", "#ED4245", "#FF6D00", "#FEE75C",

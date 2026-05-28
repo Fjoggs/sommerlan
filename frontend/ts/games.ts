@@ -1,7 +1,7 @@
 import { requireAuth, authHeaders } from "./auth.js";
 import { createElement } from "./utils.js";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 
 const me = await requireAuth();
 if (!me) throw new Error();

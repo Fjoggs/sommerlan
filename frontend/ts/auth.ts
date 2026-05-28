@@ -1,5 +1,5 @@
 const TOKEN_KEY = "sommerlan_token";
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);

@@ -56,7 +56,7 @@ if (nav) {
 
 // Wire up RSVP/Påmeldte nav links to the next upcoming LAN
 try {
-  const res = await fetch("http://localhost:8080/api/lan/", { headers: authHeaders() });
+  const res = await fetch("/api/lan/", { headers: authHeaders() });
   if (res.ok) {
     const lans: { lanId: number; startDate: string }[] = await res.json();
     const today = new Date().toISOString().substring(0, 10);

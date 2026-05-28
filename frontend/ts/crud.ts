@@ -1,7 +1,7 @@
 import { showError } from "./errorHandler.js";
 import { authHeaders } from "./auth.js";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 
 type Model = "award" | "game" | "lan" | "user";
 

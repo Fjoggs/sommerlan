@@ -1,0 +1,19 @@
+services:
+  sommerlan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+      - ./uploads:/app/frontend/uploads/lan
+    environment:
+      DB_PATH: /data/sommerlan.db
+      FRONTEND_PATH: /app/frontend
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
+      FRONTEND_URL: ${FRONTEND_URL}
+    restart: unless-stopped

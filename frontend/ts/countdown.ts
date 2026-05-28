@@ -21,8 +21,8 @@ function tick() {
     if (rsvp) rsvp.classList.add("fading-out");
 
     setTimeout(() => {
-      units.hidden = true;
-      if (rsvp) rsvp.hidden = true;
+      const timerGroup = document.querySelector<HTMLElement>(".countdown-timer-group");
+      if (timerGroup) timerGroup.hidden = true;
       const started = document.getElementById("countdown-started")!;
       started.hidden = false;
       started.classList.add("active");

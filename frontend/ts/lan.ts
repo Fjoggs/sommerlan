@@ -78,7 +78,7 @@ const onSubmitLAN = async (event: SubmitEvent) => {
 };
 
 const deleteLan = async (id: number) => {
-  const response = await fetch(`http://localhost:8080/api/lan/${id}/`, {
+  const response = await fetch(`/api/lan/${id}/`, {
     method: "DELETE",
   });
   if (response.status === 204) {

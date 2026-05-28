@@ -61,7 +61,7 @@ function buildFirstTimerMap(lans: LAN[]): Map<number, Set<number>> {
 }
 
 const fetchLanById = async (id: number) => {
-  const res = await fetch(`http://localhost:8080/api/lan/${id}/`);
+  const res = await fetch(`/api/lan/${id}/`);
   const lan: LAN = await res.json();
   console.log("lan", lan);
 };
@@ -374,7 +374,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
       formData.append("awards", input.value);
     }
 
-    const res = await fetch("http://localhost:8080/api/lan/", {
+    const res = await fetch("/api/lan/", {
       method: "PATCH",
       headers: authHeaders(),
       body: formData,
@@ -498,7 +498,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     e.preventDefault();
     const attending = attendBtn.classList.contains("attending");
     const method = attending ? "DELETE" : "POST";
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/attend/`, {
+    const res = await fetch(`/api/lan/${lan.lanId}/attend/`, {
       method,
       headers: authHeaders(),
     });
@@ -561,7 +561,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
 
       const save = async () => {
         const val = nickInput.value.trim();
-        const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/participant/${userId}/nickname/`, {
+        const res = await fetch(`/api/lan/${lan.lanId}/participant/${userId}/nickname/`, {
           method: "PATCH",
           headers: authHeaders(),
           body: new URLSearchParams({ nickname: val }),
@@ -611,7 +611,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     if (!name) return;
     const fd = new FormData();
     fd.append("gameName", name);
-    const res = await fetch("http://localhost:8080/api/game/", {
+    const res = await fetch("/api/game/", {
       method: "POST",
       headers: authHeaders(),
       body: fd,
@@ -649,7 +649,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     if (!name) return;
     const fd = new FormData();
     fd.append("awardName", name);
-    const res = await fetch("http://localhost:8080/api/award/", {
+    const res = await fetch("/api/award/", {
       method: "POST",
       headers: authHeaders(),
       body: fd,
@@ -669,7 +669,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   deleteButton.addEventListener("click", async () => {
     const confirmed = window.confirm(`Slett LAN ${lan.startDate.substring(0, 4)}? Dette kan ikke angres.`);
     if (!confirmed) return;
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/`, {
+    const res = await fetch(`/api/lan/${lan.lanId}/`, {
       method: "DELETE",
       headers: authHeaders(),
     });
@@ -695,7 +695,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   const loadQuotes = async () => {
     if (quotesLoaded) return;
     quotesLoaded = true;
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() });
+    const res = await fetch(`/api/lan/${lan.lanId}/quotes/`, { headers: authHeaders() });
     if (!res.ok) return;
     const fetched: LanQuote[] = await res.json();
     for (const q of fetched) quoteList.appendChild(buildQuoteItem(q));
@@ -736,7 +736,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     const text = quoteTextInput.value.trim();
     if (!text) return;
     const fd = new URLSearchParams({ quote: text, attributedTo: quoteAttrInput.value.trim() });
-    const res = await fetch(`http://localhost:8080/api/lan/${lan.lanId}/quotes/`, {
+    const res = await fetch(`/api/lan/${lan.lanId}/quotes/`, {
       method: "POST",
       headers: authHeaders(),
       body: fd,
@@ -991,7 +991,7 @@ const buildNewEntry = async (): Promise<void> => {
     if (!name) return;
     const fd = new FormData();
     fd.append("gameName", name);
-    const res = await fetch("http://localhost:8080/api/game/", {
+    const res = await fetch("/api/game/", {
       method: "POST",
       headers: authHeaders(),
       body: fd,
@@ -1028,7 +1028,7 @@ const buildNewEntry = async (): Promise<void> => {
     if (!name) return;
     const fd = new FormData();
     fd.append("awardName", name);
-    const res = await fetch("http://localhost:8080/api/award/", {
+    const res = await fetch("/api/award/", {
       method: "POST",
       headers: authHeaders(),
       body: fd,
@@ -1087,7 +1087,7 @@ const buildNewEntry = async (): Promise<void> => {
       formData.append("awards", input.value);
     }
 
-    const res = await fetch("http://localhost:8080/api/lan/", {
+    const res = await fetch("/api/lan/", {
       method: "POST",
       headers: authHeaders(),
       body: formData,
