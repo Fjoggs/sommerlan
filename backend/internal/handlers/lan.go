@@ -359,8 +359,8 @@ func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Requ
 }
 
 func (h *LanHandlers) AddGameToLan(w http.ResponseWriter, r *http.Request) {
-	if err := requireAdmin(h.db, r); err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
+	if _, err := GetUserFromRequest(h.db, r); err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	lanId, err := strconv.Atoi(r.PathValue("id"))
@@ -412,10 +412,6 @@ func (a *LanHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) 
 }
 
 func (h *LanHandlers) AttendLan(writer http.ResponseWriter, req *http.Request) {
-	if err := requireAdmin(h.db, req); err != nil {
-		http.Error(writer, err.Error(), http.StatusForbidden)
-		return
-	}
 	user, err := GetUserFromRequest(h.db, req)
 	if err != nil {
 		http.Error(writer, "unauthorized", http.StatusUnauthorized)
@@ -434,10 +430,6 @@ func (h *LanHandlers) AttendLan(writer http.ResponseWriter, req *http.Request) {
 }
 
 func (h *LanHandlers) UnattendLan(writer http.ResponseWriter, req *http.Request) {
-	if err := requireAdmin(h.db, req); err != nil {
-		http.Error(writer, err.Error(), http.StatusForbidden)
-		return
-	}
 	user, err := GetUserFromRequest(h.db, req)
 	if err != nil {
 		http.Error(writer, "unauthorized", http.StatusUnauthorized)
