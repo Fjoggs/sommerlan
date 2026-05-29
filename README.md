@@ -57,7 +57,20 @@ Then:
 docker compose up -d --build
 ```
 
-Volumes: `./data/` → SQLite DB, `./uploads/` → user-uploaded images.
+Or without Compose:
+
+```bash
+docker build -t sommerlan .
+docker run -d --name sommerlan -p 8080:8080 \
+  -v ./data:/data \
+  -v ./frontend/uploads:/app/frontend/uploads \
+  --env-file .env \
+  sommerlan
+```
+
+Volumes:
+- `./data/` → SQLite DB (`sommerlan.db`)
+- `./frontend/uploads/` → user-uploaded images (per-LAN subdirs + thumbs)
 
 ## Project structure
 
@@ -77,7 +90,7 @@ backend/
       game.go                      — game CRUD + GetGameById
       user.go                      — user CRUD
       rsvp.go                      — RSVP endpoints
-      middleware.go                — EnableCORS, requireAdmin
+      middleware.go                — EnableCORS, requireAuth, requireAdmin
 
 frontend/
   index.html                       — main page (timeline of LAN events)

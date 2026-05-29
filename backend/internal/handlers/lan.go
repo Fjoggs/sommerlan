@@ -41,6 +41,10 @@ func NewLanHandlers(db *sql.DB, frontendPath string) *LanHandlers {
 }
 
 func (h *LanHandlers) GetLanById(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")
@@ -63,7 +67,11 @@ func (h *LanHandlers) GetLanById(writer http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (h *LanHandlers) GetLan(writer http.ResponseWriter, _ *http.Request) {
+func (h *LanHandlers) GetLan(writer http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetLans(h.db)
@@ -388,6 +396,10 @@ func (h *LanHandlers) AddGameToLan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *LanHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(a.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	var lanGame addLanGame
@@ -448,6 +460,10 @@ func (h *LanHandlers) UnattendLan(writer http.ResponseWriter, req *http.Request)
 }
 
 func (h *LanHandlers) GetLanImages(w http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	lanId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -603,6 +619,10 @@ func (h *LanHandlers) DeleteLanImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LanHandlers) GetTags(w http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	tags, err := database.GetAllTags(h.db)
 	if err != nil {
@@ -741,6 +761,10 @@ func (h *LanHandlers) SetParticipantNickname(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *LanHandlers) GetLanQuotes(w http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	lanId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "invalid lan id", http.StatusBadRequest)
@@ -824,6 +848,10 @@ func (h *LanHandlers) PatchLanQuote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *LanHandlers) GetLanGuests(w http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	lanId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "invalid lan id", http.StatusBadRequest)

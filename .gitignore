@@ -8,5 +8,6 @@ frontend/css/*.bak
 backend/sommerlan.db
 backend/backend
 backend/run.sh
+.env
 *.db
 raw-data/

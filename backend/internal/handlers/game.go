@@ -21,7 +21,11 @@ func NewGameHandlers(db *sql.DB) *GameHandlers {
 	}
 }
 
-func (h *GameHandlers) GetGameStats(writer http.ResponseWriter, _ *http.Request) {
+func (h *GameHandlers) GetGameStats(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 	stats, err := database.GetGameStats(h.db)
 	if err != nil {
@@ -33,7 +37,11 @@ func (h *GameHandlers) GetGameStats(writer http.ResponseWriter, _ *http.Request)
 	}
 }
 
-func (h *GameHandlers) GetGames(writer http.ResponseWriter, _ *http.Request) {
+func (h *GameHandlers) GetGames(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetGames(h.db)
@@ -122,6 +130,10 @@ func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) 
 }
 
 func (h *GameHandlers) GetGameById(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")

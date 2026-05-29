@@ -80,6 +80,10 @@ func (h *RsvpHandlers) DeleteRsvp(writer http.ResponseWriter, req *http.Request)
 }
 
 func (h *RsvpHandlers) GetRsvps(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	lanId, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
 		http.Error(writer, "invalid lan id", http.StatusBadRequest)

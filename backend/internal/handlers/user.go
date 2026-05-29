@@ -21,7 +21,11 @@ func NewUserHandlers(db *sql.DB) *UserHandlers {
 	}
 }
 
-func (h *UserHandlers) GetUserStats(writer http.ResponseWriter, _ *http.Request) {
+func (h *UserHandlers) GetUserStats(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 	stats, err := database.GetUserStats(h.db)
 	if err != nil {
@@ -33,7 +37,11 @@ func (h *UserHandlers) GetUserStats(writer http.ResponseWriter, _ *http.Request)
 	}
 }
 
-func (h *UserHandlers) GetUsers(writer http.ResponseWriter, _ *http.Request) {
+func (h *UserHandlers) GetUsers(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	lans, err := database.GetUsers(h.db)
@@ -124,6 +132,10 @@ func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) 
 }
 
 func (h *UserHandlers) GetUserById(writer http.ResponseWriter, req *http.Request) {
+	if err := requireAuth(h.db, req); err != nil {
+		http.Error(writer, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	writer.Header().Set("Content-Type", "application/json")
 
 	idPath := req.PathValue("id")

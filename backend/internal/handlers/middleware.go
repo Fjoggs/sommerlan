@@ -6,6 +6,13 @@ import (
 	"net/http"
 )
 
+func requireAuth(db *sql.DB, r *http.Request) error {
+	if _, err := GetUserFromRequest(db, r); err != nil {
+		return fmt.Errorf("unauthorized")
+	}
+	return nil
+}
+
 func requireAdmin(db *sql.DB, r *http.Request) error {
 	user, err := GetUserFromRequest(db, r)
 	if err != nil {

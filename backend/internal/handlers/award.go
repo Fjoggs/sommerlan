@@ -19,7 +19,11 @@ func NewAwardHandlers(db *sql.DB) *AwardHandlers {
 	return &AwardHandlers{db: db}
 }
 
-func (h *AwardHandlers) GetAwards(w http.ResponseWriter, _ *http.Request) {
+func (h *AwardHandlers) GetAwards(w http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 
 	awards, err := database.GetAwards(h.db)

@@ -7,7 +7,7 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/data
-      - ./uploads:/app/frontend/uploads/lan
+      - ./frontend/uploads:/app/frontend/uploads
     environment:
       DB_PATH: /data/sommerlan.db
       FRONTEND_PATH: /app/frontend
