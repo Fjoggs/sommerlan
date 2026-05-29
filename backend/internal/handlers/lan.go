@@ -493,7 +493,17 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 		"image/gif":  true,
 		"image/webp": true,
 	}
-	contentType := header.Header.Get("Content-Type")
+	buf := make([]byte, 512)
+	n, err := file.Read(buf)
+	if err != nil && n == 0 {
+		http.Error(w, "could not read file", http.StatusBadRequest)
+		return
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		http.Error(w, "could not read file", http.StatusInternalServerError)
+		return
+	}
+	contentType := http.DetectContentType(buf[:n])
 	if !allowed[contentType] {
 		http.Error(w, "unsupported image type", http.StatusBadRequest)
 		return
