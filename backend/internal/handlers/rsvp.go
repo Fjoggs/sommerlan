@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"backend/internal/database"
 )
+
+var dateRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
 type RsvpHandlers struct {
 	db *sql.DB
@@ -40,6 +43,12 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 	if len(body.Dates) == 0 {
 		http.Error(writer, "dates are required", http.StatusBadRequest)
 		return
+	}
+	for _, d := range body.Dates {
+		if !dateRegex.MatchString(d) {
+			http.Error(writer, "invalid date format: "+d, http.StatusBadRequest)
+			return
+		}
 	}
 
 	if err := database.AddRsvpDates(h.db, user.Id, lanId, body.Dates); err != nil {

@@ -115,7 +115,7 @@ func main() {
 	// Game routes
 	router.HandleFunc("GET /api/game/stats/", handlers.EnableCORS(game.GetGameStats))
 	router.HandleFunc("GET /api/game/", handlers.EnableCORS(game.GetGames))
-	router.HandleFunc("PATCH /api/game/", handlers.EnableCORS(user.AlterUser))
+	router.HandleFunc("PATCH /api/game/", handlers.EnableCORS(game.AlterGame))
 	router.HandleFunc("POST /api/game/", handlers.EnableCORS(game.AddGame))
 	router.HandleFunc(
 		"OPTIONS /api/game/{id}/",

@@ -62,7 +62,7 @@ func UpsertDiscordUser(db *sql.DB, name, discordID string) (*UserResponse, error
 
 func CreateSession(db *sql.DB, userID int) (string, error) {
 	token := uuid.New().String()
-	_, err := db.Exec(`INSERT INTO sessions(token, user_id) VALUES(?, ?)`, token, userID)
+	_, err := db.Exec(`INSERT INTO sessions(token, user_id, created_at) VALUES(?, ?, datetime('now'))`, token, userID)
 	if err != nil {
 		return "", fmt.Errorf("CreateSession: %w", err)
 	}
@@ -73,7 +73,9 @@ func GetUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
 	var user UserResponse
 	var color, color2, nickname sql.NullString
 	err := db.QueryRow(
-		`SELECT u.id, u.name, u.color, u.color2, u.nickname, u.role FROM sessions s JOIN user u ON s.user_id = u.id WHERE s.token = ?`,
+		`SELECT u.id, u.name, u.color, u.color2, u.nickname, u.role
+		 FROM sessions s JOIN user u ON s.user_id = u.id
+		 WHERE s.token = ? AND s.created_at > datetime('now', '-30 days')`,
 		token,
 	).Scan(&user.Id, &user.Name, &color, &color2, &nickname, &user.Role)
 	if err == sql.ErrNoRows {

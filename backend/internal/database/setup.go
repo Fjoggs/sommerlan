@@ -149,6 +149,9 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		FOREIGN KEY (lan_id) REFERENCES lan(id) ON DELETE CASCADE
 	)`)
 
+	_, _ = db.Exec(`ALTER TABLE sessions ADD COLUMN created_at TEXT`)
+	_, _ = db.Exec(`UPDATE sessions SET created_at = datetime('now') WHERE created_at IS NULL`)
+
 	log.Println("Database initialized successfully")
 	return db, nil
 }

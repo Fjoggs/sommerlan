@@ -128,7 +128,7 @@ func (h *UserHandlers) GetUserById(writer http.ResponseWriter, req *http.Request
 
 	idPath := req.PathValue("id")
 	id, err := strconv.Atoi(idPath)
-	if err != nil {
+	if err != nil || id <= 0 {
 		http.Error(writer, "invalid id", http.StatusBadRequest)
 		return
 	}
