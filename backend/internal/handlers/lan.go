@@ -499,31 +499,36 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ext := filepath.Ext(header.Filename)
-	if ext == "" {
-		ext = ".jpg"
-	}
-	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	base := fmt.Sprintf("%d", time.Now().UnixNano())
+	filename := base + ".webp"
 
 	uploadDir := fmt.Sprintf("%s/uploads/lan/%d", h.frontendPath, lanId)
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		http.Error(w, "failed to create upload directory", http.StatusInternalServerError)
 		return
 	}
-	dst, err := os.Create(filepath.Join(uploadDir, filename))
+
+	// Write original to a temp file, then convert to webp
+	origExt := filepath.Ext(header.Filename)
+	if origExt == "" {
+		origExt = ".jpg"
+	}
+	tmpPath := filepath.Join(uploadDir, base+origExt)
+	dst, err := os.Create(tmpPath)
 	if err != nil {
 		http.Error(w, "failed to save image", http.StatusInternalServerError)
 		return
 	}
-	defer dst.Close()
 	if _, err := io.Copy(dst, file); err != nil {
+		dst.Close()
+		os.Remove(tmpPath)
 		http.Error(w, "failed to write image", http.StatusInternalServerError)
 		return
 	}
+	dst.Close()
 
 	var exifDate *string
-	fullPath := filepath.Join(uploadDir, filename)
-	if f, err := os.Open(fullPath); err == nil {
+	if f, err := os.Open(tmpPath); err == nil {
 		if x, err := exif.Decode(f); err == nil {
 			if t, err := x.DateTime(); err == nil {
 				s := t.Format("2006:01:02 15:04:05")
@@ -533,9 +538,21 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 		f.Close()
 	}
 
+	fullPath := filepath.Join(uploadDir, filename)
+	if err := exec.Command("magick", tmpPath, "-auto-orient", "-quality", "92", fullPath).Run(); err != nil {
+		// magick unavailable or failed — keep original
+		filename = base + origExt
+		fullPath = tmpPath
+	}
+
 	thumbDir := filepath.Join(uploadDir, "thumbs")
 	if err := os.MkdirAll(thumbDir, 0755); err == nil {
-		exec.Command("magick", fullPath, "-thumbnail", "600x600>", "-auto-orient", filepath.Join(thumbDir, filename)).Run()
+		// Generate thumbnail from original to avoid double compression
+		exec.Command("magick", tmpPath, "-thumbnail", "600x600>", "-auto-orient", "-quality", "92", filepath.Join(thumbDir, filename)).Run()
+	}
+
+	if fullPath != tmpPath {
+		os.Remove(tmpPath)
 	}
 
 	img, err := database.AddLanImage(h.db, lanId, filename, user.Id, exifDate)

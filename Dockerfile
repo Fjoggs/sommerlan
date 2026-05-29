@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o sommerlan .
 
 # Stage 3: minimal runtime
 FROM alpine:latest
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata imagemagick
 WORKDIR /app
 
 COPY --from=backend-builder /app/sommerlan .
