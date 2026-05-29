@@ -29,12 +29,14 @@ type addParticipantBody struct {
 }
 
 type LanHandlers struct {
-	db *sql.DB
+	db           *sql.DB
+	frontendPath string
 }
 
-func NewLanHandlers(db *sql.DB) *LanHandlers {
+func NewLanHandlers(db *sql.DB, frontendPath string) *LanHandlers {
 	return &LanHandlers{
-		db: db,
+		db:           db,
+		frontendPath: frontendPath,
 	}
 }
 
@@ -503,7 +505,7 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 	}
 	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
 
-	uploadDir := fmt.Sprintf("../frontend/uploads/lan/%d", lanId)
+	uploadDir := fmt.Sprintf("%s/uploads/lan/%d", h.frontendPath, lanId)
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		http.Error(w, "failed to create upload directory", http.StatusInternalServerError)
 		return
@@ -569,7 +571,7 @@ func (h *LanHandlers) DeleteLanImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to delete image", http.StatusInternalServerError)
 		return
 	}
-	_ = os.Remove(fmt.Sprintf("../frontend/uploads/lan/%d/%s", lanId, filename))
+	_ = os.Remove(fmt.Sprintf("%s/uploads/lan/%d/%s", h.frontendPath, lanId, filename))
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -1,10 +1,6 @@
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN_START } from "./config.js";
 
-const path = window.location.pathname;
-if (new Date() < LAN_START && !path.endsWith("countdown.html") && !path.endsWith("rsvp.html")) {
-  window.location.replace("/countdown.html");
-}
 
 const me = await requireAuth();
 if (me) {

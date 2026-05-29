@@ -29,7 +29,7 @@ func main() {
 
 	defer db.Close()
 
-	lan := handlers.NewLanHandlers(db)
+	lan := handlers.NewLanHandlers(db, frontendPath)
 	game := handlers.NewGameHandlers(db)
 	award := handlers.NewAwardHandlers(db)
 	user := handlers.NewUserHandlers(db)

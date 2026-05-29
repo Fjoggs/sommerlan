@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -27,15 +26,7 @@ func CountdownHandler(w http.ResponseWriter, _ *http.Request) {
 
 func LanGateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if time.Now().Before(lanStartTime) {
-			path := r.URL.Path
-			isHtmlRequest := path == "/" || strings.HasSuffix(path, ".html")
-			isAllowed := path == "/countdown.html" || path == "/login.html" || strings.HasPrefix(path, "/rsvp")
-			if isHtmlRequest && !isAllowed {
-				http.Redirect(w, r, "/countdown.html", http.StatusFound)
-				return
-			}
-		}
+		_ = lanStartTime
 		next.ServeHTTP(w, r)
 	})
 }
