@@ -30,7 +30,7 @@ func LanGateMiddleware(next http.Handler) http.Handler {
 		if time.Now().Before(lanStartTime) {
 			path := r.URL.Path
 			isHtmlRequest := path == "/" || strings.HasSuffix(path, ".html")
-			isAllowed := path == "/countdown.html" || strings.HasPrefix(path, "/rsvp")
+			isAllowed := path == "/countdown.html" || path == "/login.html" || strings.HasPrefix(path, "/rsvp")
 			if isHtmlRequest && !isAllowed {
 				http.Redirect(w, r, "/countdown.html", http.StatusFound)
 				return

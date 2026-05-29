@@ -1,6 +1,4 @@
 frontend/node_modules
-frontend/ts
-frontend/tsconfig.json
 frontend/uploads
 frontend/*.bak
 frontend/css/*.bak
