@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const lanStart = "2026-07-15T13:37:00"
+const lanStart = "2026-07-20T13:37:00"
 
 var lanStartTime = func() time.Time {
 	t, err := time.ParseInLocation("2006-01-02T15:04:05", lanStart, time.Local)
