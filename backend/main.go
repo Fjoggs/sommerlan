@@ -29,6 +29,11 @@ func main() {
 
 	defer db.Close()
 
+	gateTime := handlers.ComputeLanGateTime(db)
+	if !gateTime.IsZero() {
+		log.Printf("Site gate opens at %s", gateTime.Format("2006-01-02 15:04:05"))
+	}
+
 	lan := handlers.NewLanHandlers(db, frontendPath)
 	game := handlers.NewGameHandlers(db)
 	award := handlers.NewAwardHandlers(db)
@@ -38,7 +43,7 @@ func main() {
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
-	router.HandleFunc("GET /api/countdown/", handlers.EnableCORS(handlers.CountdownHandler))
+	router.HandleFunc("GET /api/countdown/", handlers.EnableCORS(handlers.CountdownHandler(gateTime)))
 
 	// Auth routes
 	router.HandleFunc("GET /api/auth/discord/", auth.DiscordLogin)
@@ -146,7 +151,7 @@ func main() {
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 
 	// Serve frontend static files (catch-all, must be registered last)
-	router.Handle("/", handlers.LanGateMiddleware(db, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath)))))
+	router.Handle("/", handlers.LanGateMiddleware(db, gateTime, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath)))))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
