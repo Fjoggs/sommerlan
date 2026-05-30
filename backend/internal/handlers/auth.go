@@ -105,7 +105,15 @@ func (h *AuthHandlers) DiscordCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, h.frontendURL+"/login.html?token="+token, http.StatusFound)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   30 * 24 * 60 * 60,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, h.frontendURL+"/login?token="+token, http.StatusFound)
 }
 
 func (h *AuthHandlers) Me(w http.ResponseWriter, r *http.Request) {
@@ -154,16 +162,26 @@ func (h *AuthHandlers) Logout(w http.ResponseWriter, r *http.Request) {
 	if token != "" {
 		_ = database.DeleteSession(h.db, token)
 	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ExtractToken reads the Bearer token from the Authorization header.
+// ExtractToken reads the Bearer token from the Authorization header, falling back to the session cookie.
 func ExtractToken(r *http.Request) string {
-	auth := r.Header.Get("Authorization")
-	if !strings.HasPrefix(auth, "Bearer ") {
-		return ""
+	if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
+		return strings.TrimPrefix(auth, "Bearer ")
 	}
-	return strings.TrimPrefix(auth, "Bearer ")
+	if cookie, err := r.Cookie("session"); err == nil {
+		return cookie.Value
+	}
+	return ""
 }
 
 // GetUserFromRequest validates the session token and returns the current user.

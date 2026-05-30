@@ -15,6 +15,13 @@
         flex-direction: column;
         gap: 2rem;
         align-items: center;
+        width: 100%;
+        padding: 0 1rem;
+        box-sizing: border-box;
+      }
+      .login-card h1 {
+        font-size: clamp(1.8rem, 8vw, 3rem);
+        word-break: break-word;
       }
       .discord-btn {
         display: inline-flex;
@@ -34,11 +41,11 @@
       }
     </style>
   </head>
-  <body style="margin: 0; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+  <body style="margin: 0; min-height: 100vh; overflow-x: hidden; display: flex; align-items: center; justify-content: center;">
     <main class="rsvp-wrapper" style="padding-top: 0; padding-bottom: 0;">
       <div class="login-card">
         <div class="rsvp-header">
-          <h1 style="font-size: 3rem;"><span class="hash">#</span>SommerLAN</h1>
+          <h1><span class="hash">#</span>SommerLAN</h1>
         </div>
         <a id="discord-login" hidden href="/api/auth/discord/" class="discord-btn">
           <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor" xmlns="http://www.w3.org/2000/svg">

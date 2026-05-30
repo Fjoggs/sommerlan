@@ -29,6 +29,16 @@ export async function requireAuth(): Promise<AuthUser | null> {
   return res.json() as Promise<AuthUser>;
 }
 
+export async function getAuthUser(): Promise<AuthUser | null> {
+  const token = getToken();
+  if (!token) return null;
+  const res = await fetch(`${API_URL}/auth/me/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) { clearToken(); return null; }
+  return res.json() as Promise<AuthUser>;
+}
+
 function redirectToLogin() {
-  window.location.href = "/login.html";
+  window.location.href = "/login";
 }

@@ -146,7 +146,7 @@ func main() {
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 
 	// Serve frontend static files (catch-all, must be registered last)
-	router.Handle("/", handlers.LanGateMiddleware(http.FileServer(http.Dir(frontendPath))))
+	router.Handle("/", handlers.LanGateMiddleware(db, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath)))))
 
 	log.Println("Server listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

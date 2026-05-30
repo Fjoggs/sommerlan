@@ -37,7 +37,7 @@ function renderStats(stats: GameStat[]) {
   for (const game of stats) {
     const row = createElement("a") as HTMLAnchorElement;
     row.className = "game-stat-row";
-    row.href = `game.html?id=${game.id}`;
+    row.href = `game?id=${game.id}`;
 
     const nameSpan = createElement("span") as HTMLSpanElement;
     nameSpan.className = "game-stat-name";

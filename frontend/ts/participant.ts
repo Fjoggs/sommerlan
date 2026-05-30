@@ -126,7 +126,7 @@ function renderProfile(profile: UserProfile, allLans: { lanId: number; startDate
 
 function buildLanCard(lan: UserLanEntry, firstLanId: number | null, eventLabels: Record<string, string>): HTMLElement {
   const card = createElement("a") as HTMLAnchorElement;
-  card.href = `lan-event.html?id=${lan.lanId}`;
+  card.href = `lan-event?id=${lan.lanId}`;
   card.className = "participant-lan-card";
 
   const year = createElement("span") as HTMLSpanElement;

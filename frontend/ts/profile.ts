@@ -33,7 +33,7 @@ async function init() {
   document.getElementById("logout-btn")!.addEventListener("click", async () => {
     await fetch(`${API_URL}/auth/logout/`, { method: "POST", headers: authHeaders() });
     clearToken();
-    window.location.href = "/login.html";
+    window.location.href = "/login";
   });
 }
 

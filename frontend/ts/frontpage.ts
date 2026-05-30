@@ -102,7 +102,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
 
   const header = createElement("h3");
   const headerLink = document.createElement("a") as HTMLAnchorElement;
-  headerLink.href = `lan-event.html?id=${lan.lanId}`;
+  headerLink.href = `lan-event?id=${lan.lanId}`;
   headerLink.textContent = lan.startDate.substring(0, 4);
   headerLink.className = "lan-event-link";
   header.appendChild(headerLink);
@@ -430,7 +430,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     if ((lan.imageCount ?? 0) > 0) {
       const b = createElement("a") as HTMLAnchorElement;
       b.className = "content-badge";
-      b.href = `lan-event.html?id=${lan.lanId}#event-images`;
+      b.href = `lan-event?id=${lan.lanId}#event-images`;
       b.title = "Bilder";
       b.innerHTML = `📷 <span>${lan.imageCount}</span>`;
       badges.appendChild(b);
@@ -438,7 +438,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     if (tweetCount > 0) {
       const b = createElement("a") as HTMLAnchorElement;
       b.className = "content-badge";
-      b.href = `lan-event.html?id=${lan.lanId}#event-tweets`;
+      b.href = `lan-event?id=${lan.lanId}#event-tweets`;
       b.title = "Tweets";
       b.innerHTML = `🐦 <span>${tweetCount}</span>`;
       badges.appendChild(b);
@@ -481,7 +481,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     label.addEventListener("click", (e: Event) => {
       if (container.classList.contains("editing")) return;
       e.preventDefault();
-      window.location.href = `participant.html?id=${label.dataset.userId}`;
+      window.location.href = `participant?id=${label.dataset.userId}`;
     });
   }
 
@@ -770,7 +770,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   }
   const quoteBadge = createElement("a") as HTMLAnchorElement;
   quoteBadge.className = "content-badge";
-  quoteBadge.href = `lan-event.html?id=${lan.lanId}#event-quotes`;
+  quoteBadge.href = `lan-event?id=${lan.lanId}#event-quotes`;
   quoteBadge.title = "Sitater";
   quoteBadge.textContent = `💬 ${lan.quoteCount ?? 0}`;
   if (!(lan.quoteCount ?? 0)) quoteBadge.style.display = "none";
@@ -779,7 +779,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   container.addEventListener("click", (e) => {
     if (container.classList.contains("editing")) return;
     if ((e.target as HTMLElement).closest("a, button, input, label")) return;
-    window.location.href = `lan-event.html?id=${lan.lanId}`;
+    window.location.href = `lan-event?id=${lan.lanId}`;
   });
 
   return container;

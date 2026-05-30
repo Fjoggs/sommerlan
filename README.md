@@ -62,6 +62,7 @@ Or without Compose:
 ```bash
 docker build -t sommerlan .
 docker run -d --name sommerlan -p 8080:8080 \
+  --user "$(id -u):$(id -g)" \
   -v ./data:/data \
   -v ./frontend/uploads:/app/frontend/uploads \
   --env-file .env \

@@ -9,5 +9,6 @@ backend/sommerlan.db
 backend/backend
 backend/run.sh
 .env
+.env.prod
 *.db
 raw-data/

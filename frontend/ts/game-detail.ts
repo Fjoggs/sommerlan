@@ -92,7 +92,7 @@ function renderProfile(profile: GameProfile) {
 
   for (const lan of profile.lans) {
     const card = createElement("a") as HTMLAnchorElement;
-    card.href = `lan-event.html?id=${lan.lanId}`;
+    card.href = `lan-event?id=${lan.lanId}`;
     card.className = "participant-lan-card";
 
     const year = createElement("span") as HTMLSpanElement;

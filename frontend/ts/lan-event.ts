@@ -100,7 +100,7 @@ async function renderUpcoming(lan: LAN) {
   titleRow.className = "event-title-row";
   const prevLink = createElement("a") as HTMLAnchorElement;
   prevLink.className = "event-nav-arrow";
-  if (prev) { prevLink.href = `lan-event.html?id=${prev.lanId}`; prevLink.innerHTML = `&#8592; <span>${prev.startDate.substring(0, 4)}</span>`; }
+  if (prev) { prevLink.href = `lan-event?id=${prev.lanId}`; prevLink.innerHTML = `&#8592; <span>${prev.startDate.substring(0, 4)}</span>`; }
   else prevLink.setAttribute("aria-hidden", "true");
   const title = createElement("h1") as HTMLHeadingElement;
   const hash = createElement("span"); hash.className = "hash"; hash.textContent = "#";
@@ -108,7 +108,7 @@ async function renderUpcoming(lan: LAN) {
   title.append(`SommerLAN ${lan.startDate.substring(0, 4)}`);
   const nextLink = createElement("a") as HTMLAnchorElement;
   nextLink.className = "event-nav-arrow";
-  if (next) { nextLink.href = `lan-event.html?id=${next.lanId}`; nextLink.innerHTML = `<span>${next.startDate.substring(0, 4)}</span> &#8594;`; }
+  if (next) { nextLink.href = `lan-event?id=${next.lanId}`; nextLink.innerHTML = `<span>${next.startDate.substring(0, 4)}</span> &#8594;`; }
   else nextLink.setAttribute("aria-hidden", "true");
   const titleCenter = createElement("div") as HTMLDivElement;
   titleCenter.className = "event-title-center";
@@ -284,7 +284,7 @@ function renderLan(
   const prevLink = createElement("a") as HTMLAnchorElement;
   prevLink.className = "event-nav-arrow";
   if (prev) {
-    prevLink.href = `lan-event.html?id=${prev.lanId}`;
+    prevLink.href = `lan-event?id=${prev.lanId}`;
     prevLink.innerHTML = `&#8592; <span>${prev.startDate.substring(0, 4)}</span>`;
   } else {
     prevLink.setAttribute("aria-hidden", "true");
@@ -306,7 +306,7 @@ function renderLan(
   const nextLink = createElement("a") as HTMLAnchorElement;
   nextLink.className = "event-nav-arrow";
   if (next) {
-    nextLink.href = `lan-event.html?id=${next.lanId}`;
+    nextLink.href = `lan-event?id=${next.lanId}`;
     nextLink.innerHTML = `<span>${next.startDate.substring(0, 4)}</span> &#8594;`;
   } else {
     nextLink.setAttribute("aria-hidden", "true");
@@ -352,8 +352,8 @@ function renderLan(
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     if (document.querySelector(".lightbox-overlay")) return;
     if (document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
-    if (e.key === "ArrowLeft" && prev) window.location.href = `lan-event.html?id=${prev.lanId}`;
-    if (e.key === "ArrowRight" && next) window.location.href = `lan-event.html?id=${next.lanId}`;
+    if (e.key === "ArrowLeft" && prev) window.location.href = `lan-event?id=${prev.lanId}`;
+    if (e.key === "ArrowRight" && next) window.location.href = `lan-event?id=${next.lanId}`;
   });
 
   // === Participants section ===
@@ -373,7 +373,7 @@ function renderLan(
     for (const p of lan.participants ?? []) {
       const pill = createElement("a") as HTMLAnchorElement;
       pill.className = "event-pill";
-      pill.href = `participant.html?id=${p.id}`;
+      pill.href = `participant?id=${p.id}`;
       pill.style.backgroundColor = `color-mix(in srgb, ${p.color} 20%, var(--bg))`;
       pill.style.color = p.color;
       pill.style.fontWeight = "bold";

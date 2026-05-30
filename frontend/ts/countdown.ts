@@ -1,11 +1,10 @@
-import { requireAuth } from "./auth.js";
+import { getAuthUser } from "./auth.js";
 import { LAN_START } from "./config.js";
 
 const TARGET = LAN_START;
 
 async function init() {
-  const me = await requireAuth();
-  if (!me) return;
+  await getAuthUser();
   tick();
   setInterval(tick, 1000);
 }

@@ -1,8 +1,8 @@
-import { requireAuth, authHeaders } from "./auth.js";
+import { getAuthUser, authHeaders } from "./auth.js";
 import { LAN_START } from "./config.js";
 
 
-const me = await requireAuth();
+const me = await getAuthUser();
 if (me) {
   const avatar = document.getElementById("profile-avatar") as HTMLAnchorElement | null;
   if (avatar) {

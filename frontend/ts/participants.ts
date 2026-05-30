@@ -39,7 +39,7 @@ function renderStats(stats: UserStat[]) {
 
     const row = createElement("a") as HTMLAnchorElement;
     row.className = "game-stat-row participant-stat-row";
-    row.href = `participant.html?id=${user.id}`;
+    row.href = `participant?id=${user.id}`;
 
     const avatar = createElement("div") as HTMLDivElement;
     avatar.className = "participant-stat-avatar";
