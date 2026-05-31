@@ -89,10 +89,12 @@ function getSelectedDates(): string[] {
 
 function applyUserColor(btn: HTMLButtonElement) {
   if (!me?.color) return;
-  btn.style.backgroundColor = me.color + "33";
-  btn.style.border = `2px solid ${me.color}`;
-  btn.style.color = me.color;
-  btn.style.boxShadow = "none";
+  btn.style.backgroundColor = me.color;
+  if (!btn.dataset.colorized) {
+    btn.dataset.colorized = "1";
+    btn.addEventListener("mouseenter", () => { btn.style.filter = "brightness(1.2)"; });
+    btn.addEventListener("mouseleave", () => { btn.style.filter = ""; });
+  }
 }
 
 function updateSubmitButton() {
@@ -102,11 +104,8 @@ function updateSubmitButton() {
   btn.disabled = !canSubmit;
   btn.classList.toggle("inactive", !canSubmit);
   btn.textContent = "Snakkes på LAN";
-  if (canSubmit) {
-    applyUserColor(btn);
-  } else {
-    btn.style.cssText = "";
-  }
+  if (canSubmit) applyUserColor(btn);
+  else btn.style.backgroundColor = "";
 }
 
 async function postRsvp(dates: string[]): Promise<RsvpEntry[] | null> {
@@ -201,7 +200,6 @@ async function transformCardToForm(card: HTMLElement) {
     } catch {
       submitBtn.textContent = "Feil – prøv igjen";
       submitBtn.disabled = false;
-      applyUserColor(submitBtn);
     }
   });
 
