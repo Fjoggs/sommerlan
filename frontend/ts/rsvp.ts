@@ -160,6 +160,7 @@ async function transformCardToForm(card: HTMLElement) {
   cancelBtn.type = "button";
   cancelBtn.className = "rsvp-endre-btn";
   cancelBtn.textContent = "Avbryt";
+  applyUserColor(cancelBtn);
   cancelBtn.addEventListener("click", () => {
     selectedDates.clear();
     originalDates.forEach((d) => selectedDates.add(d));
@@ -214,6 +215,7 @@ function showConfirmation(entries?: RsvpEntry[]) {
   document.getElementById("step-days")!.style.display = "none";
   document.querySelector<HTMLElement>(".rsvp-footer")!.style.display = "none";
   document.getElementById("rsvp-confirmation")!.style.display = "";
+  applyUserColor(document.getElementById("rsvp-endre") as HTMLButtonElement);
 
   const matrixEl = document.getElementById("participant-matrix")!;
   matrixEl.innerHTML = "";
