@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Test: countdown effect</title>
+    <link href="css/headings.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" />
+    <script defer type="module" src="dist/ts/test-countdown.js"></script>
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .test-stage {
+        position: relative;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 8rem;
+      }
+
+      .countdown-started {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 0 clamp(1rem, 5vw, 4rem);
+        font-size: clamp(1.5rem, 6vw, 3rem);
+        font-weight: 700;
+        color: var(--primary);
+        text-align: center;
+      }
+
+      #typewriter-text::after {
+        content: '';
+        display: inline-block;
+        width: 3px;
+        height: 0.85em;
+        background: var(--primary);
+        vertical-align: -0.1em;
+        margin-left: 3px;
+        animation: cursor-blink 0.8s step-end infinite;
+      }
+
+      @keyframes cursor-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+      }
+
+      @keyframes fade-out {
+        to { opacity: 0; }
+      }
+
+      .fading-out {
+        animation: fade-out 0.4s ease forwards;
+      }
+
+      #trigger-btn {
+        transition: opacity 0.3s;
+      }
+
+      .hore-text {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        font-size: clamp(6rem, 30vw, 18rem);
+        font-weight: 900;
+        color: var(--primary);
+        letter-spacing: -0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="test-stage">
+      <button id="trigger-btn" type="button">Simulate countdown end</button>
+      <p id="countdown-started" class="countdown-started" hidden>
+        <span id="typewriter-text"></span>
+      </p>
+    </div>
+    <p id="hore-text" class="hore-text" hidden>HORE</p>
+  </body>
+</html>

@@ -86,17 +86,28 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.4em;
         margin: 0;
+        padding: 0 clamp(1rem, 5vw, 4rem);
         font-size: clamp(1.5rem, 6vw, 3rem);
         font-weight: 700;
         color: var(--primary);
+        text-align: center;
       }
 
-      .countdown-word {
-        opacity: 0;
-        transform: translateY(0.3em);
+      #typewriter-text::after {
+        content: '';
         display: inline-block;
+        width: 3px;
+        height: 0.85em;
+        background: var(--primary);
+        vertical-align: -0.1em;
+        margin-left: 3px;
+        animation: cursor-blink 0.8s step-end infinite;
+      }
+
+      @keyframes cursor-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
       }
 
       @keyframes fade-out {
@@ -105,20 +116,6 @@
 
       .fading-out {
         animation: fade-out 0.8s ease forwards;
-      }
-
-      @keyframes word-appear {
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .countdown-started.active .countdown-word:nth-child(1) {
-        animation: word-appear 0.6s ease forwards 1.0s;
-      }
-      .countdown-started.active .countdown-word:nth-child(2) {
-        animation: word-appear 0.6s ease forwards 2.0s;
-      }
-      .countdown-started.active .countdown-word:nth-child(3) {
-        animation: word-appear 0.6s ease forwards 3.0s;
       }
 
       .countdown-timer-group {
@@ -136,6 +133,19 @@
       .countdown-rsvp button {
         font-size: clamp(0.75rem, 2.5vw, 1rem);
         padding: clamp(0.35rem, 1.5vw, 0.6rem) clamp(0.75rem, 3vw, 1.5rem);
+      }
+
+      .hore-text {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        font-size: clamp(6rem, 30vw, 18rem);
+        font-weight: 900;
+        color: var(--primary);
+        letter-spacing: -0.02em;
       }
     </style>
   </head>
@@ -169,10 +179,10 @@
       </div>
 
       <p id="countdown-started" class="countdown-started" hidden>
-        <span class="countdown-word">Snakkes.</span>
-        <span class="countdown-word">på.</span>
-        <span class="countdown-word">LAN</span>
+        <span id="typewriter-text"></span>
       </p>
+
+      <p id="hore-text" class="hore-text" hidden>HORE</p>
     </main>
   </body>
 </html>
