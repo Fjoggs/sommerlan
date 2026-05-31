@@ -1,0 +1,24 @@
+[Unit]
+Description=SommerLAN
+After=docker.service
+Requires=docker.service
+
+[Service]
+WorkingDirectory=/opt/sommerlan
+Restart=on-failure
+RestartSec=5s
+
+ExecStartPre=-/usr/bin/docker stop sommerlan
+ExecStartPre=-/usr/bin/docker rm sommerlan
+ExecStart=/usr/bin/docker run \
+    --name sommerlan \
+    -p 8080:8080 \
+    --user 1000:1000 \
+    -v /opt/sommerlan/data:/data \
+    -v /opt/sommerlan/frontend:/app/frontend \
+    --env-file /opt/sommerlan/.env \
+    sommerlan
+ExecStop=/usr/bin/docker stop sommerlan
+
+[Install]
+WantedBy=multi-user.target
