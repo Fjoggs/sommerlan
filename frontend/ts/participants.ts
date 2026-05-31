@@ -65,6 +65,22 @@ function renderStats(stats: UserStat[]) {
     row.appendChild(nameSpan);
     row.appendChild(barOuter);
     row.appendChild(count);
+
+    if (me!.role === "admin") {
+      const impBtn = document.createElement("button");
+      impBtn.textContent = "Logg inn som";
+      impBtn.className = "impersonate-btn";
+      impBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const res = await fetch(`/api/admin/impersonate/${user.id}/`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+        if (res.ok) window.location.reload();
+      });
+      row.appendChild(impBtn);
+    }
+
     list.appendChild(row);
   }
 

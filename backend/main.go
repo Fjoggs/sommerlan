@@ -51,6 +51,10 @@ func main() {
 	router.HandleFunc("GET /api/auth/me/", handlers.EnableCORS(auth.Me))
 	router.HandleFunc("POST /api/auth/logout/", handlers.EnableCORS(auth.Logout))
 	router.HandleFunc("PATCH /api/auth/me/", handlers.EnableCORS(auth.UpdateMe))
+	router.HandleFunc("POST /api/admin/impersonate/{userId}/", handlers.EnableCORS(auth.Impersonate))
+	router.HandleFunc("POST /api/admin/impersonate/stop/", handlers.EnableCORS(auth.StopImpersonate))
+	router.HandleFunc("OPTIONS /api/admin/impersonate/{userId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("OPTIONS /api/admin/impersonate/stop/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("OPTIONS /api/auth/me/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("OPTIONS /api/auth/logout/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 

@@ -2,7 +2,7 @@
 
 ## Go-live checklist
 
-- **⚠️ Gate is currently disabled**: `countdown.go` has `if false && !gateTime.IsZero() ...` — revert to `if !gateTime.IsZero() ...` before go-live.
+- **Gate is enabled**: `countdown.go` uses `if !gateTime.IsZero() ...`. To disable for dev, prepend `false &&`.
 
 ## Key patterns
 

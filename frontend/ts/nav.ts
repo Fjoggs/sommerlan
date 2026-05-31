@@ -13,6 +13,24 @@ if (me) {
       : me.color || "var(--primary)";
   }
 
+  if (me.impersonating) {
+    const banner = document.createElement("div");
+    banner.className = "impersonation-banner";
+    const displayName = me.nickname || me.name;
+    banner.innerHTML = `Innlogget som <strong>${displayName}</strong> (testmodus)`;
+    const stopBtn = document.createElement("button");
+    stopBtn.textContent = "Avslutt";
+    stopBtn.className = "impersonation-stop-btn";
+    stopBtn.addEventListener("click", async () => {
+      await fetch("/api/admin/impersonate/stop/", {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      window.location.reload();
+    });
+    banner.appendChild(stopBtn);
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
 }
 
 const nav = document.querySelector<HTMLElement>("nav.menu");

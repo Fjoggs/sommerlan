@@ -72,6 +72,58 @@ func CreateSession(db *sql.DB, userID int) (string, error) {
 func GetUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
 	var user UserResponse
 	var color, color2, nickname sql.NullString
+	var impersonateUserID sql.NullInt64
+	err := db.QueryRow(
+		`SELECT u.id, u.name, u.color, u.color2, u.nickname, u.role, s.impersonate_user_id
+		 FROM sessions s JOIN user u ON s.user_id = u.id
+		 WHERE s.token = ? AND s.created_at > datetime('now', '-30 days')`,
+		token,
+	).Scan(&user.Id, &user.Name, &color, &color2, &nickname, &user.Role, &impersonateUserID)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no session for token")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetUserFromToken: %w", err)
+	}
+
+	if impersonateUserID.Valid {
+		var imp UserResponse
+		var ic, ic2, in sql.NullString
+		err = db.QueryRow(
+			`SELECT id, name, color, color2, nickname, role FROM user WHERE id = ?`,
+			impersonateUserID.Int64,
+		).Scan(&imp.Id, &imp.Name, &ic, &ic2, &in, &imp.Role)
+		if err == nil {
+			if ic.Valid {
+				imp.Color = ic.String
+			}
+			if ic2.Valid {
+				imp.Color2 = ic2.String
+			}
+			if in.Valid {
+				imp.Nickname = in.String
+			}
+			imp.Impersonating = true
+			return &imp, nil
+		}
+	}
+
+	if color.Valid {
+		user.Color = color.String
+	}
+	if color2.Valid {
+		user.Color2 = color2.String
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
+	}
+	return &user, nil
+}
+
+// GetRealUserFromToken returns the actual session owner, ignoring any active impersonation.
+func GetRealUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
+	var user UserResponse
+	var color, color2, nickname sql.NullString
 	err := db.QueryRow(
 		`SELECT u.id, u.name, u.color, u.color2, u.nickname, u.role
 		 FROM sessions s JOIN user u ON s.user_id = u.id
@@ -82,7 +134,7 @@ func GetUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
 		return nil, fmt.Errorf("no session for token")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("GetUserFromToken: %w", err)
+		return nil, fmt.Errorf("GetRealUserFromToken: %w", err)
 	}
 	if color.Valid {
 		user.Color = color.String
@@ -94,6 +146,24 @@ func GetUserFromToken(db *sql.DB, token string) (*UserResponse, error) {
 		user.Nickname = nickname.String
 	}
 	return &user, nil
+}
+
+func SetImpersonation(db *sql.DB, token string, targetUserID int) error {
+	_, err := db.Exec(
+		`UPDATE sessions SET impersonate_user_id = ?
+		 WHERE user_id = (SELECT user_id FROM sessions WHERE token = ?)`,
+		targetUserID, token,
+	)
+	return err
+}
+
+func ClearImpersonation(db *sql.DB, token string) error {
+	_, err := db.Exec(
+		`UPDATE sessions SET impersonate_user_id = NULL
+		 WHERE user_id = (SELECT user_id FROM sessions WHERE token = ?)`,
+		token,
+	)
+	return err
 }
 
 func DeleteSession(db *sql.DB, token string) error {

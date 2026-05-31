@@ -81,10 +81,13 @@ func LanGateMiddleware(db *sql.DB, gateTime time.Time, next http.Handler) http.H
 			return
 		}
 
-		_, authErr := GetUserFromRequest(db, r)
-		isAuthed := authErr == nil
+		w.Header().Set("Cache-Control", "no-store")
 
-		if false && !gateTime.IsZero() && time.Now().Before(gateTime) {
+		user, authErr := GetUserFromRequest(db, r)
+		isAuthed := authErr == nil
+		isAdmin := isAuthed && user.Role == "admin"
+
+		if !gateTime.IsZero() && time.Now().Before(gateTime) && !isAdmin {
 			switch p {
 			case "/countdown", "/rsvp":
 				if !isAuthed {

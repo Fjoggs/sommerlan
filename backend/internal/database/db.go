@@ -52,6 +52,7 @@ type UserResponse struct {
 	Color         string `json:"color"`
 	Color2        string `json:"color2,omitempty"`
 	Role          string `json:"role,omitempty"`
+	Impersonating bool   `json:"impersonating,omitempty"`
 }
 
 func GetUsers(db *sql.DB) ([]UserResponse, error) {

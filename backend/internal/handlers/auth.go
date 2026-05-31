@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"backend/internal/database"
@@ -171,6 +172,56 @@ func (h *AuthHandlers) Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AuthHandlers) Impersonate(w http.ResponseWriter, r *http.Request) {
+	token := ExtractToken(r)
+	if token == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	realUser, err := database.GetRealUserFromToken(h.db, token)
+	if err != nil || realUser.Role != "admin" {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	userID, err := strconv.Atoi(r.PathValue("userId"))
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+	if err := database.SetImpersonation(h.db, token, userID); err != nil {
+		log.Printf("SetImpersonation: %v", err)
+		http.Error(w, "failed", http.StatusInternalServerError)
+		return
+	}
+	user, err := database.GetUserFromToken(h.db, token)
+	if err != nil {
+		http.Error(w, "failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func (h *AuthHandlers) StopImpersonate(w http.ResponseWriter, r *http.Request) {
+	token := ExtractToken(r)
+	if token == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	realUser, err := database.GetRealUserFromToken(h.db, token)
+	if err != nil || realUser.Role != "admin" {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err := database.ClearImpersonation(h.db, token); err != nil {
+		log.Printf("ClearImpersonation: %v", err)
+		http.Error(w, "failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(realUser)
 }
 
 // ExtractToken reads the Bearer token from the Authorization header, falling back to the session cookie.
