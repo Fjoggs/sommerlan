@@ -273,7 +273,7 @@ async function init() {
   if (myEntry && myEntry.dates.length > 0) {
     showConfirmation(entries ?? undefined);
   } else {
-    updateSubmitButton();
+    showForm();
   }
 }
 
