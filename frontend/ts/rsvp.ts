@@ -87,6 +87,14 @@ function getSelectedDates(): string[] {
   return Array.from(selectedDates);
 }
 
+function applyUserColor(btn: HTMLButtonElement) {
+  if (!me?.color) return;
+  btn.style.backgroundColor = me.color + "33";
+  btn.style.border = `2px solid ${me.color}`;
+  btn.style.color = me.color;
+  btn.style.boxShadow = "none";
+}
+
 function updateSubmitButton() {
   const btn = document.getElementById("rsvp-submit") as HTMLButtonElement | null;
   if (!btn || btn.closest("#rsvp-confirmation")) return;
@@ -94,6 +102,11 @@ function updateSubmitButton() {
   btn.disabled = !canSubmit;
   btn.classList.toggle("inactive", !canSubmit);
   btn.textContent = "Snakkes på LAN";
+  if (canSubmit) {
+    applyUserColor(btn);
+  } else {
+    btn.style.cssText = "";
+  }
 }
 
 async function postRsvp(dates: string[]): Promise<RsvpEntry[] | null> {
@@ -164,6 +177,7 @@ async function transformCardToForm(card: HTMLElement) {
     submitBtn.textContent = empty ? "Avmeld" : "Lagre";
     submitBtn.classList.toggle("inactive", false);
     submitBtn.disabled = false;
+    applyUserColor(submitBtn);
   };
   syncSubmitBtn();
 
@@ -187,6 +201,7 @@ async function transformCardToForm(card: HTMLElement) {
     } catch {
       submitBtn.textContent = "Feil – prøv igjen";
       submitBtn.disabled = false;
+      applyUserColor(submitBtn);
     }
   });
 
