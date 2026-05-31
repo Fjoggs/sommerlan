@@ -6,7 +6,7 @@ Private LAN party website for a friend group. Go backend + TypeScript frontend, 
 
 - **Backend**: Go (`net/http` ServeMux), SQLite via `modernc.org/sqlite`, no ORM
 - **Frontend**: TypeScript compiled to ES modules (`tsc`), plain HTML/CSS — no framework
-- **Auth**: Discord OAuth2, Bearer tokens stored in `localStorage`, sessions table in DB
+- **Auth**: Discord OAuth2, Bearer tokens stored in `localStorage` or session cookie — `ExtractToken` checks both, sessions table in DB
 - **DB**: `backend/sommerlan.db` (not `sommerlan.db` in root — that one is stale/ignored)
 
 ## Running
@@ -108,6 +108,7 @@ frontend/
     auth.ts                        — requireAuth(), authHeaders(), token helpers
     crud.ts                        — fetchAll() / fetchById() helpers
     types.ts                       — LAN, User, Game, RsvpEntry types
+    matrix.ts                      — BLOCKS, GAMES, RACES constants; renderMatrix(), renderCards(), renderDinnerTable()
   css/
     style.css                      — main styles, design tokens, lifecycle phase colors
     inputs.css                     — form/input base styles (loaded on most pages)
@@ -126,7 +127,7 @@ lan_participants — lan_id, user_id
 lan_games        — lan_id, game_id
 game        — id, name
 sessions    — token, user_id
-rsvp        — user_id, date
+rsvp        — user_id, lan_id, date, wants_dinner (1/0, default 1)
 ```
 
 Migrations are done inline in `setup.go` via `_, _ = db.Exec("ALTER TABLE ...")` — safe to re-run.
@@ -138,52 +139,6 @@ Migrations are done inline in `setup.go` via `_, _ = db.Exec("ALTER TABLE ...")`
 - To promote a user: `UPDATE user SET role = 'admin' WHERE id = ?`
 - Frontend: `.nav-admin` elements hidden for non-admins, edit button hidden on frontpage
 
-## LAN lifecycle phases
+The countdown target is derived at startup from the DB — no hardcoded date. To change it, update `start_date` on the relevant LAN row and restart the server.
 
-The CSS class applied to `.timeline-event` (frontpage) and `#content` (subpage) drives colors and badges:
-
-| Class | Condition | Color |
-|---|---|---|
-| `upcoming-far` | > 180 days away | faint purple |
-| `upcoming-medium` | 60–180 days | medium purple |
-| `upcoming-soon` | 14–60 days | vivid purple |
-| `upcoming` | < 14 days | bright purple + pulse |
-| `happening` | start ≤ now ≤ end | orange + pulse |
-| `over` | ended < 7 days ago | grey-blue, badge "GG" |
-| _(none)_ | > 7 days after end | historical, no badge |
-
-The LAN start date is served by `GET /api/countdown/` and hardcoded in `countdown.go`. Change `lanStart` there to update the countdown target and the server-side gate.
-
-## Key patterns
-
-**Year extraction**: always use `lan.startDate.substring(0, 4)` — never `new Date().getFullYear()` (NaN risk with partial dates).
-
-**DB date fields**: `start_date`/`end_date` are always `YYYY-01-01`/`YYYY-12-31`. `from_display`/`to_display` are free-form human strings (e.g. "juli").
-
-**Migrations**: add new columns in `setup.go` with `_, _ = db.Exec("ALTER TABLE ...")` then run the same migration against the live DB file with sqlite3.
-
-**Game save**: `AlterLan` calls `RemoveLanGames` then re-inserts — always send all checked game IDs in the PATCH.
-
-**Sort order**: `fetchLans` uses `for...of` + `await` (not `forEach`) to preserve insertion order. DB query orders by `start_date ASC`.
-
-**Edit mode overlay**: pure CSS — `body:has(.editing)::before { opacity: 1 }` darkens page, `.editing` gets `z-index: 2` + page gradient background.
-
-**Nav profile avatar**: `#profile-avatar` is `position: fixed; top: 1rem; right: 1.5rem` — populated by `nav.ts` with user initial + color.
-
-**API URLs are relative**: all `fetch()` calls use `/api/...` (no `localhost:8080`). Safe for both dev and production.
-
-**Countdown gate**: `LanGateMiddleware` in `countdown.go` intercepts all HTML requests server-side before `lanStart` and redirects to `countdown.html`. Client-side `nav.ts` does the same for JS-loaded navigation. Both read from `/api/countdown/`.
-
-**Image performance**: the image grid can hold 70+ photos. Anything adding absolutely-positioned children inside `.image-card` (overflow:hidden + border-radius) causes scroll jank — the tag strip feature was removed for this reason.
-
-## Common issues
-
-| Problem | Cause | Fix |
-|---|---|---|
-| Port 8080 in use on restart | Old process didn't die | `fuser -k 8080/tcp` |
-| Role not returned by `/api/auth/me/` | Running old binary | Kill + restart backend |
-| NaN in year display | Using `new Date(dateStr)` on partial date | Use `.substring(0, 4)` |
-| Games wiped on LAN save | Forgot to send game IDs in PATCH | Include all checked game inputs |
-| LAN sort order changes | `forEach` async race | Use `for...of` + `await` |
-| Image section scroll jank | Positioned children inside overflow:hidden cards | Strip back to bare `<img>` and add children back one-by-one to isolate |
-| Countdown redirect loop | `nav.ts` redirecting back to countdown after it hits zero | Both `countdown.ts` and `nav.ts` must read `LAN_START` from `config.ts`, not hardcode |
+See `CLAUDE.md` for coding patterns, gotchas, and the go-live checklist.
