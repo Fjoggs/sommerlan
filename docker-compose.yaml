@@ -1,20 +1,32 @@
 services:
-  sommerlan:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    command: go run .
     ports:
       - "8080:8080"
-    user: "1000:1000"
     volumes:
+      - ./backend:/app
+      - ./frontend:/frontend
       - ./data:/data
-      - ./frontend/uploads:/app/frontend/uploads
+      - go-cache:/root/go/pkg/mod
     environment:
       DB_PATH: /data/sommerlan.db
-      FRONTEND_PATH: /app/frontend
+      FRONTEND_PATH: /frontend
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
       DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
       FRONTEND_URL: ${FRONTEND_URL}
-    restart: unless-stopped
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/frontend
+
+volumes:
+  go-cache:
