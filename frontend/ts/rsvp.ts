@@ -1,5 +1,5 @@
 import { showError } from "./errorHandler.js";
-import { BLOCKS, GAMES, renderMatrix, renderCards } from "./matrix.js";
+import { BLOCKS, GAMES, RACES, renderMatrix, renderCards, renderDinnerTable } from "./matrix.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import type { RsvpEntry, LAN } from "./types.js";
 
@@ -10,6 +10,8 @@ let me: { id: number; name: string; nickname?: string; color: string } | null = 
 let cachedEntries: RsvpEntry[] | null = null;
 
 const selectedDates = new Set<string>();
+const dinnerDates = new Set<string>();
+const mainDates = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
 let onDateToggle: (() => void) | null = null;
 
 const BLOCK_SATURATION: Record<string, number> = {
@@ -40,6 +42,23 @@ function buildPickerContent(): HTMLElement {
       const badge = document.createElement("span");
       badge.className = "mc-day day-picker-badge";
 
+      let dinnerLabel: HTMLLabelElement | null = null;
+      if (mainDates.has(date)) {
+        dinnerLabel = document.createElement("label");
+        dinnerLabel.className = "mc-day-dinner";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = dinnerDates.has(date);
+        cb.addEventListener("change", () => {
+          if (cb.checked) dinnerDates.add(date);
+          else dinnerDates.delete(date);
+        });
+        const span = document.createElement("span");
+        span.textContent = "Mat";
+        dinnerLabel.appendChild(cb);
+        dinnerLabel.appendChild(span);
+      }
+
       const applyState = () => {
         const on = selectedDates.has(date);
         badge.classList.toggle("mc-day-on", on);
@@ -53,10 +72,16 @@ function buildPickerContent(): HTMLElement {
           badge.style.cssText = "";
           badge.classList.add("mc-day-off");
         }
+        if (dinnerLabel) {
+          dinnerLabel.style.display = on ? "" : "none";
+          const cb = dinnerLabel.querySelector<HTMLInputElement>("input");
+          if (cb) cb.checked = dinnerDates.has(date);
+        }
       };
 
       const game = GAMES[date as keyof typeof GAMES];
-      badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}${game ? `<span class="mc-day-game" title="${game}">⚽</span>` : ""}</span>`;
+      const race = RACES[date as keyof typeof RACES];
+      badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}${game ? `<span class="mc-day-game" title="${game}">⚽</span>` : ""}${race ? `<span class="mc-day-game" title="${race}">🏁</span>` : ""}</span>`;
 
       badge.addEventListener("click", () => {
         if (selectedDates.has(date)) selectedDates.delete(date);
@@ -67,7 +92,12 @@ function buildPickerContent(): HTMLElement {
       });
 
       applyState();
-      badgeRow.appendChild(badge);
+
+      const wrap = document.createElement("div");
+      wrap.className = "mc-day-wrap";
+      wrap.appendChild(badge);
+      if (dinnerLabel) wrap.appendChild(dinnerLabel);
+      badgeRow.appendChild(wrap);
     }
 
     blockWrap.appendChild(badgeRow);
@@ -137,7 +167,7 @@ async function postRsvp(dates: string[]): Promise<RsvpEntry[] | null> {
   const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ dates }),
+    body: JSON.stringify({ dates, dinner_dates: dates.filter(d => mainDates.has(d) && dinnerDates.has(d)) }),
   });
   if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
   return apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
@@ -243,8 +273,12 @@ function showConfirmation(entries?: RsvpEntry[]) {
   renderMatrix(tableWrap, cachedEntries ?? []);
   renderCards(cardWrap, cachedEntries ?? [], { currentUserId: me?.id, onEdit: transformCardToForm });
   cardWrap.querySelectorAll<HTMLButtonElement>(".rsvp-endre-btn").forEach(applyUserColorOutline);
+  const dinnerWrap = document.createElement("div");
+  dinnerWrap.className = "dinner-table-wrap";
+  renderDinnerTable(dinnerWrap, cachedEntries ?? []);
   matrixEl.appendChild(tableWrap);
   matrixEl.appendChild(cardWrap);
+  matrixEl.appendChild(dinnerWrap);
 }
 
 function showForm() {
@@ -284,7 +318,12 @@ async function init() {
 
   const entries = await apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);
   const myEntry = entries?.find((e) => e.userId === me!.id);
-  if (myEntry) for (const date of myEntry.dates) selectedDates.add(date);
+  if (myEntry) {
+    for (const date of myEntry.dates) selectedDates.add(date);
+    for (const date of (myEntry.dinnerDates ?? [])) dinnerDates.add(date);
+  } else {
+    for (const date of mainDates) dinnerDates.add(date);
+  }
 
   buildDayPicker();
 
@@ -297,6 +336,15 @@ async function init() {
 
 document.getElementById("rsvp-submit")!.addEventListener("click", handleSubmit);
 document.getElementById("rsvp-endre")!.addEventListener("click", showForm);
+
+document.addEventListener("click", (e) => {
+  const h2 = (e.target as HTMLElement).closest("h2");
+  if (!h2) return;
+  const parent = h2.parentElement;
+  if (parent?.classList.contains("dinner-table-wrap")) {
+    parent.classList.toggle("collapsed");
+  }
+});
 
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;

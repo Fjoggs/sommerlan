@@ -1067,6 +1067,34 @@ header {
   margin-top: 3rem;
 }
 
+/* Collapsible sections */
+.event-section > h2,
+.dinner-table-wrap > h2 {
+  cursor: pointer;
+  user-select: none;
+}
+
+.event-section > h2::after,
+.dinner-table-wrap > h2::after {
+  content: "▾";
+  font-size: 0.7em;
+  margin-left: 0.6rem;
+  opacity: 0.4;
+  display: inline-block;
+  transition: transform 0.2s ease;
+  vertical-align: middle;
+}
+
+.event-section.collapsed > h2::after,
+.dinner-table-wrap.collapsed > h2::after {
+  transform: rotate(-90deg);
+}
+
+.event-section.collapsed > *:not(h2),
+.dinner-table-wrap.collapsed > *:not(h2) {
+  display: none;
+}
+
 .section-count {
   font-size: 0.65em;
   color: var(--text-muted);

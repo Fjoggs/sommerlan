@@ -731,15 +731,20 @@ func AddLanAward(db *sql.DB, lanId int64, awardId int) (int64, error) {
 }
 
 type RsvpEntry struct {
-	UserId   int      `json:"userId"`
-	Name     string   `json:"name"`
-	Nickname string   `json:"nickname,omitempty"`
-	Color    string   `json:"color"`
-	Color2   string   `json:"color2,omitempty"`
-	Dates    []string `json:"dates"`
+	UserId      int      `json:"userId"`
+	Name        string   `json:"name"`
+	Nickname    string   `json:"nickname,omitempty"`
+	Color       string   `json:"color"`
+	Color2      string   `json:"color2,omitempty"`
+	Dates       []string `json:"dates"`
+	DinnerDates []string `json:"dinnerDates"`
 }
 
-func AddRsvpDates(db *sql.DB, userId, lanId int, dates []string) error {
+func AddRsvpDates(db *sql.DB, userId, lanId int, dates []string, dinnerDates []string) error {
+	dinnerSet := make(map[string]bool, len(dinnerDates))
+	for _, d := range dinnerDates {
+		dinnerSet[d] = true
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("RSVP BEGIN ERROR: %v", err)
@@ -748,14 +753,18 @@ func AddRsvpDates(db *sql.DB, userId, lanId int, dates []string) error {
 		tx.Rollback()
 		return fmt.Errorf("RSVP DELETE ERROR: %v", err)
 	}
-	stmt, err := tx.Prepare("INSERT INTO rsvp(user_id, lan_id, date) VALUES(?, ?, ?)")
+	stmt, err := tx.Prepare("INSERT INTO rsvp(user_id, lan_id, date, wants_dinner) VALUES(?, ?, ?, ?)")
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("RSVP PREPARE ERROR: %v", err)
 	}
 	defer stmt.Close()
 	for _, date := range dates {
-		if _, err := stmt.Exec(userId, lanId, date); err != nil {
+		wantsDinner := 0
+		if dinnerSet[date] {
+			wantsDinner = 1
+		}
+		if _, err := stmt.Exec(userId, lanId, date, wantsDinner); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("RSVP INSERT ERROR: %v", err)
 		}
@@ -770,7 +779,7 @@ func DeleteRsvp(db *sql.DB, userId, lanId int) error {
 
 func GetRsvps(db *sql.DB, lanId int) ([]RsvpEntry, error) {
 	query := `
-		SELECT u.id, u.name, u.color, u.color2, u.nickname, r.date
+		SELECT u.id, u.name, u.color, u.color2, u.nickname, r.date, COALESCE(r.wants_dinner, 1)
 		FROM rsvp r
 		JOIN user u ON r.user_id = u.id
 		WHERE r.lan_id = ?
@@ -785,10 +794,10 @@ func GetRsvps(db *sql.DB, lanId int) ([]RsvpEntry, error) {
 	entryMap := make(map[int]*RsvpEntry)
 	var order []int
 	for rows.Next() {
-		var userId int
+		var userId, wantsDinner int
 		var name, date string
 		var color, color2, nickname sql.NullString
-		if err := rows.Scan(&userId, &name, &color, &color2, &nickname, &date); err != nil {
+		if err := rows.Scan(&userId, &name, &color, &color2, &nickname, &date, &wantsDinner); err != nil {
 			return nil, err
 		}
 		if _, ok := entryMap[userId]; !ok {
@@ -804,10 +813,13 @@ func GetRsvps(db *sql.DB, lanId int) ([]RsvpEntry, error) {
 			if nickname.Valid {
 				n = nickname.String
 			}
-			entryMap[userId] = &RsvpEntry{UserId: userId, Name: name, Nickname: n, Color: c, Color2: c2}
+			entryMap[userId] = &RsvpEntry{UserId: userId, Name: name, Nickname: n, Color: c, Color2: c2, DinnerDates: []string{}}
 			order = append(order, userId)
 		}
 		entryMap[userId].Dates = append(entryMap[userId].Dates, date)
+		if wantsDinner == 1 {
+			entryMap[userId].DinnerDates = append(entryMap[userId].DinnerDates, date)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

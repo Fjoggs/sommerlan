@@ -2,7 +2,7 @@ import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
-import { BLOCKS, GAMES, renderMatrix, renderCards } from "./matrix.js";
+import { BLOCKS, GAMES, renderMatrix, renderCards, renderDinnerTable } from "./matrix.js";
 
 type Tag = { id: number; name: string };
 
@@ -52,6 +52,15 @@ function buildFirstTimers(lans: LAN[], lanId: number): Set<number> {
 const firstTimers = allLans ? buildFirstTimers(allLans, id) : new Set<number>();
 
 const content = document.getElementById("content")!;
+
+content.addEventListener("click", (e) => {
+  const h2 = (e.target as HTMLElement).closest("h2");
+  if (!h2) return;
+  const parent = h2.parentElement;
+  if (parent?.classList.contains("event-section") || parent?.classList.contains("dinner-table-wrap")) {
+    parent.classList.toggle("collapsed");
+  }
+});
 
 if (!lan) {
   const p = createElement("p");
@@ -228,6 +237,11 @@ async function renderUpcoming(lan: LAN) {
 
   renderCards(matrixContainer, rsvpEntries, { currentUserId: me!.id, onEdit: showForm });
 
+  const dinnerContainer = createElement("div") as HTMLDivElement;
+  dinnerContainer.className = "dinner-table-wrap";
+  renderDinnerTable(dinnerContainer, rsvpEntries);
+  matrixSection.appendChild(dinnerContainer);
+
   if (myDates.length > 0) showConfirmed(); else showForm();
 
   wrapper.querySelectorAll<HTMLInputElement>("input[name=day]").forEach((cb) => cb.addEventListener("change", updateBtn));
@@ -244,6 +258,8 @@ async function renderUpcoming(lan: LAN) {
     if (res.ok) {
       const updated: RsvpEntry[] = await (await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() })).json();
       renderCards(matrixContainer, updated, { currentUserId: me!.id, onEdit: showForm });
+      dinnerContainer.innerHTML = "";
+      renderDinnerTable(dinnerContainer, updated);
       submitBtn.textContent = "Snakkes på LAN";
       showConfirmed();
     } else {

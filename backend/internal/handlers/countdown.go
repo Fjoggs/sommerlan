@@ -84,7 +84,7 @@ func LanGateMiddleware(db *sql.DB, gateTime time.Time, next http.Handler) http.H
 		_, authErr := GetUserFromRequest(db, r)
 		isAuthed := authErr == nil
 
-		if !gateTime.IsZero() && time.Now().Before(gateTime) {
+		if false && !gateTime.IsZero() && time.Now().Before(gateTime) {
 			switch p {
 			case "/countdown", "/rsvp":
 				if !isAuthed {

@@ -34,7 +34,8 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	var body struct {
-		Dates []string `json:"dates"`
+		Dates       []string `json:"dates"`
+		DinnerDates []string `json:"dinner_dates"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		http.Error(writer, "invalid request body", http.StatusBadRequest)
@@ -51,7 +52,7 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if err := database.AddRsvpDates(h.db, user.Id, lanId, body.Dates); err != nil {
+	if err := database.AddRsvpDates(h.db, user.Id, lanId, body.Dates, body.DinnerDates); err != nil {
 		fmt.Println("AddRsvp failed:", err)
 		http.Error(writer, "failed to save rsvp", http.StatusInternalServerError)
 		return

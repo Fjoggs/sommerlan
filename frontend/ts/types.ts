@@ -59,6 +59,7 @@ export type RsvpEntry = {
   color: string;
   color2?: string;
   dates: string[];
+  dinnerDates?: string[];
 };
 
 export type UserLanEntry = {

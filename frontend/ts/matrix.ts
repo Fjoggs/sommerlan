@@ -7,6 +7,11 @@ export const GAMES: Record<string, string> = {
   "2026-07-19": "Finale (21:00)",
 };
 
+export const RACES: Record<string, string> = {
+  "2026-07-19": "Belgian Grand Prix",
+  "2026-07-26": "Hungarian Grand Prix",
+};
+
 export const BLOCKS = [
   {
     key: "pre-pre",
@@ -92,6 +97,8 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
 
   container.appendChild(table);
 }
+
+const mainDatesSet = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
 
 const BLOCK_SATURATION: Record<string, number> = {
   "pre-pre": 0.25,
@@ -188,4 +195,63 @@ export function renderCards(
   }
 
   container.appendChild(list);
+}
+
+export function renderDinnerTable(container: HTMLElement, entries: RsvpEntry[]): void {
+  container.innerHTML = "";
+
+  const mainDates = BLOCKS.find(b => b.key === "main")!.dates as readonly string[];
+  const eaters = entries.filter(e => (e.dinnerDates ?? []).some(d => mainDatesSet.has(d)));
+
+  if (eaters.length === 0) return;
+
+  const heading = document.createElement("h2");
+  heading.innerHTML = `<span class="hash">#</span>Middag`;
+  container.appendChild(heading);
+
+  const table = document.createElement("table");
+  table.className = "rsvp-matrix dinner-matrix";
+
+  const thead = table.createTHead();
+  const dateRow = thead.insertRow();
+  dateRow.insertCell();
+  for (const date of mainDates) {
+    const th = document.createElement("th");
+    const d = new Date(date + "T00:00:00");
+    th.innerHTML = `<span class="matrix-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="matrix-day-num">${d.getDate()}.</span>`;
+    dateRow.appendChild(th);
+  }
+
+  const tbody = table.createTBody();
+  for (const entry of eaters) {
+    const row = tbody.insertRow();
+    const nameCell = row.insertCell();
+    nameCell.className = "matrix-name";
+    nameCell.innerHTML = `<span class="user-dot" style="background-color:${entry.color}"></span>${entry.nickname || entry.name}`;
+
+    for (const date of mainDates) {
+      const cell = row.insertCell();
+      if ((entry.dinnerDates ?? []).includes(date)) {
+        cell.className = "matrix-cell attending";
+        cell.innerHTML = `<span class="attend-dot" style="background-color:${entry.color}"></span>`;
+      } else {
+        cell.className = "matrix-cell absent";
+        cell.textContent = "–";
+      }
+    }
+  }
+
+  const tfoot = table.createTFoot();
+  const sumRow = tfoot.insertRow();
+  const sumLabel = sumRow.insertCell();
+  sumLabel.className = "matrix-name dinner-sum-label";
+  sumLabel.textContent = "Totalt";
+  for (const date of mainDates) {
+    const cell = sumRow.insertCell();
+    cell.className = "matrix-cell dinner-sum";
+    const count = eaters.filter(e => (e.dinnerDates ?? []).includes(date)).length;
+    cell.textContent = count > 0 ? String(count) : "–";
+  }
+
+  container.appendChild(table);
 }
