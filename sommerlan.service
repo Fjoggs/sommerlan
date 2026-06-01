@@ -4,7 +4,7 @@ After=docker.service
 Requires=docker.service
 
 [Service]
-WorkingDirectory=/opt/sommerlan
+WorkingDirectory=/var/www/sommerlan
 Restart=on-failure
 RestartSec=5s
 
@@ -14,9 +14,9 @@ ExecStart=/usr/bin/docker run \
     --name sommerlan \
     -p 8080:8080 \
     --user 1000:1000 \
-    -v /opt/sommerlan/data:/data \
-    -v /opt/sommerlan/uploads:/app/frontend/uploads \
-    --env-file /opt/sommerlan/.env \
+    -v /var/www/sommerlan/data:/data \
+    -v /var/www/sommerlan/uploads:/app/frontend/uploads \
+    --env-file /var/www/sommerlan/.env \
     sommerlan
 ExecStop=/usr/bin/docker stop sommerlan
 
