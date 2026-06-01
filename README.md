@@ -64,14 +64,14 @@ docker build -t sommerlan .
 docker run -d --name sommerlan -p 8080:8080 \
   --user "$(id -u):$(id -g)" \
   -v ./data:/data \
-  -v ./frontend:/app/frontend \
+  -v ./uploads:/app/frontend/uploads \
   --env-file .env \
   sommerlan
 ```
 
 Volumes:
 - `./data/` → SQLite DB (`sommerlan.db`)
-- `./frontend/uploads/` → user-uploaded images (per-LAN subdirs + thumbs)
+- `./uploads/` → user-uploaded images (per-LAN subdirs + thumbs)
 
 ## Project structure
 
