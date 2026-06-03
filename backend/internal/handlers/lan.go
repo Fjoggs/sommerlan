@@ -51,19 +51,18 @@ func (h *LanHandlers) GetLanById(writer http.ResponseWriter, req *http.Request) 
 
 	id, err := strconv.Atoi(idPath)
 	if err != nil {
-		log.Fatalf("Id to int failed: %v", err)
-	}
-
-	lan, err := database.GetLanById(h.db, id)
-	fmt.Println("lan now", lan)
-	if err != nil {
-		fmt.Printf("No lan with %v found in db", id)
+		http.Error(writer, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(lan)
+	lan, err := database.GetLanById(h.db, id)
 	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		http.Error(writer, "lan not found", http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewEncoder(writer).Encode(lan); err != nil {
+		log.Printf("encode GetLanById: %v", err)
 	}
 }
 
@@ -76,13 +75,12 @@ func (h *LanHandlers) GetLan(writer http.ResponseWriter, r *http.Request) {
 
 	lans, err := database.GetLans(h.db)
 	if err != nil {
-		fmt.Println("No lans found in db")
+		http.Error(writer, "failed to get lans", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(lans)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(lans); err != nil {
+		log.Printf("encode GetLan: %v", err)
 	}
 }
 
@@ -93,9 +91,9 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parsing lan form failed", err)
+	if err := req.ParseMultipartForm(0); err != nil {
+		http.Error(writer, "invalid form", http.StatusBadRequest)
+		return
 	}
 
 	startDate := req.FormValue("startDate")
@@ -107,7 +105,7 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 
 	lanId, err := database.AddLan(h.db, description, endDate, event, startDate, fromDisplay, toDisplay)
 	if err != nil {
-		fmt.Println("Failed to add lan", err)
+		http.Error(writer, "failed to add lan", http.StatusInternalServerError)
 		return
 	}
 
@@ -115,73 +113,51 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 	for _, lanGameId := range req.Form["games"] {
 		gameId, err := strconv.Atoi(lanGameId)
 		if err != nil {
-			// Handle error - invalid ID format
-			fmt.Println("Invalid participant ID:", lanGameId)
 			continue
 		}
-
-		_, err = database.AddLanGame(h.db, lanId, gameId)
-		if err != nil {
-			fmt.Println("Failed to add lan game", err)
+		if _, err = database.AddLanGame(h.db, lanId, gameId); err != nil {
+			http.Error(writer, "failed to add lan game", http.StatusInternalServerError)
 			return
 		}
-
 		game, err := database.GetGameWithId(h.db, gameId)
 		if err != nil {
-			fmt.Println("Failed to get lan game", err)
+			http.Error(writer, "failed to get lan game", http.StatusInternalServerError)
 			return
 		}
-
-		lanGame := database.GameResponse{
-			Id:   game.Id,
-			Name: game.Name,
-		}
-		lanGames = append(lanGames, lanGame)
+		lanGames = append(lanGames, database.GameResponse{Id: game.Id, Name: game.Name})
 	}
 
 	participants := []database.UserResponse{}
 	for _, participantId := range req.Form["participants"] {
 		userId, err := strconv.Atoi(participantId)
 		if err != nil {
-			// Handle error - invalid ID format
-			fmt.Println("Invalid participant ID:", participantId)
 			continue
 		}
-
-		_, err = database.AddLanParticipant(h.db, lanId, userId)
-		if err != nil {
-			fmt.Println("Failed to add lan user", err)
+		if _, err = database.AddLanParticipant(h.db, lanId, userId); err != nil {
+			http.Error(writer, "failed to add lan participant", http.StatusInternalServerError)
 			return
 		}
-
 		user, err := database.GetUserWithId(h.db, userId)
 		if err != nil {
-			fmt.Println("Failed to get lan user", err)
+			http.Error(writer, "failed to get lan participant", http.StatusInternalServerError)
 			return
 		}
-
-		participant := database.UserResponse{
-			Id:    user.Id,
-			Name:  user.Name,
-			Color: user.Color,
-		}
-		participants = append(participants, participant)
+		participants = append(participants, database.UserResponse{Id: user.Id, Name: user.Name, Color: user.Color})
 	}
 
 	lanAwards := []database.AwardResponse{}
 	for _, lanAwardId := range req.Form["awards"] {
 		awardId, err := strconv.Atoi(lanAwardId)
 		if err != nil {
-			fmt.Println("Invalid award ID:", lanAwardId)
 			continue
 		}
 		if _, err = database.AddLanAward(h.db, lanId, awardId); err != nil {
-			fmt.Println("Failed to add lan award", err)
+			http.Error(writer, "failed to add lan award", http.StatusInternalServerError)
 			return
 		}
 		award, err := database.GetAwardWithId(h.db, awardId)
 		if err != nil {
-			fmt.Println("Failed to get lan award", err)
+			http.Error(writer, "failed to get lan award", http.StatusInternalServerError)
 			return
 		}
 		lanAwards = append(lanAwards, database.AwardResponse{Id: award.Id, Name: award.Name})
@@ -200,10 +176,8 @@ func (h *LanHandlers) AddLan(writer http.ResponseWriter, req *http.Request) {
 		ToDisplay:    toDisplay,
 	}
 
-	fmt.Println("Added LAN to db", res)
-	err = json.NewEncoder(writer).Encode(res)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(res); err != nil {
+		log.Printf("encode AddLan: %v", err)
 	}
 }
 
@@ -214,16 +188,14 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parsing user form failed", err)
+	if err := req.ParseMultipartForm(0); err != nil {
+		http.Error(writer, "invalid form", http.StatusBadRequest)
+		return
 	}
 
-	lanId := req.FormValue("lanId")
-	id, err := strconv.Atoi(lanId)
+	id, err := strconv.Atoi(req.FormValue("lanId"))
 	if err != nil {
-		// Handle error - invalid ID format
-		fmt.Println("Invalid lan ID:", lanId)
+		http.Error(writer, "invalid lan id", http.StatusBadRequest)
 		return
 	}
 
@@ -235,14 +207,13 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	toDisplay := req.FormValue("toDisplay")
 	invitation := req.FormValue("invitation")
 	isRomjulsLAN := req.FormValue("isRomjulsLAN") == "1"
-	err = database.AlterLan(h.db, id, description, endDate, event, startDate, fromDisplay, toDisplay, invitation, isRomjulsLAN)
-	if err != nil {
-		fmt.Println("Failed to add user", err)
+	if err := database.AlterLan(h.db, id, description, endDate, event, startDate, fromDisplay, toDisplay, invitation, isRomjulsLAN); err != nil {
+		http.Error(writer, "failed to update lan", http.StatusInternalServerError)
 		return
 	}
 
 	if err := database.RemoveLanGames(h.db, id); err != nil {
-		fmt.Println("Failed to clear lan games", err)
+		http.Error(writer, "failed to clear lan games", http.StatusInternalServerError)
 		return
 	}
 
@@ -250,22 +221,17 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	for _, lanGameId := range req.Form["games"] {
 		gameId, err := strconv.Atoi(lanGameId)
 		if err != nil {
-			fmt.Println("Invalid game ID:", lanGameId)
 			continue
 		}
-
-		_, err = database.AddLanGame(h.db, int64(id), gameId)
-		if err != nil {
-			fmt.Println("Failed to add lan game", err)
+		if _, err = database.AddLanGame(h.db, int64(id), gameId); err != nil {
+			http.Error(writer, "failed to add lan game", http.StatusInternalServerError)
 			return
 		}
-
 		game, err := database.GetGameWithId(h.db, gameId)
 		if err != nil {
-			fmt.Println("Failed to get lan game", err)
+			http.Error(writer, "failed to get lan game", http.StatusInternalServerError)
 			return
 		}
-
 		lanGames = append(lanGames, database.GameResponse{Id: game.Id, Name: game.Name})
 	}
 
@@ -273,14 +239,13 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	for _, participantId := range req.Form["participants"] {
 		userId, err := strconv.Atoi(participantId)
 		if err != nil {
-			fmt.Println("Invalid participant ID:", participantId)
 			continue
 		}
 		participantIds = append(participantIds, userId)
 	}
 
 	if err := database.UpdateLanParticipants(h.db, id, participantIds); err != nil {
-		fmt.Println("Failed to update lan participants", err)
+		http.Error(writer, "failed to update lan participants", http.StatusInternalServerError)
 		return
 	}
 
@@ -288,18 +253,14 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	for _, userId := range participantIds {
 		user, err := database.GetUserWithId(h.db, userId)
 		if err != nil {
-			fmt.Println("Failed to get lan user", err)
+			http.Error(writer, "failed to get lan participant", http.StatusInternalServerError)
 			return
 		}
-		participants = append(participants, database.UserResponse{
-			Id:    user.Id,
-			Name:  user.Name,
-			Color: user.Color,
-		})
+		participants = append(participants, database.UserResponse{Id: user.Id, Name: user.Name, Color: user.Color})
 	}
 
 	if err := database.RemoveLanAwards(h.db, id); err != nil {
-		fmt.Println("Failed to clear lan awards", err)
+		http.Error(writer, "failed to clear lan awards", http.StatusInternalServerError)
 		return
 	}
 
@@ -307,16 +268,15 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 	for _, lanAwardId := range req.Form["awards"] {
 		awardId, err := strconv.Atoi(lanAwardId)
 		if err != nil {
-			fmt.Println("Invalid award ID:", lanAwardId)
 			continue
 		}
 		if _, err = database.AddLanAward(h.db, int64(id), awardId); err != nil {
-			fmt.Println("Failed to add lan award", err)
+			http.Error(writer, "failed to add lan award", http.StatusInternalServerError)
 			return
 		}
 		award, err := database.GetAwardWithId(h.db, awardId)
 		if err != nil {
-			fmt.Println("Failed to get lan award", err)
+			http.Error(writer, "failed to get lan award", http.StatusInternalServerError)
 			return
 		}
 		lanAwards = append(lanAwards, database.AwardResponse{Id: award.Id, Name: award.Name})
@@ -336,9 +296,8 @@ func (h *LanHandlers) AlterLan(writer http.ResponseWriter, req *http.Request) {
 		ToDisplay:    toDisplay,
 	}
 
-	err = json.NewEncoder(writer).Encode(res)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(res); err != nil {
+		log.Printf("encode AlterLan: %v", err)
 	}
 }
 
@@ -353,16 +312,15 @@ func (h *LanHandlers) DeleteLanWithId(writer http.ResponseWriter, req *http.Requ
 
 	id, err := strconv.Atoi(idPath)
 	if err != nil {
-		log.Fatalf("Id to int failed: %v", err)
-	}
-
-	rowsDeleted, err := database.DeleteLanWithId(h.db, id)
-	if err != nil {
-		fmt.Println("No lan found in db", err)
+		http.Error(writer, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println("Deleted rows", rowsDeleted)
+	if _, err := database.DeleteLanWithId(h.db, id); err != nil {
+		http.Error(writer, "failed to delete lan", http.StatusInternalServerError)
+		return
+	}
+
 	writer.WriteHeader(http.StatusNoContent)
 }
 
@@ -404,22 +362,19 @@ func (a *LanHandlers) AddLanGame(writer http.ResponseWriter, req *http.Request) 
 
 	var lanGame addLanGame
 
-	err := json.NewDecoder(req.Body).Decode(&lanGame)
-	if err != nil {
-		fmt.Println("error", err)
+	if err := json.NewDecoder(req.Body).Decode(&lanGame); err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	rows, err := database.AddLanGame(a.db, lanGame.lanId, lanGame.gameId)
 	if err != nil {
-		fmt.Println("Blew up:", err)
+		http.Error(writer, "failed to add lan game", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(rows)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(rows); err != nil {
+		log.Printf("encode AddLanGame: %v", err)
 	}
 }
 
@@ -728,9 +683,7 @@ func (h *LanHandlers) AddParticipantToLan(writer http.ResponseWriter, req *http.
 		return
 	}
 
-	_, err = database.AddLanParticipant(h.db, int64(lanId), body.UserId)
-	if err != nil {
-		fmt.Println("AddParticipantToLan failed:", err)
+	if _, err = database.AddLanParticipant(h.db, int64(lanId), body.UserId); err != nil {
 		http.Error(writer, "failed to add participant", http.StatusInternalServerError)
 		return
 	}

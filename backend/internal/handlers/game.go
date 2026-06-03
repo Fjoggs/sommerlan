@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -33,7 +32,7 @@ func (h *GameHandlers) GetGameStats(writer http.ResponseWriter, req *http.Reques
 		return
 	}
 	if err := json.NewEncoder(writer).Encode(stats); err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		log.Printf("encode GetGameStats: %v", err)
 	}
 }
 
@@ -44,15 +43,14 @@ func (h *GameHandlers) GetGames(writer http.ResponseWriter, req *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	lans, err := database.GetGames(h.db)
+	games, err := database.GetGames(h.db)
 	if err != nil {
-		fmt.Println("No games found in db", err)
+		http.Error(writer, "failed to get games", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(lans)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(games); err != nil {
+		log.Printf("encode GetGames: %v", err)
 	}
 }
 
@@ -63,9 +61,9 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parsing game form failed", err)
+	if err := req.ParseMultipartForm(0); err != nil {
+		http.Error(writer, "invalid form", http.StatusBadRequest)
+		return
 	}
 
 	gameName := req.FormValue("gameName")
@@ -74,10 +72,9 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println("gameform", gameName)
 	gameId, err := database.AddGame(a.db, gameName)
 	if err != nil {
-		fmt.Println("Failed to add game", err)
+		http.Error(writer, "failed to add game", http.StatusInternalServerError)
 		return
 	}
 
@@ -86,9 +83,8 @@ func (a *GameHandlers) AddGame(writer http.ResponseWriter, req *http.Request) {
 		Name: gameName,
 	}
 
-	err = json.NewEncoder(writer).Encode(res)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(res); err != nil {
+		log.Printf("encode AddGame: %v", err)
 	}
 }
 
@@ -99,22 +95,19 @@ func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) 
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parsing game form failed", err)
+	if err := req.ParseMultipartForm(0); err != nil {
+		http.Error(writer, "invalid form", http.StatusBadRequest)
+		return
 	}
 
-	userId := req.FormValue("gameId")
-	id, err := strconv.Atoi(userId)
+	id, err := strconv.Atoi(req.FormValue("gameId"))
 	if err != nil {
-		// Handle error - invalid ID format
-		fmt.Println("Invalid game ID:", userId)
+		http.Error(writer, "invalid game id", http.StatusBadRequest)
 		return
 	}
 	gameName := req.FormValue("gameName")
-	err = database.AlterGame(a.db, id, gameName)
-	if err != nil {
-		fmt.Println("Failed to add user", err)
+	if err := database.AlterGame(a.db, id, gameName); err != nil {
+		http.Error(writer, "failed to update game", http.StatusInternalServerError)
 		return
 	}
 
@@ -123,9 +116,8 @@ func (a *GameHandlers) AlterGame(writer http.ResponseWriter, req *http.Request) 
 		Name: gameName,
 	}
 
-	err = json.NewEncoder(writer).Encode(res)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(res); err != nil {
+		log.Printf("encode AlterGame: %v", err)
 	}
 }
 
@@ -136,8 +128,7 @@ func (h *GameHandlers) GetGameById(writer http.ResponseWriter, req *http.Request
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	idPath := req.PathValue("id")
-	id, err := strconv.Atoi(idPath)
+	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
 		http.Error(writer, "invalid id", http.StatusBadRequest)
 		return
@@ -150,7 +141,7 @@ func (h *GameHandlers) GetGameById(writer http.ResponseWriter, req *http.Request
 	}
 
 	if err := json.NewEncoder(writer).Encode(profile); err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		log.Printf("encode GetGameById: %v", err)
 	}
 }
 
@@ -159,21 +150,17 @@ func (h *GameHandlers) DeleteGameWithId(writer http.ResponseWriter, req *http.Re
 		http.Error(writer, err.Error(), http.StatusForbidden)
 		return
 	}
-	writer.Header().Set("Content-Type", "application/json")
 
-	idPath := req.PathValue("id")
-
-	id, err := strconv.Atoi(idPath)
+	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
-		log.Fatalf("Id to int failed: %v", err)
-	}
-
-	rowsDeleted, err := database.DeleteGameWithId(h.db, id)
-	if err != nil {
-		fmt.Println("No games found in db", err)
+		http.Error(writer, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println("Deleted rows", rowsDeleted)
+	if _, err := database.DeleteGameWithId(h.db, id); err != nil {
+		http.Error(writer, "failed to delete game", http.StatusInternalServerError)
+		return
+	}
+
 	writer.WriteHeader(http.StatusNoContent)
 }

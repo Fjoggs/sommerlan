@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"log"
 
 	_ "modernc.org/sqlite"
 )
@@ -154,6 +153,5 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	_, _ = db.Exec(`ALTER TABLE rsvp ADD COLUMN wants_dinner INTEGER NOT NULL DEFAULT 1`)
 	_, _ = db.Exec(`ALTER TABLE sessions ADD COLUMN impersonate_user_id INTEGER REFERENCES user(id)`)
 
-	log.Println("Database initialized successfully")
 	return db, nil
 }

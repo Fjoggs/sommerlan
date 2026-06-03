@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -28,12 +27,12 @@ func (h *AwardHandlers) GetAwards(w http.ResponseWriter, r *http.Request) {
 
 	awards, err := database.GetAwards(h.db)
 	if err != nil {
-		fmt.Println("No awards found in db", err)
+		http.Error(w, "failed to get awards", http.StatusInternalServerError)
 		return
 	}
 
 	if err := json.NewEncoder(w).Encode(awards); err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		log.Printf("encode GetAwards: %v", err)
 	}
 }
 
@@ -45,7 +44,8 @@ func (h *AwardHandlers) AddAward(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := r.ParseMultipartForm(0); err != nil {
-		fmt.Println("Parsing award form failed", err)
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
 	}
 
 	name := r.FormValue("awardName")
@@ -56,13 +56,13 @@ func (h *AwardHandlers) AddAward(w http.ResponseWriter, r *http.Request) {
 
 	id, err := database.AddAward(h.db, name)
 	if err != nil {
-		fmt.Println("Failed to add award", err)
+		http.Error(w, "failed to add award", http.StatusInternalServerError)
 		return
 	}
 
 	res := database.AwardResponse{Id: int(id), Name: name}
 	if err := json.NewEncoder(w).Encode(res); err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		log.Printf("encode AddAward: %v", err)
 	}
 }
 

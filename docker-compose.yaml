@@ -6,7 +6,7 @@ services:
     working_dir: /app
     command: go run .
     ports:
-      - "8080:8080"
+      - "3000:8080"
     volumes:
       - ./backend:/app
       - ./frontend:/frontend

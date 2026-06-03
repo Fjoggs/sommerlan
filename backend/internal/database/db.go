@@ -102,7 +102,6 @@ func GetUserWithId(db *sql.DB, userId int) (UserResponse, error) {
 		var color, color2, nickname sql.NullString
 		err := userRow.Scan(&user.Id, &user.Name, &color, &color2, &nickname)
 		if err != nil {
-			fmt.Println("GetUserWithId scan failed", err)
 			return user, err
 		}
 		if color.Valid {
@@ -279,7 +278,6 @@ func GetLans(db *sql.DB) ([]LanEvent, error) {
 	for _, lanId := range lanIds {
 		event, err := GetLanById(db, lanId)
 		if err != nil {
-			fmt.Println("Blew up:", err)
 			return events, err
 		}
 		events = append(events, event)
@@ -428,7 +426,6 @@ func GetLanById(db *sql.DB, id int) (LanEvent, error) {
 				&eventNickname,
 			)
 			if err != nil {
-				fmt.Println("Scanning participant blew up", err)
 				return event, err
 			}
 			if color.Valid {
@@ -518,7 +515,7 @@ func DeleteLanWithId(db *sql.DB, id int) (int64, error) {
 func doQuery(db *sql.DB, query string) (*sql.Rows, error) {
 	rows, err := db.Query(query)
 	if err != nil {
-		log.Fatal("Query failed:", err)
+		log.Printf("query failed: %v", err)
 	}
 
 	return rows, err
@@ -527,7 +524,7 @@ func doQuery(db *sql.DB, query string) (*sql.Rows, error) {
 func doQueryWithId(db *sql.DB, query string, id int) (*sql.Rows, error) {
 	rows, err := db.Query(query, id)
 	if err != nil {
-		log.Fatal("Query failed:", err)
+		log.Printf("query failed: %v", err)
 	}
 
 	return rows, err

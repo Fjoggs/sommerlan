@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -33,7 +32,7 @@ func (h *UserHandlers) GetUserStats(writer http.ResponseWriter, req *http.Reques
 		return
 	}
 	if err := json.NewEncoder(writer).Encode(stats); err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		log.Printf("encode GetUserStats: %v", err)
 	}
 }
 
@@ -44,15 +43,14 @@ func (h *UserHandlers) GetUsers(writer http.ResponseWriter, req *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	lans, err := database.GetUsers(h.db)
+	users, err := database.GetUsers(h.db)
 	if err != nil {
-		fmt.Println("No users found in db", err)
+		http.Error(writer, "failed to get users", http.StatusInternalServerError)
 		return
 	}
 
-	err = json.NewEncoder(writer).Encode(lans)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(users); err != nil {
+		log.Printf("encode GetUsers: %v", err)
 	}
 }
 
@@ -63,9 +61,9 @@ func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parsing user form failed", err)
+	if err := req.ParseMultipartForm(0); err != nil {
+		http.Error(writer, "invalid form", http.StatusBadRequest)
+		return
 	}
 
 	userName := req.FormValue("userName")
@@ -73,7 +71,7 @@ func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 	color2 := req.FormValue("color2")
 	userId, err := database.AddUser(h.db, userName, color, color2)
 	if err != nil {
-		fmt.Println("Failed to add user", err)
+		http.Error(writer, "failed to add user", http.StatusInternalServerError)
 		return
 	}
 
@@ -84,9 +82,8 @@ func (h *UserHandlers) AddUser(writer http.ResponseWriter, req *http.Request) {
 		Color2: color2,
 	}
 
-	err = json.NewEncoder(writer).Encode(res)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(res); err != nil {
+		log.Printf("encode AddUser: %v", err)
 	}
 }
 
@@ -97,24 +94,22 @@ func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) 
 	}
 	writer.Header().Set("Content-Type", "application/json")
 
-	err := req.ParseMultipartForm(0)
-	if err != nil {
-		fmt.Println("Parsing user form failed", err)
+	if err := req.ParseMultipartForm(0); err != nil {
+		http.Error(writer, "invalid form", http.StatusBadRequest)
+		return
 	}
 
 	userId := req.FormValue("userId")
 	id, err := strconv.Atoi(userId)
 	if err != nil {
-		// Handle error - invalid ID format
-		fmt.Println("Invalid user ID:", userId)
+		http.Error(writer, "invalid user id", http.StatusBadRequest)
 		return
 	}
 	userName := req.FormValue("userName")
 	color := req.FormValue("color")
 	color2 := req.FormValue("color2")
-	err = database.AlterUser(h.db, id, userName, color, color2)
-	if err != nil {
-		fmt.Println("Failed to add user", err)
+	if err := database.AlterUser(h.db, id, userName, color, color2); err != nil {
+		http.Error(writer, "failed to update user", http.StatusInternalServerError)
 		return
 	}
 
@@ -125,9 +120,8 @@ func (h *UserHandlers) AlterUser(writer http.ResponseWriter, req *http.Request) 
 		Color2: color2,
 	}
 
-	err = json.NewEncoder(writer).Encode(res)
-	if err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+	if err := json.NewEncoder(writer).Encode(res); err != nil {
+		log.Printf("encode AlterUser: %v", err)
 	}
 }
 
@@ -152,7 +146,7 @@ func (h *UserHandlers) GetUserById(writer http.ResponseWriter, req *http.Request
 	}
 
 	if err := json.NewEncoder(writer).Encode(profile); err != nil {
-		log.Fatalf("Encoding response blew up: %v", err)
+		log.Printf("encode GetUserById: %v", err)
 	}
 }
 
@@ -161,21 +155,17 @@ func (h *UserHandlers) DeleteUserWithId(writer http.ResponseWriter, req *http.Re
 		http.Error(writer, err.Error(), http.StatusForbidden)
 		return
 	}
-	writer.Header().Set("Content-Type", "application/json")
 
-	idPath := req.PathValue("id")
-
-	id, err := strconv.Atoi(idPath)
+	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil {
-		log.Fatalf("Id to int failed: %v", err)
-	}
-
-	rowsDeleted, err := database.DeleteUserWithId(h.db, id)
-	if err != nil {
-		fmt.Println("No users found in db", err)
+		http.Error(writer, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println("Deleted rows", rowsDeleted)
+	if _, err := database.DeleteUserWithId(h.db, id); err != nil {
+		http.Error(writer, "failed to delete user", http.StatusInternalServerError)
+		return
+	}
+
 	writer.WriteHeader(http.StatusNoContent)
 }

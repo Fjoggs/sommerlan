@@ -3,7 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -53,7 +53,7 @@ func (h *RsvpHandlers) AddRsvp(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	if err := database.AddRsvpDates(h.db, user.Id, lanId, body.Dates, body.DinnerDates); err != nil {
-		fmt.Println("AddRsvp failed:", err)
+		log.Printf("AddRsvp user=%d lan=%d: %v", user.Id, lanId, err)
 		http.Error(writer, "failed to save rsvp", http.StatusInternalServerError)
 		return
 	}
@@ -73,7 +73,7 @@ func (h *RsvpHandlers) DeleteRsvp(writer http.ResponseWriter, req *http.Request)
 		return
 	}
 	if err := database.DeleteRsvp(h.db, user.Id, lanId); err != nil {
-		fmt.Println("DeleteRsvp failed:", err)
+		log.Printf("DeleteRsvp user=%d lan=%d: %v", user.Id, lanId, err)
 		http.Error(writer, "failed to delete rsvp", http.StatusInternalServerError)
 		return
 	}
@@ -94,12 +94,12 @@ func (h *RsvpHandlers) GetRsvps(writer http.ResponseWriter, req *http.Request) {
 
 	entries, err := database.GetRsvps(h.db, lanId)
 	if err != nil {
-		fmt.Println("GetRsvps failed:", err)
+		log.Printf("GetRsvps lan=%d: %v", lanId, err)
 		http.Error(writer, "failed to fetch rsvps", http.StatusInternalServerError)
 		return
 	}
 
 	if err := json.NewEncoder(writer).Encode(entries); err != nil {
-		fmt.Println("GetRsvps encode failed:", err)
+		log.Printf("encode GetRsvps: %v", err)
 	}
 }
