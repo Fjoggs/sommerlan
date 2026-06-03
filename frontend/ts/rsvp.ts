@@ -37,27 +37,52 @@ function buildPickerContent(): HTMLElement {
     badgeRow.className = "mc-block-days";
     const sat = BLOCK_SATURATION[block.key] ?? 1;
 
+    const dinnerRow = document.createElement("div");
+    dinnerRow.className = "mc-dinner-row";
+    const dinnerRowLabel = document.createElement("span");
+    dinnerRowLabel.className = "mc-dinner-row-label";
+    dinnerRowLabel.textContent = "Middag?";
+    dinnerRow.appendChild(dinnerRowLabel);
+    const dinnerBadgesRow = document.createElement("div");
+    dinnerBadgesRow.className = "mc-block-days";
+    dinnerRow.appendChild(dinnerBadgesRow);
+
+    const updateDinnerRowVisibility = () => {
+      dinnerRow.style.display = block.dates.some(d => selectedDates.has(d)) ? "" : "none";
+    };
+
     for (const date of block.dates) {
       const d = new Date(date + "T00:00:00");
       const badge = document.createElement("span");
       badge.className = "mc-day day-picker-badge";
 
-      let dinnerLabel: HTMLLabelElement | null = null;
-      if (mainDates.has(date)) {
-        dinnerLabel = document.createElement("label");
-        dinnerLabel.className = "mc-day-dinner";
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = dinnerDates.has(date);
-        cb.addEventListener("change", () => {
-          if (cb.checked) dinnerDates.add(date);
-          else dinnerDates.delete(date);
-        });
-        const span = document.createElement("span");
-        span.textContent = "Mat";
-        dinnerLabel.appendChild(cb);
-        dinnerLabel.appendChild(span);
-      }
+      const dinnerBadge = document.createElement("span");
+      dinnerBadge.className = "mc-dinner-badge";
+      dinnerBadge.textContent = "Ja";
+
+      const applyDinnerBadgeState = () => {
+        const dateOn = selectedDates.has(date);
+        const dinnerOn = dateOn && dinnerDates.has(date);
+        dinnerBadge.style.visibility = dateOn ? "visible" : "hidden";
+        if (dinnerOn && me) {
+          dinnerBadge.style.backgroundColor = me.color + "33";
+          dinnerBadge.style.borderColor = me.color;
+          dinnerBadge.style.color = me.color;
+          dinnerBadge.style.filter = `saturate(${sat})`;
+        } else {
+          dinnerBadge.style.backgroundColor = "";
+          dinnerBadge.style.borderColor = "";
+          dinnerBadge.style.color = "";
+          dinnerBadge.style.filter = "";
+        }
+      };
+
+      dinnerBadge.addEventListener("click", () => {
+        if (!selectedDates.has(date)) return;
+        if (dinnerDates.has(date)) dinnerDates.delete(date);
+        else dinnerDates.add(date);
+        applyDinnerBadgeState();
+      });
 
       const applyState = () => {
         const on = selectedDates.has(date);
@@ -72,11 +97,8 @@ function buildPickerContent(): HTMLElement {
           badge.style.cssText = "";
           badge.classList.add("mc-day-off");
         }
-        if (dinnerLabel) {
-          dinnerLabel.style.display = on ? "" : "none";
-          const cb = dinnerLabel.querySelector<HTMLInputElement>("input");
-          if (cb) cb.checked = dinnerDates.has(date);
-        }
+        applyDinnerBadgeState();
+        updateDinnerRowVisibility();
       };
 
       const game = GAMES[date as keyof typeof GAMES];
@@ -96,11 +118,12 @@ function buildPickerContent(): HTMLElement {
       const wrap = document.createElement("div");
       wrap.className = "mc-day-wrap";
       wrap.appendChild(badge);
-      if (dinnerLabel) wrap.appendChild(dinnerLabel);
       badgeRow.appendChild(wrap);
+      dinnerBadgesRow.appendChild(dinnerBadge);
     }
 
     blockWrap.appendChild(badgeRow);
+    blockWrap.appendChild(dinnerRow);
     daysWrap.appendChild(blockWrap);
   }
 
@@ -167,7 +190,7 @@ async function postRsvp(dates: string[]): Promise<RsvpEntry[] | null> {
   const res = await fetch(`${API_URL}/lan/${lanId}/rsvp/`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({ dates, dinner_dates: dates.filter(d => mainDates.has(d) && dinnerDates.has(d)) }),
+    body: JSON.stringify({ dates, dinner_dates: dates.filter(d => dinnerDates.has(d)) }),
   });
   if (!res.ok && res.status !== 204) throw new Error(`${res.status}`);
   return apiFetch<RsvpEntry[]>(`lan/${lanId}/rsvp`);

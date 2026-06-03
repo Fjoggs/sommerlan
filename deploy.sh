@@ -20,6 +20,9 @@ rsync -av          "$REPO/frontend/css/"    "$SERVER:~/opt/sommerlan/frontend/cs
 rsync -av          "$REPO/frontend/fonts/"  "$SERVER:~/opt/sommerlan/frontend/fonts/"
 rsync -av          "$REPO/frontend/data/"   "$SERVER:~/opt/sommerlan/frontend/data/"
 
+echo "==> Syncing database"
+rsync -av "$REPO/backend/sommerlan.db" "$SERVER:~/opt/sommerlan/data/sommerlan.db"
+
 echo "==> Restarting service"
 ssh "$SERVER" 'systemctl --user restart sommerlan'
 
