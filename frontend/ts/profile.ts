@@ -18,7 +18,7 @@ async function init() {
   nameInput.value = me.nickname || "";
   nameInput.placeholder = me.name;
   colorInput.value = me.color || "#5865F2";
-  updatePreview(me.nickname || me.name, colorInput.value, preview);
+  updatePreview(me.nickname || me.name, colorInput.value, preview, me.color2);
 
   renderSwatches(colorInput, preview, nameInput);
 
@@ -53,8 +53,10 @@ function renderSwatches(colorInput: HTMLInputElement, preview: HTMLElement, name
   }
 }
 
-function updatePreview(name: string, color: string, preview: HTMLElement) {
-  preview.style.backgroundColor = color;
+function updatePreview(name: string, color: string, preview: HTMLElement, color2?: string) {
+  preview.style.background = color2
+    ? `linear-gradient(135deg, ${color}, ${color2})`
+    : color;
   preview.textContent = name.charAt(0).toUpperCase() || "?";
 }
 

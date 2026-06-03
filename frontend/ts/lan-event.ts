@@ -2,7 +2,7 @@ import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
-import { BLOCKS, GAMES, renderMatrix, renderCards, renderDinnerTable } from "./matrix.js";
+import { BLOCKS, GAMES, RACES, renderCards, renderDinnerTable } from "./matrix.js";
 
 type Tag = { id: number; name: string };
 
@@ -135,72 +135,148 @@ async function renderUpcoming(lan: LAN) {
     content.appendChild(inv);
   }
 
-  // RSVP form
-  const wrapper = createElement("div") as HTMLDivElement;
-  wrapper.className = "rsvp-wrapper";
-  wrapper.style.padding = "0";
-  wrapper.style.maxWidth = "100%";
+  // State
+  const selectedDates = new Set<string>();
+  const dinnerDates = new Set<string>();
+  const mainDates = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
+  let onDateToggle: (() => void) | null = null;
 
-  const blocksEl = createElement("div") as HTMLDivElement;
-  blocksEl.className = "event-blocks";
+  const BLOCK_SATURATION: Record<string, number> = { "pre-pre": 0.25, "pre": 0.55, "main": 1.0 };
 
-  for (const block of BLOCKS) {
-    const blockEl = createElement("div") as HTMLDivElement;
-    blockEl.className = "event-block";
-    if (block.key === "main") blockEl.classList.add("event-block-main");
-
-    const blockHeader = createElement("div") as HTMLDivElement;
-    blockHeader.className = "event-block-header";
-    const badge = createElement("span") as HTMLSpanElement;
-    badge.className = `event-badge badge-${block.key}`;
-    badge.textContent = block.label;
-    blockHeader.appendChild(badge);
-    blockEl.appendChild(blockHeader);
-
-    const dayGrid = createElement("div") as HTMLDivElement;
-    dayGrid.className = "day-grid";
-
-    for (const date of block.dates) {
-      const d = new Date(date + "T00:00:00");
-      const dayName = d.toLocaleDateString("nb-NO", { weekday: "long" });
-      const dayNum = d.getDate();
-      const monthName = d.toLocaleDateString("nb-NO", { month: "long" });
-      const game = GAMES[date as keyof typeof GAMES];
-
-      const label = createElement("label") as HTMLLabelElement;
-      label.className = "day-card";
-      const cb = createElement("input") as HTMLInputElement;
-      cb.type = "checkbox"; cb.name = "day"; cb.value = date;
-      const nameSpan = createElement("span") as HTMLSpanElement;
-      nameSpan.className = "day-name";
-      nameSpan.textContent = dayName.charAt(0).toUpperCase() + dayName.slice(1);
-      const dateSpan = createElement("span") as HTMLSpanElement;
-      dateSpan.className = "day-date";
-      dateSpan.textContent = `${dayNum}. ${monthName}`;
-      if (game) {
-        const gameSpan = createElement("span") as HTMLSpanElement;
-        gameSpan.className = "day-card-game"; gameSpan.textContent = " ⚽"; gameSpan.title = game;
-        dateSpan.appendChild(gameSpan);
-      }
-      label.appendChild(cb); label.appendChild(nameSpan); label.appendChild(dateSpan);
-      dayGrid.appendChild(label);
+  function applyUserColor(btn: HTMLButtonElement) {
+    if (!me?.color) return;
+    btn.style.backgroundColor = me.color;
+    if (!btn.dataset.colorized) {
+      btn.dataset.colorized = "1";
+      btn.addEventListener("mouseenter", () => { btn.style.filter = "brightness(1.2)"; });
+      btn.addEventListener("mouseleave", () => { btn.style.filter = ""; });
     }
-    blockEl.appendChild(dayGrid);
-    blocksEl.appendChild(blockEl);
   }
-  wrapper.appendChild(blocksEl);
 
-  const footer = createElement("div") as HTMLDivElement;
-  footer.className = "rsvp-footer";
+  function applyUserColorOutline(btn: HTMLButtonElement) {
+    if (!me?.color) return;
+    btn.style.borderColor = me.color;
+    btn.style.color = me.color;
+    if (!btn.dataset.colorized) {
+      btn.dataset.colorized = "1";
+      btn.addEventListener("mouseenter", () => { btn.style.backgroundColor = me!.color + "1a"; });
+      btn.addEventListener("mouseleave", () => { btn.style.backgroundColor = ""; });
+    }
+  }
+
+  function buildPickerContent(): HTMLElement {
+    const daysWrap = document.createElement("div");
+    daysWrap.className = "mc-days";
+    for (const block of BLOCKS) {
+      const blockWrap = document.createElement("div");
+      blockWrap.className = "mc-block";
+      const blockLabel = document.createElement("span");
+      blockLabel.className = "mc-block-label";
+      blockLabel.textContent = block.label;
+      blockWrap.appendChild(blockLabel);
+      const badgeRow = document.createElement("div");
+      badgeRow.className = "mc-block-days";
+      const sat = BLOCK_SATURATION[block.key] ?? 1;
+      for (const date of block.dates) {
+        const d = new Date(date + "T00:00:00");
+        const badge = document.createElement("span");
+        badge.className = "mc-day day-picker-badge";
+        let dinnerLabel: HTMLLabelElement | null = null;
+        if (mainDates.has(date)) {
+          dinnerLabel = document.createElement("label");
+          dinnerLabel.className = "mc-day-dinner";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = dinnerDates.has(date);
+          cb.addEventListener("change", () => { if (cb.checked) dinnerDates.add(date); else dinnerDates.delete(date); });
+          const span = document.createElement("span");
+          span.textContent = "Mat";
+          dinnerLabel.appendChild(cb);
+          dinnerLabel.appendChild(span);
+        }
+        const applyState = () => {
+          const on = selectedDates.has(date);
+          badge.classList.toggle("mc-day-on", on);
+          badge.classList.toggle("mc-day-off", !on);
+          if (on) {
+            badge.style.backgroundColor = me!.color + "33";
+            badge.style.borderColor = me!.color;
+            badge.style.color = me!.color;
+            badge.style.filter = `saturate(${sat})`;
+          } else {
+            badge.style.cssText = "";
+            badge.classList.add("mc-day-off");
+          }
+          if (dinnerLabel) {
+            dinnerLabel.style.display = on ? "" : "none";
+            const cb = dinnerLabel.querySelector<HTMLInputElement>("input");
+            if (cb) cb.checked = dinnerDates.has(date);
+          }
+        };
+        const game = GAMES[date as keyof typeof GAMES];
+        const race = RACES[date as keyof typeof RACES];
+        badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}${game ? `<span class="mc-day-game" title="${game}">⚽</span>` : ""}${race ? `<span class="mc-day-game" title="${race}">🏁</span>` : ""}</span>`;
+        badge.addEventListener("click", () => {
+          if (selectedDates.has(date)) selectedDates.delete(date);
+          else selectedDates.add(date);
+          applyState();
+          updateSubmitBtn();
+          onDateToggle?.();
+        });
+        applyState();
+        const wrap = document.createElement("div");
+        wrap.className = "mc-day-wrap";
+        wrap.appendChild(badge);
+        if (dinnerLabel) wrap.appendChild(dinnerLabel);
+        badgeRow.appendChild(wrap);
+      }
+      blockWrap.appendChild(badgeRow);
+      daysWrap.appendChild(blockWrap);
+    }
+    return daysWrap;
+  }
+
+  async function postRsvp(dates: string[]): Promise<RsvpEntry[]> {
+    if (dates.length === 0) {
+      await fetch(`/api/lan/${lan.lanId}/rsvp/`, { method: "DELETE", headers: authHeaders() });
+    } else {
+      await fetch(`/api/lan/${lan.lanId}/rsvp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ dates, dinner_dates: dates.filter(d => mainDates.has(d) && dinnerDates.has(d)) }),
+      });
+    }
+    const res = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+    return res.ok ? res.json() : [];
+  }
+
+  // Initial sign-up form (hidden once RSVPed)
+  const formSection = createElement("section") as HTMLElement;
+  formSection.className = "event-section";
+  const pickerContainer = createElement("div") as HTMLDivElement;
+  formSection.appendChild(pickerContainer);
   const submitBtn = createElement("button") as HTMLButtonElement;
-  submitBtn.id = "rsvp-submit"; submitBtn.disabled = true; submitBtn.className = "inactive";
+  submitBtn.type = "button";
+  submitBtn.disabled = true;
+  submitBtn.className = "inactive";
   submitBtn.textContent = "Snakkes på LAN";
-  footer.appendChild(submitBtn);
-  wrapper.appendChild(footer);
+  formSection.appendChild(submitBtn);
+  content.appendChild(formSection);
 
-  content.appendChild(wrapper);
+  function updateSubmitBtn() {
+    const canSubmit = selectedDates.size > 0;
+    submitBtn.disabled = !canSubmit;
+    submitBtn.classList.toggle("inactive", !canSubmit);
+    if (canSubmit) applyUserColor(submitBtn);
+    else submitBtn.style.backgroundColor = "";
+  }
 
-  // Påmeldte cards section
+  function refreshPicker() {
+    pickerContainer.innerHTML = "";
+    pickerContainer.appendChild(buildPickerContent());
+  }
+
+  // Påmeldte section
   const matrixSection = createElement("section") as HTMLElement;
   matrixSection.className = "event-section";
   const matrixH2 = createElement("h2");
@@ -208,61 +284,102 @@ async function renderUpcoming(lan: LAN) {
   matrixSection.appendChild(matrixH2);
   const matrixContainer = createElement("div") as HTMLDivElement;
   matrixSection.appendChild(matrixContainer);
-  content.appendChild(matrixSection);
-
-  // Single fetch: populate cards + check existing RSVP
-  const rsvpRes = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
-  const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
-  const mine = rsvpEntries.find((e) => e.userId === me!.id);
-  const myDates = mine?.dates ?? [];
-
-  for (const date of myDates) {
-    const cb = wrapper.querySelector<HTMLInputElement>(`input[value="${date}"]`);
-    if (cb) cb.checked = true;
-  }
-
-  const updateBtn = () => {
-    const anyChecked = wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked").length > 0;
-    submitBtn.disabled = !anyChecked;
-    submitBtn.classList.toggle("inactive", !anyChecked);
-  };
-
-  const showConfirmed = () => {
-    wrapper.style.display = "none";
-  };
-  const showForm = () => {
-    wrapper.style.display = "";
-    updateBtn();
-  };
-
-  renderCards(matrixContainer, rsvpEntries, { currentUserId: me!.id, onEdit: showForm });
-
   const dinnerContainer = createElement("div") as HTMLDivElement;
   dinnerContainer.className = "dinner-table-wrap";
-  renderDinnerTable(dinnerContainer, rsvpEntries);
   matrixSection.appendChild(dinnerContainer);
+  content.appendChild(matrixSection);
 
-  if (myDates.length > 0) showConfirmed(); else showForm();
+  function refreshMatrix(entries: RsvpEntry[]) {
+    matrixContainer.innerHTML = "";
+    dinnerContainer.innerHTML = "";
+    renderCards(matrixContainer, entries, { currentUserId: me!.id, onEdit: (card) => transformCardToForm(card, entries) });
+    matrixContainer.querySelectorAll<HTMLButtonElement>(".rsvp-endre-btn").forEach(applyUserColorOutline);
+    renderDinnerTable(dinnerContainer, entries);
+  }
 
-  wrapper.querySelectorAll<HTMLInputElement>("input[name=day]").forEach((cb) => cb.addEventListener("change", updateBtn));
-  updateBtn();
+  function transformCardToForm(card: HTMLElement, entries: RsvpEntry[]) {
+    const originalDates = new Set(selectedDates);
+    card.querySelector(".mc-days")?.remove();
+    card.querySelector(".rsvp-endre-btn")?.remove();
+    card.appendChild(buildPickerContent());
+
+    const actions = createElement("div") as HTMLDivElement;
+    actions.className = "mc-card-actions";
+
+    const cancelBtn = createElement("button") as HTMLButtonElement;
+    cancelBtn.type = "button";
+    cancelBtn.className = "rsvp-endre-btn";
+    cancelBtn.textContent = "Avbryt";
+    applyUserColorOutline(cancelBtn);
+    cancelBtn.addEventListener("click", () => {
+      selectedDates.clear();
+      originalDates.forEach(d => selectedDates.add(d));
+      onDateToggle = null;
+      refreshMatrix(entries);
+    });
+
+    const saveBtn = createElement("button") as HTMLButtonElement;
+    saveBtn.type = "button";
+    const syncSaveBtn = () => {
+      saveBtn.textContent = selectedDates.size === 0 ? "Avmeld" : "Lagre";
+      saveBtn.disabled = false;
+      applyUserColor(saveBtn);
+    };
+    syncSaveBtn();
+    onDateToggle = syncSaveBtn;
+
+    saveBtn.addEventListener("click", async () => {
+      const dates = Array.from(selectedDates);
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Sender…";
+      try {
+        const updated = await postRsvp(dates);
+        onDateToggle = null;
+        refreshMatrix(updated);
+        if (dates.length === 0) {
+          formSection.style.display = "";
+          refreshPicker();
+          updateSubmitBtn();
+        }
+      } catch {
+        saveBtn.textContent = "Feil – prøv igjen";
+        saveBtn.disabled = false;
+      }
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    card.appendChild(actions);
+  }
+
+  // Fetch & render
+  const rsvpRes = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+  const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
+  const mine = rsvpEntries.find(e => e.userId === me!.id);
+
+  if (mine) {
+    for (const date of mine.dates) selectedDates.add(date);
+    for (const date of (mine.dinnerDates ?? [])) dinnerDates.add(date);
+    formSection.style.display = "none";
+  } else {
+    for (const date of mainDates) dinnerDates.add(date);
+  }
+
+  refreshPicker();
+  updateSubmitBtn();
+  refreshMatrix(rsvpEntries);
 
   submitBtn.addEventListener("click", async () => {
-    const dates = Array.from(wrapper.querySelectorAll<HTMLInputElement>("input[name=day]:checked")).map((cb) => cb.value);
-    submitBtn.disabled = true; submitBtn.textContent = "Sender…";
-    const res = await fetch(`/api/lan/${lan.lanId}/rsvp/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ dates }),
-    });
-    if (res.ok) {
-      const updated: RsvpEntry[] = await (await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() })).json();
-      renderCards(matrixContainer, updated, { currentUserId: me!.id, onEdit: showForm });
-      dinnerContainer.innerHTML = "";
-      renderDinnerTable(dinnerContainer, updated);
+    const dates = Array.from(selectedDates);
+    if (!dates.length) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sender…";
+    try {
+      const updated = await postRsvp(dates);
       submitBtn.textContent = "Snakkes på LAN";
-      showConfirmed();
-    } else {
+      refreshMatrix(updated);
+      formSection.style.display = "none";
+    } catch {
       submitBtn.textContent = "Feil – prøv igjen";
       submitBtn.disabled = false;
     }

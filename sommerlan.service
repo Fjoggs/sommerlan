@@ -1,25 +1,15 @@
 [Unit]
 Description=SommerLAN
-After=docker.service
-Requires=docker.service
+After=network.target
 
 [Service]
-User=fjogen
-WorkingDirectory=%h/opt/sommerlan
+WorkingDirectory=/home/fjogen/opt/sommerlan
 Restart=on-failure
 RestartSec=5s
-
-ExecStartPre=-/usr/bin/docker stop sommerlan
-ExecStartPre=-/usr/bin/docker rm sommerlan
-ExecStart=/usr/bin/docker run \
-    --name sommerlan \
-    -p 8080:8080 \
-    --user 1000:1000 \
-    -v %h/opt/sommerlan/data:/data \
-    -v %h/opt/sommerlan/uploads:/app/frontend/uploads \
-    --env-file %h/opt/sommerlan/.env \
-    sommerlan
-ExecStop=/usr/bin/docker stop sommerlan
+EnvironmentFile=/home/fjogen/opt/sommerlan/.env
+Environment=FRONTEND_PATH=/home/fjogen/opt/sommerlan/frontend
+Environment=DB_PATH=/home/fjogen/opt/sommerlan/data/sommerlan.db
+ExecStart=/home/fjogen/opt/sommerlan/sommerlan
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

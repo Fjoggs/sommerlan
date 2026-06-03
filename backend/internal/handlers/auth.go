@@ -35,7 +35,7 @@ func NewAuthHandlers(db *sql.DB) *AuthHandlers {
 	}
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
-		frontendURL = "http://localhost:8080"
+		frontendURL = "http://localhost:3000"
 	}
 	guildID := os.Getenv("DISCORD_GUILD_ID")
 	if guildID == "" {
@@ -106,6 +106,8 @@ func (h *AuthHandlers) DiscordCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("login: %s", user.Name)
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    token,
@@ -148,6 +150,9 @@ func (h *AuthHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if body.Color2 == "" {
+		body.Color2 = user.Color2
+	}
 	if err := database.SetNickname(h.db, user.Id, body.Nickname, body.Color, body.Color2); err != nil {
 		log.Printf("UpdateMe: %v", err)
 		http.Error(w, "failed to update", http.StatusInternalServerError)

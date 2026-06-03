@@ -58,6 +58,7 @@ td:empty::before {
 
 /* Fix tr display for table rows */
 tbody tr,
-thead tr {
+thead tr,
+tfoot tr {
   display: table-row;
 }

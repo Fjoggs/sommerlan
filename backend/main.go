@@ -154,9 +154,22 @@ func main() {
 	)
 	router.HandleFunc("DELETE /api/user/{id}/", handlers.EnableCORS(user.DeleteUserWithId))
 
-	// Serve frontend static files (catch-all, must be registered last)
-	router.Handle("/", handlers.LanGateMiddleware(db, gateTime, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath)))))
+	// Return [] for missing tweet files rather than 404ing
+	router.HandleFunc("GET /data/tweets/", func(w http.ResponseWriter, r *http.Request) {
+		p := frontendPath + r.URL.Path
+		data, err := os.ReadFile(p)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.Write([]byte("[]"))
+			return
+		}
+		w.Write(data)
+	})
 
-	log.Println("Server listening on :8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	// Serve frontend static files (catch-all, must be registered last)
+	router.Handle("/", handlers.NoCacheMiddleware(handlers.LanGateMiddleware(db, gateTime, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath))))))
+
+	addr := ":" + envOr("PORT", "3000")
+	log.Println("Server listening on", addr)
+	log.Fatal(http.ListenAndServe(addr, router))
 }

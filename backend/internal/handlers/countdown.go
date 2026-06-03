@@ -45,6 +45,16 @@ func CountdownHandler(gateTime time.Time) http.HandlerFunc {
 	}
 }
 
+// NoCacheMiddleware sets Cache-Control: no-cache on all responses, telling browsers to always
+// revalidate via ETag before using a cached copy. LanGateMiddleware overrides this to no-store
+// for HTML pages; static assets (JS, CSS, fonts) keep no-cache.
+func NoCacheMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // CleanURLHandler redirects /foo.html → /foo (301) and rewrites /foo → serves foo.html transparently.
 func CleanURLHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
