@@ -2,7 +2,7 @@ import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
-import { BLOCKS, GAMES, RACES, renderCards, renderDinnerTable } from "./matrix.js";
+import { BLOCKS, GAMES, RACES, renderCards, renderDinnerTable, buildPickerContent } from "./matrix.js";
 
 type Tag = { id: number; name: string };
 
@@ -141,8 +141,6 @@ async function renderUpcoming(lan: LAN) {
   const mainDates = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
   let onDateToggle: (() => void) | null = null;
 
-  const BLOCK_SATURATION: Record<string, number> = { "pre-pre": 0.25, "pre": 0.55, "main": 1.0 };
-
   function applyUserColor(btn: HTMLButtonElement) {
     if (!me?.color) return;
     btn.style.backgroundColor = me.color;
@@ -164,78 +162,6 @@ async function renderUpcoming(lan: LAN) {
     }
   }
 
-  function buildPickerContent(): HTMLElement {
-    const daysWrap = document.createElement("div");
-    daysWrap.className = "mc-days";
-    for (const block of BLOCKS) {
-      const blockWrap = document.createElement("div");
-      blockWrap.className = "mc-block";
-      const blockLabel = document.createElement("span");
-      blockLabel.className = "mc-block-label";
-      blockLabel.textContent = block.label;
-      blockWrap.appendChild(blockLabel);
-      const badgeRow = document.createElement("div");
-      badgeRow.className = "mc-block-days";
-      const sat = BLOCK_SATURATION[block.key] ?? 1;
-      for (const date of block.dates) {
-        const d = new Date(date + "T00:00:00");
-        const badge = document.createElement("span");
-        badge.className = "mc-day day-picker-badge";
-        let dinnerLabel: HTMLLabelElement | null = null;
-        if (mainDates.has(date)) {
-          dinnerLabel = document.createElement("label");
-          dinnerLabel.className = "mc-day-dinner";
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked = dinnerDates.has(date);
-          cb.addEventListener("change", () => { if (cb.checked) dinnerDates.add(date); else dinnerDates.delete(date); });
-          const span = document.createElement("span");
-          span.textContent = "Mat";
-          dinnerLabel.appendChild(cb);
-          dinnerLabel.appendChild(span);
-        }
-        const applyState = () => {
-          const on = selectedDates.has(date);
-          badge.classList.toggle("mc-day-on", on);
-          badge.classList.toggle("mc-day-off", !on);
-          if (on) {
-            badge.style.backgroundColor = me!.color + "33";
-            badge.style.borderColor = me!.color;
-            badge.style.color = me!.color;
-            badge.style.filter = `saturate(${sat})`;
-          } else {
-            badge.style.cssText = "";
-            badge.classList.add("mc-day-off");
-          }
-          if (dinnerLabel) {
-            dinnerLabel.style.display = on ? "" : "none";
-            const cb = dinnerLabel.querySelector<HTMLInputElement>("input");
-            if (cb) cb.checked = dinnerDates.has(date);
-          }
-        };
-        const game = GAMES[date as keyof typeof GAMES];
-        const race = RACES[date as keyof typeof RACES];
-        badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}${game ? `<span class="mc-day-game" title="${game}">⚽</span>` : ""}${race ? `<span class="mc-day-game" title="${race}">🏁</span>` : ""}</span>`;
-        badge.addEventListener("click", () => {
-          if (selectedDates.has(date)) selectedDates.delete(date);
-          else selectedDates.add(date);
-          applyState();
-          updateSubmitBtn();
-          onDateToggle?.();
-        });
-        applyState();
-        const wrap = document.createElement("div");
-        wrap.className = "mc-day-wrap";
-        wrap.appendChild(badge);
-        if (dinnerLabel) wrap.appendChild(dinnerLabel);
-        badgeRow.appendChild(wrap);
-      }
-      blockWrap.appendChild(badgeRow);
-      daysWrap.appendChild(blockWrap);
-    }
-    return daysWrap;
-  }
-
   async function postRsvp(dates: string[]): Promise<RsvpEntry[]> {
     if (dates.length === 0) {
       await fetch(`/api/lan/${lan.lanId}/rsvp/`, { method: "DELETE", headers: authHeaders() });
@@ -243,7 +169,7 @@ async function renderUpcoming(lan: LAN) {
       await fetch(`/api/lan/${lan.lanId}/rsvp/`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ dates, dinner_dates: dates.filter(d => mainDates.has(d) && dinnerDates.has(d)) }),
+        body: JSON.stringify({ dates, dinner_dates: dates.filter(d => dinnerDates.has(d)) }),
       });
     }
     const res = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
@@ -273,7 +199,7 @@ async function renderUpcoming(lan: LAN) {
 
   function refreshPicker() {
     pickerContainer.innerHTML = "";
-    pickerContainer.appendChild(buildPickerContent());
+    pickerContainer.appendChild(buildPickerContent(selectedDates, dinnerDates, me, updateSubmitBtn, () => onDateToggle));
   }
 
   // Påmeldte section
@@ -301,7 +227,7 @@ async function renderUpcoming(lan: LAN) {
     const originalDates = new Set(selectedDates);
     card.querySelector(".mc-days")?.remove();
     card.querySelector(".rsvp-endre-btn")?.remove();
-    card.appendChild(buildPickerContent());
+    card.appendChild(buildPickerContent(selectedDates, dinnerDates, me, updateSubmitBtn, () => onDateToggle));
 
     const actions = createElement("div") as HTMLDivElement;
     actions.className = "mc-card-actions";

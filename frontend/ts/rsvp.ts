@@ -1,5 +1,5 @@
 import { showError } from "./errorHandler.js";
-import { BLOCKS, GAMES, RACES, renderMatrix, renderCards, renderDinnerTable } from "./matrix.js";
+import { BLOCKS, GAMES, RACES, renderMatrix, renderCards, renderDinnerTable, buildPickerContent } from "./matrix.js";
 import { requireAuth, authHeaders } from "./auth.js";
 import type { RsvpEntry, LAN } from "./types.js";
 
@@ -14,126 +14,11 @@ const dinnerDates = new Set<string>();
 const mainDates = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
 let onDateToggle: (() => void) | null = null;
 
-const BLOCK_SATURATION: Record<string, number> = {
-  "pre-pre": 0.25,
-  "pre":     0.55,
-  "main":    1.0,
-};
-
-function buildPickerContent(): HTMLElement {
-  const daysWrap = document.createElement("div");
-  daysWrap.className = "mc-days";
-
-  for (const block of BLOCKS) {
-    const blockWrap = document.createElement("div");
-    blockWrap.className = "mc-block";
-
-    const blockLabel = document.createElement("span");
-    blockLabel.className = "mc-block-label";
-    blockLabel.textContent = block.label;
-    blockWrap.appendChild(blockLabel);
-
-    const badgeRow = document.createElement("div");
-    badgeRow.className = "mc-block-days";
-    const sat = BLOCK_SATURATION[block.key] ?? 1;
-
-    const dinnerRow = document.createElement("div");
-    dinnerRow.className = "mc-dinner-row";
-    const dinnerRowLabel = document.createElement("span");
-    dinnerRowLabel.className = "mc-dinner-row-label";
-    dinnerRowLabel.textContent = "Middag?";
-    dinnerRow.appendChild(dinnerRowLabel);
-    const dinnerBadgesRow = document.createElement("div");
-    dinnerBadgesRow.className = "mc-block-days";
-    dinnerRow.appendChild(dinnerBadgesRow);
-
-    const updateDinnerRowVisibility = () => {
-      dinnerRow.style.display = block.dates.some(d => selectedDates.has(d)) ? "" : "none";
-    };
-
-    for (const date of block.dates) {
-      const d = new Date(date + "T00:00:00");
-      const badge = document.createElement("span");
-      badge.className = "mc-day day-picker-badge";
-
-      const dinnerBadge = document.createElement("span");
-      dinnerBadge.className = "mc-dinner-badge";
-      dinnerBadge.textContent = "Ja";
-
-      const applyDinnerBadgeState = () => {
-        const dateOn = selectedDates.has(date);
-        const dinnerOn = dateOn && dinnerDates.has(date);
-        dinnerBadge.style.visibility = dateOn ? "visible" : "hidden";
-        if (dinnerOn && me) {
-          dinnerBadge.style.backgroundColor = me.color + "33";
-          dinnerBadge.style.borderColor = me.color;
-          dinnerBadge.style.color = me.color;
-          dinnerBadge.style.filter = `saturate(${sat})`;
-        } else {
-          dinnerBadge.style.backgroundColor = "";
-          dinnerBadge.style.borderColor = "";
-          dinnerBadge.style.color = "";
-          dinnerBadge.style.filter = "";
-        }
-      };
-
-      dinnerBadge.addEventListener("click", () => {
-        if (!selectedDates.has(date)) return;
-        if (dinnerDates.has(date)) dinnerDates.delete(date);
-        else dinnerDates.add(date);
-        applyDinnerBadgeState();
-      });
-
-      const applyState = () => {
-        const on = selectedDates.has(date);
-        badge.classList.toggle("mc-day-on", on);
-        badge.classList.toggle("mc-day-off", !on);
-        if (on) {
-          badge.style.backgroundColor = me!.color + "33";
-          badge.style.borderColor = me!.color;
-          badge.style.color = me!.color;
-          badge.style.filter = `saturate(${sat})`;
-        } else {
-          badge.style.cssText = "";
-          badge.classList.add("mc-day-off");
-        }
-        applyDinnerBadgeState();
-        updateDinnerRowVisibility();
-      };
-
-      const game = GAMES[date as keyof typeof GAMES];
-      const race = RACES[date as keyof typeof RACES];
-      badge.innerHTML = `<span class="mc-day-name">${d.toLocaleDateString("nb-NO", { weekday: "short" })}</span><span class="mc-day-num">${d.getDate()}${game ? `<span class="mc-day-game" title="${game}">⚽</span>` : ""}${race ? `<span class="mc-day-game" title="${race}">🏁</span>` : ""}</span>`;
-
-      badge.addEventListener("click", () => {
-        if (selectedDates.has(date)) selectedDates.delete(date);
-        else selectedDates.add(date);
-        applyState();
-        updateSubmitButton();
-        onDateToggle?.();
-      });
-
-      applyState();
-
-      const wrap = document.createElement("div");
-      wrap.className = "mc-day-wrap";
-      wrap.appendChild(badge);
-      badgeRow.appendChild(wrap);
-      dinnerBadgesRow.appendChild(dinnerBadge);
-    }
-
-    blockWrap.appendChild(badgeRow);
-    blockWrap.appendChild(dinnerRow);
-    daysWrap.appendChild(blockWrap);
-  }
-
-  return daysWrap;
-}
 
 function buildDayPicker() {
   const container = document.getElementById("day-picker")!;
   container.innerHTML = "";
-  container.appendChild(buildPickerContent());
+  container.appendChild(buildPickerContent(selectedDates, dinnerDates, me, updateSubmitButton, () => onDateToggle));
 }
 
 function getSelectedDates(): string[] {
@@ -221,7 +106,7 @@ async function transformCardToForm(card: HTMLElement) {
   card.querySelector(".mc-days")?.remove();
   card.querySelector(".rsvp-endre-btn")?.remove();
 
-  card.appendChild(buildPickerContent());
+  card.appendChild(buildPickerContent(selectedDates, dinnerDates, me, updateSubmitButton, () => onDateToggle));
 
   const actions = document.createElement("div");
   actions.className = "mc-card-actions";
