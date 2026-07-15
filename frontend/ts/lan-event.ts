@@ -66,7 +66,7 @@ if (!lan) {
   const p = createElement("p");
   p.textContent = "LAN ikke funnet.";
   content.appendChild(p);
-} else if (new Date(lan.startDate) > new Date()) {
+} else if (new Date(lan.endDate) >= new Date()) {
   await renderUpcoming(lan);
 } else {
   const year = lan.startDate.substring(0, 4);

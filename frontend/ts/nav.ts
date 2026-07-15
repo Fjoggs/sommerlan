@@ -72,10 +72,10 @@ if (nav) {
 try {
   const res = await fetch("/api/lan/", { headers: authHeaders() });
   if (res.ok) {
-    const lans: { lanId: number; startDate: string }[] = await res.json();
+    const lans: { lanId: number; startDate: string; endDate: string }[] = await res.json();
     const today = new Date().toISOString().substring(0, 10);
     const upcoming = lans
-      .filter((l) => l.startDate > today)
+      .filter((l) => l.endDate >= today)
       .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
     document.querySelectorAll<HTMLAnchorElement>("a.nav-pre-lan").forEach((el) => {
       if (upcoming) {
