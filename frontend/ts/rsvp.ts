@@ -219,7 +219,7 @@ async function init() {
   if (!lans) return;
   const now = new Date();
   const upcoming = lans
-    .filter(l => new Date(l.startDate) > now)
+    .filter(l => new Date(l.endDate) >= now)
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
   if (!upcoming) { showError("Ingen kommende LAN funnet"); return; }
   lanId = upcoming.lanId;

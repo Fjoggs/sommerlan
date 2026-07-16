@@ -15,7 +15,7 @@ import (
 // if no upcoming LAN exists.
 func ComputeLanGateTime(db *sql.DB) time.Time {
 	var startDate string
-	err := db.QueryRow(`SELECT start_date FROM lan WHERE start_date >= date('now') ORDER BY start_date ASC LIMIT 1`).Scan(&startDate)
+	err := db.QueryRow(`SELECT start_date FROM lan WHERE end_date >= date('now') ORDER BY start_date ASC LIMIT 1`).Scan(&startDate)
 	if err == sql.ErrNoRows {
 		log.Println("No upcoming LAN in DB; site gate is open")
 		return time.Time{}
