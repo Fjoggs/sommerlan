@@ -439,20 +439,24 @@ func (h *LanHandlers) GetLanImages(w http.ResponseWriter, r *http.Request) {
 func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 	user, err := GetUserFromRequest(h.db, r)
 	if err != nil {
+		log.Printf("UploadLanImage: unauthorized: %v", err)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 	lanId, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
+		log.Printf("UploadLanImage: invalid lan id %q: %v", r.PathValue("id"), err)
 		http.Error(w, "invalid lan id", http.StatusBadRequest)
 		return
 	}
 	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d: failed to parse form: %v", user.Id, lanId, err)
 		http.Error(w, "failed to parse form", http.StatusBadRequest)
 		return
 	}
 	file, header, err := r.FormFile("image")
 	if err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d: no image provided: %v", user.Id, lanId, err)
 		http.Error(w, "no image provided", http.StatusBadRequest)
 		return
 	}
@@ -467,15 +471,18 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && n == 0 {
+		log.Printf("UploadLanImage user=%d lan=%d file=%q: could not read file: %v", user.Id, lanId, header.Filename, err)
 		http.Error(w, "could not read file", http.StatusBadRequest)
 		return
 	}
 	if _, err := file.Seek(0, 0); err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d file=%q: seek failed: %v", user.Id, lanId, header.Filename, err)
 		http.Error(w, "could not read file", http.StatusInternalServerError)
 		return
 	}
 	contentType := http.DetectContentType(buf[:n])
 	if !allowed[contentType] {
+		log.Printf("UploadLanImage user=%d lan=%d file=%q: unsupported content type %q", user.Id, lanId, header.Filename, contentType)
 		http.Error(w, "unsupported image type", http.StatusBadRequest)
 		return
 	}
@@ -485,6 +492,7 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 
 	uploadDir := fmt.Sprintf("%s/uploads/lan/%d", h.frontendPath, lanId)
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d: failed to create upload dir %q: %v", user.Id, lanId, uploadDir, err)
 		http.Error(w, "failed to create upload directory", http.StatusInternalServerError)
 		return
 	}
@@ -497,12 +505,14 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 	tmpPath := filepath.Join(uploadDir, base+origExt)
 	dst, err := os.Create(tmpPath)
 	if err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d: failed to create %q: %v", user.Id, lanId, tmpPath, err)
 		http.Error(w, "failed to save image", http.StatusInternalServerError)
 		return
 	}
 	if _, err := io.Copy(dst, file); err != nil {
 		dst.Close()
 		os.Remove(tmpPath)
+		log.Printf("UploadLanImage user=%d lan=%d: failed to write %q: %v", user.Id, lanId, tmpPath, err)
 		http.Error(w, "failed to write image", http.StatusInternalServerError)
 		return
 	}
@@ -522,14 +532,16 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 	fullPath := filepath.Join(uploadDir, filename)
 	if err := exec.Command("magick", tmpPath, "-auto-orient", "-quality", "92", fullPath).Run(); err != nil {
 		// magick unavailable or failed — keep original
+		log.Printf("UploadLanImage user=%d lan=%d: magick convert failed, keeping original %q: %v", user.Id, lanId, tmpPath, err)
 		filename = base + origExt
 		fullPath = tmpPath
 	}
 
 	thumbDir := filepath.Join(uploadDir, "thumbs")
-	if err := os.MkdirAll(thumbDir, 0755); err == nil {
-		// Generate thumbnail from original to avoid double compression
-		exec.Command("magick", tmpPath, "-thumbnail", "600x600>", "-auto-orient", "-quality", "92", filepath.Join(thumbDir, filename)).Run()
+	if err := os.MkdirAll(thumbDir, 0755); err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d: failed to create thumb dir %q: %v", user.Id, lanId, thumbDir, err)
+	} else if err := exec.Command("magick", tmpPath, "-thumbnail", "600x600>", "-auto-orient", "-quality", "92", filepath.Join(thumbDir, filename)).Run(); err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d: thumbnail generation failed for %q: %v", user.Id, lanId, filename, err)
 	}
 
 	if fullPath != tmpPath {
@@ -538,9 +550,11 @@ func (h *LanHandlers) UploadLanImage(w http.ResponseWriter, r *http.Request) {
 
 	img, err := database.AddLanImage(h.db, lanId, filename, user.Id, exifDate)
 	if err != nil {
+		log.Printf("UploadLanImage user=%d lan=%d file=%q: failed to save image record: %v", user.Id, lanId, filename, err)
 		http.Error(w, "failed to save image record", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("UploadLanImage user=%d lan=%d: saved %q (image id %d)", user.Id, lanId, filename, img.Id)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(img)
 }

@@ -1,5 +1,6 @@
 import { fetchById, fetchAll } from "./crud.js";
 import { requireAuth, authHeaders } from "./auth.js";
+import { showError } from "./errorHandler.js";
 import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
 import { BLOCKS, GAMES, RACES, renderCards, renderDinnerTable, buildPickerContent } from "./matrix.js";
@@ -1298,19 +1299,28 @@ function renderImageSection(
       uploadBtn.textContent = files.length > 1 ? `Laster... (${i + 1}/${files.length})` : "Laster...";
       const fd = new FormData();
       fd.append("image", files[i]);
-      const uploadRes = await fetch(`/api/lan/${lanId}/images/`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: fd,
-      });
-      if (uploadRes.ok) {
-        const img: LanImage = await uploadRes.json();
-        lanImageFilenames.add(img.filename);
-        const src = `/uploads/lan/${lanId}/${img.filename}`;
-        const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
-        const tweet = imageToTweet.get(img.filename);
-        carousel.push({ src, tweet });
-        grid.appendChild(buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected));
+      try {
+        const uploadRes = await fetch(`/api/lan/${lanId}/images/`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: fd,
+        });
+        if (uploadRes.ok) {
+          const img: LanImage = await uploadRes.json();
+          lanImageFilenames.add(img.filename);
+          const src = `/uploads/lan/${lanId}/${img.filename}`;
+          const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
+          const tweet = imageToTweet.get(img.filename);
+          carousel.push({ src, tweet });
+          grid.appendChild(buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected));
+        } else {
+          const body = await uploadRes.text().catch(() => "");
+          console.error(`Upload failed for ${files[i].name}: ${uploadRes.status} ${body}`);
+          showError(`Kunne ikke laste opp ${files[i].name}`);
+        }
+      } catch (err) {
+        console.error(`Upload failed for ${files[i].name}:`, err);
+        showError(`Kunne ikke laste opp ${files[i].name}`);
       }
     }
     uploadBtn.textContent = "+ Last opp";
