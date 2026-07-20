@@ -6,6 +6,7 @@ frontend/*.bak
 frontend/ts/*.bak
 frontend/css/*.bak
 backend/sommerlan.db
+backend/sommerlan.db.bak
 backend/backend
 backend/sommerlan
 backend/run.sh

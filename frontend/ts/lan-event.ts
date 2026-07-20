@@ -66,7 +66,7 @@ if (!lan) {
   const p = createElement("p");
   p.textContent = "LAN ikke funnet.";
   content.appendChild(p);
-} else if (new Date(lan.endDate) >= new Date()) {
+} else if (new Date(lan.startDate) > new Date()) {
   await renderUpcoming(lan);
 } else {
   const year = lan.startDate.substring(0, 4);
@@ -94,7 +94,7 @@ if (!lan) {
   // set of filenames currently on this LAN (for tweet cards to check)
   const lanImageFilenames = new Set(lanImages.map((i) => i.filename));
 
-  renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, lanQuotes, lanGuests);
+  await renderLan(lan, tweets, lanImages, imageToTweet, lanImageFilenames, lanQuotes, lanGuests);
 }
 
 
@@ -134,6 +134,22 @@ async function renderUpcoming(lan: LAN) {
     inv.textContent = lan.invitation;
     content.appendChild(inv);
   }
+
+  const rsvpRes = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+  const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
+  content.appendChild(buildRsvpSection(lan, rsvpEntries, false));
+}
+
+// Sign-up form + "Påmeldte" matrix, as a single collapsible accordion section
+// like the other event-page sections. Used both for events that haven't
+// started yet and, alongside the rest of the page content, for ongoing ones.
+function buildRsvpSection(lan: LAN, rsvpEntries: RsvpEntry[], startCollapsed: boolean): HTMLElement {
+  const section = createElement("section") as HTMLElement;
+  section.className = startCollapsed ? "event-section collapsed" : "event-section";
+  section.id = "event-rsvp";
+  const h2 = createElement("h2");
+  h2.innerHTML = `<span class="hash">#</span>Rsvp`;
+  section.appendChild(h2);
 
   // State
   const selectedDates = new Set<string>();
@@ -177,17 +193,16 @@ async function renderUpcoming(lan: LAN) {
   }
 
   // Initial sign-up form (hidden once RSVPed)
-  const formSection = createElement("section") as HTMLElement;
-  formSection.className = "event-section";
+  const formWrap = createElement("div") as HTMLDivElement;
   const pickerContainer = createElement("div") as HTMLDivElement;
-  formSection.appendChild(pickerContainer);
+  formWrap.appendChild(pickerContainer);
   const submitBtn = createElement("button") as HTMLButtonElement;
   submitBtn.type = "button";
   submitBtn.disabled = true;
   submitBtn.className = "inactive";
   submitBtn.textContent = "Snakkes på LAN";
-  formSection.appendChild(submitBtn);
-  content.appendChild(formSection);
+  formWrap.appendChild(submitBtn);
+  section.appendChild(formWrap);
 
   function updateSubmitBtn() {
     const canSubmit = selectedDates.size > 0;
@@ -202,18 +217,11 @@ async function renderUpcoming(lan: LAN) {
     pickerContainer.appendChild(buildPickerContent(selectedDates, dinnerDates, me, updateSubmitBtn, () => onDateToggle));
   }
 
-  // Påmeldte section
-  const matrixSection = createElement("section") as HTMLElement;
-  matrixSection.className = "event-section";
-  const matrixH2 = createElement("h2");
-  matrixH2.innerHTML = `<span class="hash">#</span>Påmeldte`;
-  matrixSection.appendChild(matrixH2);
   const matrixContainer = createElement("div") as HTMLDivElement;
-  matrixSection.appendChild(matrixContainer);
+  section.appendChild(matrixContainer);
   const dinnerContainer = createElement("div") as HTMLDivElement;
   dinnerContainer.className = "dinner-table-wrap";
-  matrixSection.appendChild(dinnerContainer);
-  content.appendChild(matrixSection);
+  section.appendChild(dinnerContainer);
 
   function refreshMatrix(entries: RsvpEntry[]) {
     matrixContainer.innerHTML = "";
@@ -263,7 +271,7 @@ async function renderUpcoming(lan: LAN) {
         onDateToggle = null;
         refreshMatrix(updated);
         if (dates.length === 0) {
-          formSection.style.display = "";
+          formWrap.style.display = "";
           refreshPicker();
           updateSubmitBtn();
         }
@@ -278,15 +286,11 @@ async function renderUpcoming(lan: LAN) {
     card.appendChild(actions);
   }
 
-  // Fetch & render
-  const rsvpRes = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
-  const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
   const mine = rsvpEntries.find(e => e.userId === me!.id);
-
   if (mine) {
     for (const date of mine.dates) selectedDates.add(date);
     for (const date of (mine.dinnerDates ?? [])) dinnerDates.add(date);
-    formSection.style.display = "none";
+    formWrap.style.display = "none";
   } else {
     for (const date of mainDates) dinnerDates.add(date);
   }
@@ -304,15 +308,17 @@ async function renderUpcoming(lan: LAN) {
       const updated = await postRsvp(dates);
       submitBtn.textContent = "Snakkes på LAN";
       refreshMatrix(updated);
-      formSection.style.display = "none";
+      formWrap.style.display = "none";
     } catch {
       submitBtn.textContent = "Feil – prøv igjen";
       submitBtn.disabled = false;
     }
   });
+
+  return section;
 }
 
-function renderLan(
+async function renderLan(
   lan: LAN,
   tweets: TweetEntry[],
   lanImages: LanImage[],
@@ -406,6 +412,12 @@ function renderLan(
   invitationDisplay.style.display = lan.invitation ? "" : "none";
   content.appendChild(invitationDisplay);
   if (lan.isRomjulsLAN) content.classList.add("romjulslan");
+
+  if (isHappening) {
+    const rsvpRes = await fetch(`/api/lan/${lan.lanId}/rsvp/`, { headers: authHeaders() });
+    const rsvpEntries: RsvpEntry[] = rsvpRes.ok ? await rsvpRes.json() : [];
+    content.appendChild(buildRsvpSection(lan, rsvpEntries, true));
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;

@@ -924,6 +924,22 @@ header {
   padding-bottom: 3rem;
 }
 
+/* Fixed width regardless of how much content an event has - otherwise
+   #content shrink-wraps to its widest visible child and the page's width
+   (and the prev/next nav arrows) jumps around between events, and when the
+   RSVP accordion collapses/expands. 960px is wide enough to fit the RSVP
+   day-picker's 13 day badges across all 3 date blocks on one row without
+   wrapping. Still responsive: .page-container is width:100% under that cap,
+   so it shrinks normally (and the day-picker wraps as needed) on small
+   viewports. */
+#lan-event-main {
+  max-width: 960px;
+}
+
+#lan-event-main > #content {
+  width: 100%;
+}
+
 .event-subpage--narrow {
   max-width: 800px;
 }
