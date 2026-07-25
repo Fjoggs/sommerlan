@@ -2037,3 +2037,158 @@ a.event-pill:hover {
 .impersonate-btn:hover {
   background: color-mix(in srgb, oklch(0.7 0.15 45) 15%, transparent);
 }
+
+/* Shopping lists */
+.shopping-new-list-row {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 600px;
+}
+
+.shopping-new-list-row input {
+  flex: 1;
+}
+
+.shopping-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.shopping-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.shopping-list-card {
+  border: 1px solid var(--border-muted);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  background: var(--bg-light);
+}
+
+.shopping-list-card.completed {
+  opacity: 0.75;
+}
+
+.shopping-list-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.shopping-list-name {
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+}
+
+.shopping-list-name:hover {
+  color: var(--primary);
+}
+
+.shopping-list-count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.shopping-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shopping-toggle-btn {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.shopping-delete-list-btn,
+.shopping-item-delete {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0.2rem 0.5rem;
+  min-width: unset;
+}
+
+.shopping-delete-list-btn:hover,
+.shopping-item-delete:hover {
+  background: transparent;
+  color: var(--danger);
+  box-shadow: none;
+}
+
+.shopping-list-body {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-muted);
+}
+
+.shopping-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.shopping-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.shopping-item-row.checked .shopping-item-name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.shopping-item-name {
+  flex: 1;
+}
+
+.shopping-qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.shopping-qty-btn {
+  padding: 0.1rem 0.6rem;
+  font-size: 1rem;
+  min-width: unset;
+}
+
+.shopping-qty-input {
+  width: 3rem;
+  text-align: center;
+  padding: 0.2rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.shopping-add-item-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+
+.shopping-add-item-name {
+  flex: 1;
+}
+
+.shopping-add-item-row .shopping-qty-input {
+  width: 3.5rem;
+}
+
+.shopping-add-item-row button {
+  padding: 0.3rem 0.9rem;
+  font-size: 0.9rem;
+}

@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"fmt"
 	"net/http"
+
+	"backend/internal/database"
 )
 
 func requireAuth(db *sql.DB, r *http.Request) error {
@@ -22,6 +25,22 @@ func requireAdmin(db *sql.DB, r *http.Request) error {
 		return fmt.Errorf("forbidden")
 	}
 	return nil
+}
+
+// authOrService accepts either a normal user session (web UI) or the shared
+// service token (banterbot). Service calls may attribute the action to a
+// sommerlan user via the X-Discord-Id header; if that's absent or unmatched,
+// the returned user has Id == 0, meaning "attribute to no one".
+func authOrService(db *sql.DB, r *http.Request, serviceToken string) (*database.UserResponse, error) {
+	if serviceToken != "" && subtle.ConstantTimeCompare([]byte(ExtractToken(r)), []byte(serviceToken)) == 1 {
+		if discordId := r.Header.Get("X-Discord-Id"); discordId != "" {
+			if user, err := database.GetUserByDiscordId(db, discordId); err == nil {
+				return user, nil
+			}
+		}
+		return &database.UserResponse{}, nil
+	}
+	return GetUserFromRequest(db, r)
 }
 
 func EnableCORS(next http.HandlerFunc) http.HandlerFunc {

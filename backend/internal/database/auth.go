@@ -60,6 +60,31 @@ func UpsertDiscordUser(db *sql.DB, name, discordID string) (*UserResponse, error
 	return &user, nil
 }
 
+// GetDevBypassUser returns the first user in the DB with Role forced to
+// "admin", for use only when DISABLE_AUTH=true. Using a real row (rather
+// than a synthetic id) keeps created_by/foreign-key columns valid.
+func GetDevBypassUser(db *sql.DB) (*UserResponse, error) {
+	var user UserResponse
+	var color, color2, nickname sql.NullString
+	err := db.QueryRow(
+		`SELECT id, name, color, color2, nickname FROM user ORDER BY id ASC LIMIT 1`,
+	).Scan(&user.Id, &user.Name, &color, &color2, &nickname)
+	if err != nil {
+		return nil, fmt.Errorf("GetDevBypassUser: no user to impersonate: %w", err)
+	}
+	if color.Valid {
+		user.Color = color.String
+	}
+	if color2.Valid {
+		user.Color2 = color2.String
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
+	}
+	user.Role = "admin"
+	return &user, nil
+}
+
 func CreateSession(db *sql.DB, userID int) (string, error) {
 	token := uuid.New().String()
 	_, err := db.Exec(`INSERT INTO sessions(token, user_id, created_at) VALUES(?, ?, datetime('now'))`, token, userID)

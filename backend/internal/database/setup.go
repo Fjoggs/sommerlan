@@ -153,5 +153,24 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	_, _ = db.Exec(`ALTER TABLE rsvp ADD COLUMN wants_dinner INTEGER NOT NULL DEFAULT 1`)
 	_, _ = db.Exec(`ALTER TABLE sessions ADD COLUMN impersonate_user_id INTEGER REFERENCES user(id)`)
 
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS shopping_list (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'active',
+		created_by INTEGER REFERENCES user(id),
+		created_at TEXT DEFAULT (datetime('now')),
+		completed_at TEXT
+	)`)
+	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS shopping_item (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		list_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		quantity INTEGER NOT NULL DEFAULT 1,
+		checked INTEGER NOT NULL DEFAULT 0,
+		created_by INTEGER REFERENCES user(id),
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (list_id) REFERENCES shopping_list(id) ON DELETE CASCADE
+	)`)
+
 	return db, nil
 }

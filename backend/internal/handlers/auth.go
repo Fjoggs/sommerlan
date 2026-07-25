@@ -241,7 +241,14 @@ func ExtractToken(r *http.Request) string {
 }
 
 // GetUserFromRequest validates the session token and returns the current user.
+//
+// Local dev only: if DISABLE_AUTH=true, every request is treated as the
+// first user in the DB with admin rights, no token required. Never set this
+// in production - it skips all auth and admin checks site-wide.
 func GetUserFromRequest(db *sql.DB, r *http.Request) (*database.UserResponse, error) {
+	if os.Getenv("DISABLE_AUTH") == "true" {
+		return database.GetDevBypassUser(db)
+	}
 	token := ExtractToken(r)
 	if token == "" {
 		return nil, fmt.Errorf("no token")

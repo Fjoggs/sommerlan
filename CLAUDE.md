@@ -4,6 +4,10 @@
 
 - **Gate is enabled**: `countdown.go` uses `if !gateTime.IsZero() ...`. To disable for dev, prepend `false &&`.
 
+## Local dev
+
+- **Skip auth entirely**: set `DISABLE_AUTH=true` (e.g. in a local `.env`, picked up by `docker-compose.yaml`). `GetUserFromRequest` then returns the first user in the DB with `Role` forced to `"admin"`, no token/login needed anywhere — API calls, admin-only routes, and the countdown/LAN gate (which checks admin status) all pass. Logged loudly at startup as a warning. Never set this outside local dev.
+
 ## Key patterns
 
 **Year extraction**: always use `lan.startDate.substring(0, 4)` — never `new Date().getFullYear()` (NaN risk with partial dates).

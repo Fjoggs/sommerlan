@@ -80,3 +80,32 @@ export type UserProfile = {
   color2?: string;
   lans: UserLanEntry[];
 };
+
+export type ShoppingStatus = "active" | "completed";
+
+export type ShoppingItem = {
+  id: number;
+  listId: number;
+  name: string;
+  quantity: number;
+  checked: boolean;
+  createdAt: string;
+};
+
+export type ShoppingListSummary = {
+  id: number;
+  name: string;
+  status: ShoppingStatus;
+  createdAt: string;
+  completedAt?: string;
+  itemCount: number;
+};
+
+export type ShoppingListDetail = {
+  id: number;
+  name: string;
+  status: ShoppingStatus;
+  createdAt: string;
+  completedAt?: string;
+  items: ShoppingItem[];
+};

@@ -12,15 +12,12 @@ export const authHeaders = (): Record<string, string> => {
 
 export type AuthUser = { id: number; name: string; nickname?: string; color: string; color2?: string; role?: string; impersonating?: boolean };
 
+// Deliberately doesn't short-circuit on a missing localStorage token before
+// asking the server: with the backend's local-only DISABLE_AUTH bypass,
+// /api/auth/me/ can succeed with no token at all, letting the site work
+// without logging in. With a normal backend this just 401s as before.
 export async function requireAuth(): Promise<AuthUser | null> {
-  const token = getToken();
-  if (!token) {
-    redirectToLogin();
-    return null;
-  }
-  const res = await fetch(`${API_URL}/auth/me/`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetch(`${API_URL}/auth/me/`, { headers: authHeaders() });
   if (!res.ok) {
     clearToken();
     redirectToLogin();
@@ -30,11 +27,7 @@ export async function requireAuth(): Promise<AuthUser | null> {
 }
 
 export async function getAuthUser(): Promise<AuthUser | null> {
-  const token = getToken();
-  if (!token) return null;
-  const res = await fetch(`${API_URL}/auth/me/`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await fetch(`${API_URL}/auth/me/`, { headers: authHeaders() });
   if (!res.ok) { clearToken(); return null; }
   return res.json() as Promise<AuthUser>;
 }

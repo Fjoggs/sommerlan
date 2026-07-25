@@ -27,6 +27,10 @@ func main() {
 
 	log.Println("Connected to database")
 
+	if os.Getenv("DISABLE_AUTH") == "true" {
+		log.Println("WARNING: DISABLE_AUTH=true - all auth and admin checks are bypassed. Do not use in production.")
+	}
+
 	defer db.Close()
 
 	gateTime := handlers.ComputeLanGateTime(db)
@@ -40,6 +44,7 @@ func main() {
 	user := handlers.NewUserHandlers(db)
 	rsvp := handlers.NewRsvpHandlers(db)
 	auth := handlers.NewAuthHandlers(db)
+	shopping := handlers.NewShoppingHandlers(db, envOr("SHOPPING_SERVICE_TOKEN", ""))
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
@@ -141,6 +146,20 @@ func main() {
 	router.HandleFunc("DELETE /api/award/{id}/", handlers.EnableCORS(award.DeleteAwardWithId))
 	router.HandleFunc("OPTIONS /api/award/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 	router.HandleFunc("OPTIONS /api/award/{id}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+
+	// Shopping routes
+	router.HandleFunc("GET /api/shopping/", handlers.EnableCORS(shopping.GetShoppingLists))
+	router.HandleFunc("POST /api/shopping/", handlers.EnableCORS(shopping.CreateShoppingList))
+	router.HandleFunc("OPTIONS /api/shopping/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("GET /api/shopping/{id}/", handlers.EnableCORS(shopping.GetShoppingListById))
+	router.HandleFunc("PATCH /api/shopping/{id}/", handlers.EnableCORS(shopping.PatchShoppingList))
+	router.HandleFunc("DELETE /api/shopping/{id}/", handlers.EnableCORS(shopping.DeleteShoppingList))
+	router.HandleFunc("OPTIONS /api/shopping/{id}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("POST /api/shopping/{id}/items/", handlers.EnableCORS(shopping.AddShoppingItem))
+	router.HandleFunc("OPTIONS /api/shopping/{id}/items/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
+	router.HandleFunc("PATCH /api/shopping/{id}/items/{itemId}/", handlers.EnableCORS(shopping.PatchShoppingItem))
+	router.HandleFunc("DELETE /api/shopping/{id}/items/{itemId}/", handlers.EnableCORS(shopping.DeleteShoppingItem))
+	router.HandleFunc("OPTIONS /api/shopping/{id}/items/{itemId}/", handlers.EnableCORS(func(w http.ResponseWriter, r *http.Request) {}))
 
 	// User routes
 	router.HandleFunc("GET /api/user/stats/", handlers.EnableCORS(user.GetUserStats))
