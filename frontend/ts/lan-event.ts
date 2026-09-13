@@ -13,6 +13,7 @@ type LanImage = {
   filename: string;
   uploadedBy?: number;
   uploadedAt: string;
+  caption?: string | null;
   tags: Tag[];
 };
 
@@ -716,6 +717,22 @@ async function renderLan(
   editDatesRow.appendChild(fromInput); editDatesRow.appendChild(sep); editDatesRow.appendChild(toInput);
   editFields.appendChild(editDatesRow);
 
+  // Real start/end date inputs (used for happening/over status; falls back to year if unset)
+  const isPlaceholderDates = lan.startDate === `${year}-01-01` && lan.endDate === `${year}-12-31`;
+  const editRealDatesRow = createElement("div") as HTMLDivElement;
+  editRealDatesRow.className = "from-to-row";
+  const realStartInput = createElement("input") as HTMLInputElement;
+  realStartInput.type = "date"; realStartInput.className = "lan-text-input";
+  realStartInput.title = "Nøyaktig startdato (brukes til status som pågår/ferdig)";
+  realStartInput.value = isPlaceholderDates ? "" : lan.startDate;
+  const realToInput = createElement("input") as HTMLInputElement;
+  realToInput.type = "date"; realToInput.className = "lan-text-input";
+  realToInput.title = "Nøyaktig sluttdato (brukes til status som pågår/ferdig)";
+  realToInput.value = isPlaceholderDates ? "" : lan.endDate;
+  const realSep = createElement("span"); realSep.textContent = "–";
+  editRealDatesRow.appendChild(realStartInput); editRealDatesRow.appendChild(realSep); editRealDatesRow.appendChild(realToInput);
+  editFields.appendChild(editRealDatesRow);
+
   // Description textarea
   const descInput = createElement("textarea") as HTMLTextAreaElement;
   descInput.className = "lan-text-input";
@@ -925,8 +942,8 @@ async function renderLan(
     const fd = new FormData();
     fd.append("lanId", String(lan.lanId));
     fd.append("description", descInput.value);
-    fd.append("startDate", `${yearInput.value}-01-01`);
-    fd.append("endDate", `${yearInput.value}-12-31`);
+    fd.append("startDate", realStartInput.value || `${yearInput.value}-01-01`);
+    fd.append("endDate", realToInput.value || `${yearInput.value}-12-31`);
     fd.append("fromDisplay", fromInput.value);
     fd.append("toDisplay", toInput.value);
     const eraRadio = eraGroup.querySelector<HTMLInputElement>("input:checked");
@@ -1174,7 +1191,13 @@ function renderQuoteSection(lanId: number, quotes: LanQuote[]) {
   content.appendChild(section);
 }
 
-type CarouselEntry = { src: string; tweet: TweetEntry | undefined };
+type CarouselEntry = {
+  src: string;
+  tweet: TweetEntry | undefined;
+  imageId: number;
+  lanId: number;
+  caption: string | null;
+};
 
 function renderImageSection(
   lanId: number,
@@ -1216,7 +1239,7 @@ function renderImageSection(
     const src = `/uploads/lan/${lanId}/${img.filename}`;
     const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
     const tweet = imageToTweet.get(img.filename);
-    carousel.push({ src, tweet });
+    carousel.push({ src, tweet, imageId: img.id, lanId, caption: img.caption ?? null });
     const card = buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected);
     grid.appendChild(card);
   }
@@ -1311,7 +1334,7 @@ function renderImageSection(
           const src = `/uploads/lan/${lanId}/${img.filename}`;
           const thumbSrc = `/uploads/lan/${lanId}/thumbs/${img.filename}`;
           const tweet = imageToTweet.get(img.filename);
-          carousel.push({ src, tweet });
+          carousel.push({ src, tweet, imageId: img.id, lanId, caption: img.caption ?? null });
           grid.appendChild(buildImageCard(img, lanId, thumbSrc, grid, carousel, carousel.length - 1, selected));
         } else {
           const body = await uploadRes.text().catch(() => "");
@@ -1351,6 +1374,10 @@ function openLightbox(images: CarouselEntry[], startIndex: number) {
   imgAnchor.appendChild(imgEl);
   inner.appendChild(imgAnchor);
 
+  const captionBox = createElement("div");
+  captionBox.className = "lightbox-caption";
+  inner.appendChild(captionBox);
+
   const tweetBox = createElement("div");
   tweetBox.className = "lightbox-tweet";
   inner.appendChild(tweetBox);
@@ -1379,10 +1406,90 @@ function openLightbox(images: CarouselEntry[], startIndex: number) {
   closeBtn.textContent = "✕";
   overlay.appendChild(closeBtn);
 
+  function renderCaptionBox() {
+    const entry = images[current];
+    captionBox.innerHTML = "";
+
+    const textEl = createElement("p");
+    textEl.className = "lightbox-caption-text";
+    textEl.textContent = entry.caption || "+ Legg til bildetekst";
+    if (!entry.caption) textEl.classList.add("empty");
+    textEl.tabIndex = 0;
+    textEl.addEventListener("click", startEditingCaption);
+    textEl.addEventListener("keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Enter") startEditingCaption();
+    });
+    captionBox.appendChild(textEl);
+
+    function startEditingCaption() {
+      captionBox.innerHTML = "";
+
+      const textarea = createElement("textarea") as HTMLTextAreaElement;
+      textarea.className = "lightbox-caption-input";
+      textarea.value = entry.caption ?? "";
+      textarea.placeholder = "Skriv en bildetekst...";
+      textarea.rows = 2;
+      captionBox.appendChild(textarea);
+      textarea.focus();
+
+      const actions = createElement("div");
+      actions.className = "lightbox-caption-actions";
+      const saveBtn = createElement("button") as HTMLButtonElement;
+      saveBtn.type = "button";
+      saveBtn.className = "lightbox-caption-save";
+      saveBtn.textContent = "Lagre";
+      const cancelBtn = createElement("button") as HTMLButtonElement;
+      cancelBtn.type = "button";
+      cancelBtn.className = "lightbox-caption-cancel";
+      cancelBtn.textContent = "Avbryt";
+      actions.appendChild(saveBtn);
+      actions.appendChild(cancelBtn);
+      captionBox.appendChild(actions);
+
+      cancelBtn.addEventListener("click", () => renderCaptionBox());
+
+      const save = async () => {
+        const value = textarea.value.trim();
+        saveBtn.disabled = true;
+        try {
+          const res = await fetch(`/api/lan/${entry.lanId}/images/${entry.imageId}/caption/`, {
+            method: "PATCH",
+            headers: { ...authHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({ caption: value }),
+          });
+          if (res.ok) {
+            entry.caption = value || null;
+            renderCaptionBox();
+          } else {
+            showError("Kunne ikke lagre bildetekst");
+            saveBtn.disabled = false;
+          }
+        } catch (err) {
+          console.error("Failed to save caption:", err);
+          showError("Kunne ikke lagre bildetekst");
+          saveBtn.disabled = false;
+        }
+      };
+      saveBtn.addEventListener("click", save);
+      textarea.addEventListener("keydown", (e) => {
+        e.stopPropagation();
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          save();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          renderCaptionBox();
+        }
+      });
+    }
+  }
+
   function update() {
     const { src, tweet } = images[current];
     imgEl.src = src;
     imgAnchor.href = src;
+    renderCaptionBox();
 
     tweetBox.innerHTML = "";
     if (tweet) {

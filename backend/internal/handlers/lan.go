@@ -649,6 +649,40 @@ func (h *LanHandlers) RemoveImageTag(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *LanHandlers) SetLanImageCaption(w http.ResponseWriter, r *http.Request) {
+	if err := requireAuth(h.db, r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	lanId, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid lan id", http.StatusBadRequest)
+		return
+	}
+	imageId, err := strconv.Atoi(r.PathValue("imageId"))
+	if err != nil {
+		http.Error(w, "invalid image id", http.StatusBadRequest)
+		return
+	}
+	dbLanId, _, err := database.GetLanImageFilename(h.db, imageId)
+	if err != nil || dbLanId != lanId {
+		http.Error(w, "image not found", http.StatusNotFound)
+		return
+	}
+	var body struct {
+		Caption string `json:"caption"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if err := database.SetLanImageCaption(h.db, imageId, body.Caption); err != nil {
+		http.Error(w, "failed to set caption", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *LanHandlers) ReorderLanImages(w http.ResponseWriter, r *http.Request) {
 	if err := requireAdmin(h.db, r); err != nil {
 		http.Error(w, err.Error(), http.StatusForbidden)

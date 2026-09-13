@@ -135,6 +135,27 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   fromToRow.appendChild(separator);
   fromToRow.appendChild(toInput);
 
+  const isPlaceholderDates = lan.startDate === `${lan.startDate.substring(0, 4)}-01-01` && lan.endDate === `${lan.startDate.substring(0, 4)}-12-31`;
+  const realDateRow = createElement("div") as HTMLDivElement;
+  realDateRow.className = "from-to-row";
+  realDateRow.style.display = "none";
+  const realStartInput = createElement("input") as HTMLInputElement;
+  realStartInput.type = "date";
+  realStartInput.className = "lan-text-input";
+  realStartInput.title = "Nøyaktig startdato (brukes til status som pågår/ferdig)";
+  realStartInput.value = isPlaceholderDates ? "" : lan.startDate;
+  const realDateSeparator = createElement("span");
+  realDateSeparator.textContent = "–";
+  realDateSeparator.className = "date-separator";
+  const realEndInput = createElement("input") as HTMLInputElement;
+  realEndInput.type = "date";
+  realEndInput.className = "lan-text-input";
+  realEndInput.title = "Nøyaktig sluttdato (brukes til status som pågår/ferdig)";
+  realEndInput.value = isPlaceholderDates ? "" : lan.endDate;
+  realDateRow.appendChild(realStartInput);
+  realDateRow.appendChild(realDateSeparator);
+  realDateRow.appendChild(realEndInput);
+
   const buildDatesText = (from: string, to: string) => {
     if (from && to && from === to) return `( ${from} )`;
     if (from && to) return `${from} – ${to}`;
@@ -242,6 +263,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     header.style.display = "";
     yearInput.style.display = "none";
     fromToRow.style.display = "none";
+    realDateRow.style.display = "none";
     descriptionDisplay.style.display = "";
     invitationDisplay.style.display = lan.invitation ? "" : "none";
     descriptionInput.style.display = "none";
@@ -316,6 +338,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     yearInput.style.display = "block";
     datesDisplay.style.display = "none";
     fromToRow.style.display = "flex";
+    realDateRow.style.display = "flex";
     descriptionDisplay.style.display = "none";
     invitationDisplay.style.display = "none";
     descriptionInput.style.display = "block";
@@ -357,8 +380,8 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
     formData.append("lanId", lan.lanId.toString());
     formData.append("description", descriptionInput.value);
     formData.append("invitation", invitationInput.value);
-    formData.append("startDate", `${yearInput.value}-01-01`);
-    formData.append("endDate", `${yearInput.value}-12-31`);
+    formData.append("startDate", realStartInput.value || `${yearInput.value}-01-01`);
+    formData.append("endDate", realEndInput.value || `${yearInput.value}-12-31`);
     formData.append("fromDisplay", fromInput.value);
     formData.append("toDisplay", toInput.value);
     const checkedRadio = eventTypeGroup.querySelector<HTMLInputElement>("input:checked");
@@ -447,6 +470,7 @@ const buildEntry = async (lan: LAN, firstTimers: Set<number> = new Set(), tweetC
   }
 
   container.appendChild(fromToRow);
+  container.appendChild(realDateRow);
   container.appendChild(descriptionDisplay);
   container.appendChild(descriptionInput);
   container.appendChild(invitationInput);
@@ -918,11 +942,30 @@ const buildNewEntry = async (): Promise<void> => {
   fromToRow.appendChild(separator);
   fromToRow.appendChild(toInput);
 
+  const realDateRow = createElement("div") as HTMLDivElement;
+  realDateRow.className = "from-to-row";
+  realDateRow.style.display = "flex";
+  const realStartInput = createElement("input") as HTMLInputElement;
+  realStartInput.type = "date";
+  realStartInput.className = "lan-text-input";
+  realStartInput.title = "Nøyaktig startdato (brukes til status som pågår/ferdig)";
+  const realDateSeparator = createElement("span");
+  realDateSeparator.textContent = "–";
+  realDateSeparator.className = "date-separator";
+  const realEndInput = createElement("input") as HTMLInputElement;
+  realEndInput.type = "date";
+  realEndInput.className = "lan-text-input";
+  realEndInput.title = "Nøyaktig sluttdato (brukes til status som pågår/ferdig)";
+  realDateRow.appendChild(realStartInput);
+  realDateRow.appendChild(realDateSeparator);
+  realDateRow.appendChild(realEndInput);
+
   hContainer.appendChild(headerLeft);
 
   container.appendChild(hContainer);
 
   container.appendChild(fromToRow);
+  container.appendChild(realDateRow);
 
   const descriptionInput = createElement("input") as HTMLInputElement;
   descriptionInput.className = "lan-text-input";
@@ -1072,8 +1115,8 @@ const buildNewEntry = async (): Promise<void> => {
 
     const formData = new FormData();
     formData.append("description", descriptionInput.value);
-    formData.append("startDate", `${yearInput.value}-01-01`);
-    formData.append("endDate", `${yearInput.value}-12-31`);
+    formData.append("startDate", realStartInput.value || `${yearInput.value}-01-01`);
+    formData.append("endDate", realEndInput.value || `${yearInput.value}-12-31`);
     formData.append("fromDisplay", fromInput.value);
     formData.append("toDisplay", toInput.value);
     formData.append("event", eventType);

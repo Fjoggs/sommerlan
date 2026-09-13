@@ -1374,6 +1374,50 @@ a.event-pill:hover {
   gap: 0.5rem;
 }
 
+.lightbox-caption {
+  width: 100%;
+}
+
+.lightbox-caption-text {
+  margin: 0;
+  padding: 0.35rem 0.1rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+  border-radius: var(--border-radius);
+  transition: background-color 0.15s ease;
+}
+
+.lightbox-caption-text:hover {
+  background-color: var(--bg-light);
+}
+
+.lightbox-caption-text.empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.lightbox-caption-input {
+  width: 100%;
+  resize: vertical;
+  background-color: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-color, var(--bg-light));
+  border-radius: var(--border-radius);
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.lightbox-caption-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
 .lightbox-tweet-meta {
   display: flex;
   justify-content: space-between;

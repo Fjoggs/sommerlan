@@ -912,12 +912,13 @@ type LanImage struct {
 	UploadedBy int     `json:"uploadedBy,omitempty"`
 	UploadedAt string  `json:"uploadedAt"`
 	ExifDate   *string `json:"exifDate,omitempty"`
+	Caption    *string `json:"caption,omitempty"`
 	Tags       []Tag   `json:"tags"`
 }
 
 func GetLanImages(db *sql.DB, lanId int) ([]LanImage, error) {
 	rows, err := db.Query(
-		"SELECT id, lan_id, filename, uploaded_by, uploaded_at, exif_date FROM lan_images WHERE lan_id = ? ORDER BY sort_order ASC, uploaded_at ASC",
+		"SELECT id, lan_id, filename, uploaded_by, uploaded_at, exif_date, caption FROM lan_images WHERE lan_id = ? ORDER BY sort_order ASC, uploaded_at ASC",
 		lanId,
 	)
 	if err != nil {
@@ -930,7 +931,8 @@ func GetLanImages(db *sql.DB, lanId int) ([]LanImage, error) {
 		var img LanImage
 		var uploadedBy sql.NullInt64
 		var exifDate sql.NullString
-		if err := rows.Scan(&img.Id, &img.LanId, &img.Filename, &uploadedBy, &img.UploadedAt, &exifDate); err != nil {
+		var caption sql.NullString
+		if err := rows.Scan(&img.Id, &img.LanId, &img.Filename, &uploadedBy, &img.UploadedAt, &exifDate, &caption); err != nil {
 			return nil, err
 		}
 		if uploadedBy.Valid {
@@ -938,6 +940,9 @@ func GetLanImages(db *sql.DB, lanId int) ([]LanImage, error) {
 		}
 		if exifDate.Valid {
 			img.ExifDate = &exifDate.String
+		}
+		if caption.Valid {
+			img.Caption = &caption.String
 		}
 		img.Tags = []Tag{}
 		imageIdx[img.Id] = len(images)
@@ -980,19 +985,28 @@ func AddLanImage(db *sql.DB, lanId int, filename string, uploadedBy int, exifDat
 	var img LanImage
 	var uploadedByNull sql.NullInt64
 	var exifDateNull sql.NullString
+	var captionNull sql.NullString
 	row := db.QueryRow(
-		"SELECT id, lan_id, filename, uploaded_by, uploaded_at, exif_date FROM lan_images WHERE id = ?",
+		"SELECT id, lan_id, filename, uploaded_by, uploaded_at, exif_date, caption FROM lan_images WHERE id = ?",
 		id,
 	)
-	_ = row.Scan(&img.Id, &img.LanId, &img.Filename, &uploadedByNull, &img.UploadedAt, &exifDateNull)
+	_ = row.Scan(&img.Id, &img.LanId, &img.Filename, &uploadedByNull, &img.UploadedAt, &exifDateNull, &captionNull)
 	if uploadedByNull.Valid {
 		img.UploadedBy = int(uploadedByNull.Int64)
 	}
 	if exifDateNull.Valid {
 		img.ExifDate = &exifDateNull.String
 	}
+	if captionNull.Valid {
+		img.Caption = &captionNull.String
+	}
 	img.Tags = []Tag{}
 	return img, nil
+}
+
+func SetLanImageCaption(db *sql.DB, imageId int, caption string) error {
+	_, err := db.Exec("UPDATE lan_images SET caption = ? WHERE id = ?", caption, imageId)
+	return err
 }
 
 func GetAllTags(db *sql.DB) ([]Tag, error) {

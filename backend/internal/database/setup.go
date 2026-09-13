@@ -152,6 +152,7 @@ func InitDB(dbPath string) (*sql.DB, error) {
 	_, _ = db.Exec(`UPDATE sessions SET created_at = datetime('now') WHERE created_at IS NULL`)
 	_, _ = db.Exec(`ALTER TABLE rsvp ADD COLUMN wants_dinner INTEGER NOT NULL DEFAULT 1`)
 	_, _ = db.Exec(`ALTER TABLE sessions ADD COLUMN impersonate_user_id INTEGER REFERENCES user(id)`)
+	_, _ = db.Exec(`ALTER TABLE lan_images ADD COLUMN caption TEXT`)
 
 	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS shopping_list (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
