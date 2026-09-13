@@ -1,7 +1,8 @@
 import { requireAuth, authHeaders } from "./auth.js";
 import { createElement } from "./utils.js";
 import { showError } from "./errorHandler.js";
-import type { ShoppingItem, ShoppingListDetail, ShoppingListSummary } from "./types.js";
+import { fetchAll } from "./crud.js";
+import type { LAN, ShoppingItem, ShoppingListDetail, ShoppingListSummary } from "./types.js";
 
 const API_URL = "/api";
 
@@ -13,6 +14,32 @@ content.style.width = "100%";
 
 const detailCache = new Map<number, ShoppingListDetail>();
 const expanded = new Set<number>();
+const collapsedSections = new Set<string>(["Historikk"]);
+
+const lans = ((await fetchAll<LAN>("lan")) ?? []).sort((a, b) => b.startDate.localeCompare(a.startDate));
+const lanById = new Map(lans.map((l) => [l.lanId, l]));
+
+function lanLabel(lan: LAN): string {
+  return `${lan.isRomjulsLAN ? "RomjulsLAN" : "SommerLAN"} ${lan.startDate.substring(0, 4)}`;
+}
+
+// Mirrors frontpage.ts's isHappening/isUpcoming logic, so "current" here means the same
+// thing it does everywhere else on the site.
+function currentOrUpcomingLan(): LAN | undefined {
+  const now = new Date();
+  const happening = lans.find((l) => new Date(l.startDate) <= now && new Date(l.endDate) >= now);
+  if (happening) return happening;
+
+  const upcoming = lans
+    .filter((l) => new Date(l.startDate) > now)
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  if (upcoming.length > 0) return upcoming[0];
+
+  const past = lans
+    .filter((l) => new Date(l.endDate) < now)
+    .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime());
+  return past[0];
+}
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T | null> {
   try {
@@ -42,16 +69,18 @@ async function loadListDetail(id: number, force = false): Promise<ShoppingListDe
 }
 
 async function render() {
-  content.innerHTML = "";
   const lists = await loadLists();
 
-  content.appendChild(buildCreateForm());
+  const fragment = document.createDocumentFragment();
+  fragment.appendChild(buildCreateForm());
 
   const active = lists.filter((l) => l.status === "active");
   const history = lists.filter((l) => l.status === "completed");
 
-  content.appendChild(await buildListSection("Handlelister", active, false));
-  content.appendChild(await buildListSection("Historikk", history, true));
+  fragment.appendChild(await buildListSection("Handlelister", active));
+  fragment.appendChild(await buildHistorySection(history));
+
+  content.replaceChildren(fragment);
 }
 
 function buildCreateForm(): HTMLElement {
@@ -63,24 +92,27 @@ function buildCreateForm(): HTMLElement {
   section.appendChild(h2);
 
   const row = createElement("div") as HTMLDivElement;
-  row.className = "shopping-new-list-row";
+  row.className = "quote-add-form shopping-new-list-row";
 
   const input = createElement("input") as HTMLInputElement;
   input.type = "text";
+  input.className = "lan-text-input";
   input.placeholder = "Navn på liste, f.eks. \"Sommerlan 2027\"";
 
   const button = createElement("button") as HTMLButtonElement;
   button.type = "button";
+  button.className = "quote-submit-btn";
   button.textContent = "Ny liste";
 
   const submit = async () => {
     const name = input.value.trim();
     if (!name) return;
     button.disabled = true;
+    const lanId = currentOrUpcomingLan()?.lanId ?? null;
     const created = await apiFetch<ShoppingListDetail>("shopping/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, lanId }),
     });
     button.disabled = false;
     if (created) {
@@ -105,15 +137,18 @@ function buildCreateForm(): HTMLElement {
 async function buildListSection(
   title: string,
   lists: ShoppingListSummary[],
-  collapsedByDefault: boolean,
 ): Promise<HTMLElement> {
   const section = createElement("section") as HTMLElement;
   section.className = "event-section shopping-section";
-  if (collapsedByDefault) section.classList.add("collapsed");
+  if (collapsedSections.has(title)) section.classList.add("collapsed");
 
   const h2 = createElement("h2") as HTMLHeadingElement;
   h2.innerHTML = `<span class="hash">#</span>${title} <span class="section-count">${lists.length}</span>`;
-  h2.addEventListener("click", () => section.classList.toggle("collapsed"));
+  h2.addEventListener("click", () => {
+    if (collapsedSections.has(title)) collapsedSections.delete(title);
+    else collapsedSections.add(title);
+    section.classList.toggle("collapsed");
+  });
   section.appendChild(h2);
 
   if (lists.length === 0) {
@@ -127,13 +162,71 @@ async function buildListSection(
   const container = createElement("div") as HTMLDivElement;
   container.className = "shopping-list-container";
   for (const list of lists) {
-    container.appendChild(await buildListCard(list));
+    container.appendChild(await buildListCard(list, false));
   }
   section.appendChild(container);
   return section;
 }
 
-async function buildListCard(summary: ShoppingListSummary): Promise<HTMLElement> {
+async function buildHistorySection(lists: ShoppingListSummary[]): Promise<HTMLElement> {
+  const title = "Historikk";
+  const section = createElement("section") as HTMLElement;
+  section.className = "event-section shopping-section";
+  if (collapsedSections.has(title)) section.classList.add("collapsed");
+
+  const h2 = createElement("h2") as HTMLHeadingElement;
+  h2.innerHTML = `<span class="hash">#</span>${title} <span class="section-count">${lists.length}</span>`;
+  h2.addEventListener("click", () => {
+    if (collapsedSections.has(title)) collapsedSections.delete(title);
+    else collapsedSections.add(title);
+    section.classList.toggle("collapsed");
+  });
+  section.appendChild(h2);
+
+  if (lists.length === 0) {
+    const empty = createElement("p") as HTMLParagraphElement;
+    empty.className = "shopping-empty";
+    empty.textContent = "Ingen fullførte lister enda.";
+    section.appendChild(empty);
+    return section;
+  }
+
+  const groups = new Map<number | null, ShoppingListSummary[]>();
+  for (const list of lists) {
+    const key = list.lanId ?? null;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(list);
+  }
+
+  const sortedKeys = [...groups.keys()].sort((a, b) => {
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return (lanById.get(b)?.startDate ?? "").localeCompare(lanById.get(a)?.startDate ?? "");
+  });
+
+  for (const key of sortedKeys) {
+    const group = createElement("div") as HTMLDivElement;
+    group.className = "shopping-history-group";
+
+    const groupTitle = createElement("h3") as HTMLHeadingElement;
+    groupTitle.className = "shopping-history-group-title";
+    const lan = key !== null ? lanById.get(key) : undefined;
+    groupTitle.textContent = lan ? lanLabel(lan) : "Uten LAN";
+    group.appendChild(groupTitle);
+
+    const container = createElement("div") as HTMLDivElement;
+    container.className = "shopping-list-container";
+    for (const list of groups.get(key)!) {
+      container.appendChild(await buildListCard(list, true));
+    }
+    group.appendChild(container);
+    section.appendChild(group);
+  }
+
+  return section;
+}
+
+async function buildListCard(summary: ShoppingListSummary, showLan: boolean): Promise<HTMLElement> {
   const card = createElement("div") as HTMLDivElement;
   card.className = "shopping-list-card";
   if (summary.status === "completed") card.classList.add("completed");
@@ -145,10 +238,6 @@ async function buildListCard(summary: ShoppingListSummary): Promise<HTMLElement>
   name.className = "shopping-list-name";
   name.textContent = summary.name;
   name.addEventListener("click", () => toggleExpanded(summary.id));
-
-  const count = createElement("span") as HTMLSpanElement;
-  count.className = "shopping-list-count";
-  count.textContent = `${summary.itemCount} ${summary.itemCount === 1 ? "vare" : "varer"}`;
 
   const actions = createElement("div") as HTMLDivElement;
   actions.className = "shopping-list-actions";
@@ -173,6 +262,26 @@ async function buildListCard(summary: ShoppingListSummary): Promise<HTMLElement>
     }
   });
 
+  const qtyToggleBtn = createElement("button") as HTMLButtonElement;
+  qtyToggleBtn.type = "button";
+  qtyToggleBtn.className = "shopping-toggle-btn";
+  qtyToggleBtn.textContent = summary.hideQuantity ? "Vis antall" : "Skjul antall";
+  qtyToggleBtn.title = "Mange varenavn inneholder allerede mengden, f.eks. \"24 stk cola\"";
+  qtyToggleBtn.addEventListener("click", async () => {
+    qtyToggleBtn.disabled = true;
+    const updated = await apiFetch<ShoppingListDetail>(`shopping/${summary.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hideQuantity: !summary.hideQuantity }),
+    });
+    if (updated) {
+      detailCache.set(updated.id, updated);
+      await render();
+    } else {
+      qtyToggleBtn.disabled = false;
+    }
+  });
+
   const deleteBtn = createElement("button") as HTMLButtonElement;
   deleteBtn.type = "button";
   deleteBtn.className = "shopping-delete-list-btn";
@@ -187,10 +296,17 @@ async function buildListCard(summary: ShoppingListSummary): Promise<HTMLElement>
   });
 
   actions.appendChild(toggleBtn);
+  actions.appendChild(qtyToggleBtn);
   actions.appendChild(deleteBtn);
 
   header.appendChild(name);
-  header.appendChild(count);
+  if (showLan) {
+    const lan = summary.lanId ? lanById.get(summary.lanId) : undefined;
+    const lanBadge = createElement("span") as HTMLSpanElement;
+    lanBadge.className = "shopping-list-lan";
+    lanBadge.textContent = lan ? lanLabel(lan) : "Uten LAN";
+    header.appendChild(lanBadge);
+  }
   header.appendChild(actions);
   card.appendChild(header);
 
@@ -231,6 +347,9 @@ function buildItemRow(list: ShoppingListDetail, item: ShoppingItem): HTMLElement
   row.className = "shopping-item-row";
   if (item.checked) row.classList.add("checked");
 
+  const checkboxLabel = createElement("label") as HTMLLabelElement;
+  checkboxLabel.className = "shopping-item-check";
+
   const checkbox = createElement("input") as HTMLInputElement;
   checkbox.type = "checkbox";
   checkbox.checked = item.checked;
@@ -248,10 +367,30 @@ function buildItemRow(list: ShoppingListDetail, item: ShoppingItem): HTMLElement
     }
     checkbox.disabled = list.status !== "active";
   });
+  checkboxLabel.appendChild(checkbox);
 
   const name = createElement("span") as HTMLSpanElement;
   name.className = "shopping-item-name";
   name.textContent = item.name;
+
+  if (list.hideQuantity) {
+    const deleteBtn = createElement("button") as HTMLButtonElement;
+    deleteBtn.type = "button";
+    deleteBtn.className = "shopping-delete-list-btn shopping-item-delete-btn";
+    deleteBtn.textContent = "×";
+    deleteBtn.title = "Fjern vare";
+    deleteBtn.disabled = list.status !== "active";
+    deleteBtn.addEventListener("click", async () => {
+      await apiFetch(`shopping/${list.id}/items/${item.id}/`, { method: "DELETE" });
+      detailCache.delete(list.id);
+      await render();
+    });
+
+    row.appendChild(deleteBtn);
+    row.appendChild(name);
+    row.appendChild(checkboxLabel);
+    return row;
+  }
 
   const stepper = createElement("div") as HTMLDivElement;
   stepper.className = "shopping-qty-stepper";
@@ -263,8 +402,8 @@ function buildItemRow(list: ShoppingListDetail, item: ShoppingItem): HTMLElement
   decBtn.disabled = list.status !== "active";
 
   const qtyInput = createElement("input") as HTMLInputElement;
-  qtyInput.type = "number";
-  qtyInput.min = "1";
+  qtyInput.type = "text";
+  qtyInput.inputMode = "numeric";
   qtyInput.className = "shopping-qty-input";
   qtyInput.value = String(item.quantity);
   qtyInput.disabled = list.status !== "active";
@@ -276,7 +415,12 @@ function buildItemRow(list: ShoppingListDetail, item: ShoppingItem): HTMLElement
   incBtn.disabled = list.status !== "active";
 
   const commitQuantity = async (quantity: number) => {
-    if (quantity < 1) quantity = 1;
+    if (quantity < 1) {
+      await apiFetch(`shopping/${list.id}/items/${item.id}/`, { method: "DELETE" });
+      detailCache.delete(list.id);
+      await render();
+      return;
+    }
     qtyInput.value = String(quantity);
     const updated = await apiFetch<ShoppingItem>(`shopping/${list.id}/items/${item.id}/`, {
       method: "PATCH",
@@ -288,29 +432,18 @@ function buildItemRow(list: ShoppingListDetail, item: ShoppingItem): HTMLElement
 
   decBtn.addEventListener("click", () => commitQuantity(item.quantity - 1));
   incBtn.addEventListener("click", () => commitQuantity(item.quantity + 1));
-  qtyInput.addEventListener("change", () => commitQuantity(parseInt(qtyInput.value, 10) || 1));
+  qtyInput.addEventListener("change", () => {
+    const parsed = parseInt(qtyInput.value, 10);
+    commitQuantity(Number.isNaN(parsed) ? item.quantity : parsed);
+  });
 
   stepper.appendChild(decBtn);
   stepper.appendChild(qtyInput);
   stepper.appendChild(incBtn);
 
-  const deleteBtn = createElement("button") as HTMLButtonElement;
-  deleteBtn.type = "button";
-  deleteBtn.className = "shopping-item-delete";
-  deleteBtn.id = `delete-shopping-item-${item.id}`;
-  deleteBtn.textContent = "×";
-  deleteBtn.title = "Fjern vare";
-  deleteBtn.hidden = list.status !== "active";
-  deleteBtn.addEventListener("click", async () => {
-    await apiFetch(`shopping/${list.id}/items/${item.id}/`, { method: "DELETE" });
-    detailCache.delete(list.id);
-    await render();
-  });
-
-  row.appendChild(checkbox);
-  row.appendChild(name);
   row.appendChild(stepper);
-  row.appendChild(deleteBtn);
+  row.appendChild(name);
+  row.appendChild(checkboxLabel);
   return row;
 }
 
@@ -321,23 +454,26 @@ function buildAddItemRow(list: ShoppingListDetail): HTMLElement {
   const nameInput = createElement("input") as HTMLInputElement;
   nameInput.type = "text";
   nameInput.placeholder = "Vare...";
-  nameInput.className = "shopping-add-item-name";
+  nameInput.className = "lan-text-input shopping-add-item-name";
 
-  const qtyInput = createElement("input") as HTMLInputElement;
-  qtyInput.type = "number";
-  qtyInput.min = "1";
-  qtyInput.value = "1";
-  qtyInput.className = "shopping-qty-input";
+  const qtyInput = list.hideQuantity ? null : (createElement("input") as HTMLInputElement);
+  if (qtyInput) {
+    qtyInput.type = "text";
+    qtyInput.inputMode = "numeric";
+    qtyInput.value = "1";
+    qtyInput.className = "shopping-qty-input";
+  }
 
   const addBtn = createElement("button") as HTMLButtonElement;
   addBtn.type = "button";
+  addBtn.className = "quote-submit-btn";
   addBtn.textContent = "Legg til";
 
   const submit = async () => {
     const name = nameInput.value.trim();
     if (!name) return;
     addBtn.disabled = true;
-    const quantity = parseInt(qtyInput.value, 10) || 1;
+    const quantity = qtyInput ? parseInt(qtyInput.value, 10) || 1 : 1;
     const added = await apiFetch<ShoppingItem>(`shopping/${list.id}/items/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -347,7 +483,7 @@ function buildAddItemRow(list: ShoppingListDetail): HTMLElement {
     if (added) {
       detailCache.delete(list.id);
       nameInput.value = "";
-      qtyInput.value = "1";
+      if (qtyInput) qtyInput.value = "1";
       await render();
     }
   };
@@ -357,8 +493,8 @@ function buildAddItemRow(list: ShoppingListDetail): HTMLElement {
     if (e.key === "Enter") submit();
   });
 
+  if (qtyInput) row.appendChild(qtyInput);
   row.appendChild(nameInput);
-  row.appendChild(qtyInput);
   row.appendChild(addBtn);
   return row;
 }

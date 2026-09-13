@@ -173,5 +173,8 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		FOREIGN KEY (list_id) REFERENCES shopping_list(id) ON DELETE CASCADE
 	)`)
 
+	_, _ = db.Exec(`ALTER TABLE shopping_list ADD COLUMN lan_id INTEGER REFERENCES lan(id)`)
+	_, _ = db.Exec(`ALTER TABLE shopping_list ADD COLUMN hide_quantity INTEGER NOT NULL DEFAULT 0`)
+
 	return db, nil
 }

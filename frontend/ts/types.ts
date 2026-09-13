@@ -99,6 +99,8 @@ export type ShoppingListSummary = {
   createdAt: string;
   completedAt?: string;
   itemCount: number;
+  lanId?: number;
+  hideQuantity: boolean;
 };
 
 export type ShoppingListDetail = {
@@ -108,4 +110,6 @@ export type ShoppingListDetail = {
   createdAt: string;
   completedAt?: string;
   items: ShoppingItem[];
+  lanId?: number;
+  hideQuantity: boolean;
 };

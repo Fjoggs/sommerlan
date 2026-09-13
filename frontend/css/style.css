@@ -2084,19 +2084,25 @@ a.event-pill:hover {
 
 /* Shopping lists */
 .shopping-new-list-row {
-  display: flex;
-  gap: 0.75rem;
-  width: 100%;
   max-width: 600px;
-}
-
-.shopping-new-list-row input {
-  flex: 1;
 }
 
 .shopping-empty {
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.shopping-history-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.shopping-history-group-title {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .shopping-list-container {
@@ -2133,9 +2139,12 @@ a.event-pill:hover {
   color: var(--primary);
 }
 
-.shopping-list-count {
-  font-size: 0.85rem;
+.shopping-list-lan {
+  font-size: 0.8rem;
   color: var(--text-muted);
+  background: var(--bg);
+  border-radius: var(--border-radius);
+  padding: 0.15rem 0.5rem;
 }
 
 .shopping-list-actions {
@@ -2145,23 +2154,21 @@ a.event-pill:hover {
 }
 
 .shopping-toggle-btn {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.85rem;
+  padding: 0.45rem 1rem;
+  font-size: 0.95rem;
 }
 
-.shopping-delete-list-btn,
-.shopping-item-delete {
+.shopping-delete-list-btn {
   background: transparent;
   color: var(--text-muted);
   border: none;
-  font-size: 1.2rem;
+  font-size: 1rem;
   line-height: 1;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.4rem;
   min-width: unset;
 }
 
-.shopping-delete-list-btn:hover,
-.shopping-item-delete:hover {
+.shopping-delete-list-btn:hover {
   background: transparent;
   color: var(--danger);
   box-shadow: none;
@@ -2185,6 +2192,21 @@ a.event-pill:hover {
   gap: 0.75rem;
 }
 
+.shopping-item-row .shopping-item-check {
+  --checkbox-size: 1.1rem;
+  padding: 0.65rem;
+  background-color: transparent;
+}
+
+.shopping-item-row .shopping-item-check:hover {
+  background-color: var(--bg-light);
+}
+
+.shopping-item-delete-btn {
+  padding: 0.65rem;
+  font-size: 1.2rem;
+}
+
 .shopping-item-row.checked .shopping-item-name {
   text-decoration: line-through;
   color: var(--text-muted);
@@ -2201,17 +2223,18 @@ a.event-pill:hover {
 }
 
 .shopping-qty-btn {
-  padding: 0.1rem 0.6rem;
+  padding: 0.15rem 0.4rem;
   font-size: 1rem;
-  min-width: unset;
+  min-width: 1.75rem;
+  text-align: center;
 }
 
 .shopping-qty-input {
   width: 3rem;
   text-align: center;
-  padding: 0.2rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
+  padding: 0.75rem 0.2rem;
+  border-radius: 8px;
+  border: 2px solid var(--border-muted);
   background: var(--bg);
   color: var(--text);
   font-family: inherit;
@@ -2220,19 +2243,16 @@ a.event-pill:hover {
 .shopping-add-item-row {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
 }
 
-.shopping-add-item-name {
+.shopping-add-item-row .shopping-add-item-name {
   flex: 1;
+  min-width: 8rem;
 }
 
 .shopping-add-item-row .shopping-qty-input {
   width: 3.5rem;
-}
-
-.shopping-add-item-row button {
-  padding: 0.3rem 0.9rem;
-  font-size: 0.9rem;
 }

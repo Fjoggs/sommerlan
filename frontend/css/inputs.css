@@ -1,6 +1,7 @@
 /* Inputs */
 input,
-textarea {
+textarea,
+select {
   background-color: var(--bg);
   border: 2px solid var(--border-muted);
   border-radius: 8px;
@@ -13,7 +14,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--primary);
   background-color: var(--bg-light);
   box-shadow: 0 0 0 3px oklch(0.6 0.2 250 / 0.1);
@@ -42,8 +44,8 @@ fieldset {
 
 label:has(input[type="checkbox"]:not(:disabled))::before {
   content: "";
-  width: 0.5em;
-  height: 0.5rem;
+  width: var(--checkbox-size, 0.5em);
+  height: var(--checkbox-size, 0.5rem);
   border: 2px solid var(--border);
   border-radius: 4px;
   display: inline-block;

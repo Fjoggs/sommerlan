@@ -18,21 +18,25 @@ type ShoppingItem struct {
 }
 
 type ShoppingListSummary struct {
-	Id          int    `json:"id"`
-	Name        string `json:"name"`
-	Status      string `json:"status"`
-	CreatedAt   string `json:"createdAt"`
-	CompletedAt string `json:"completedAt,omitempty"`
-	ItemCount   int    `json:"itemCount"`
+	Id           int    `json:"id"`
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	CreatedAt    string `json:"createdAt"`
+	CompletedAt  string `json:"completedAt,omitempty"`
+	ItemCount    int    `json:"itemCount"`
+	LanId        *int   `json:"lanId,omitempty"`
+	HideQuantity bool   `json:"hideQuantity"`
 }
 
 type ShoppingListDetail struct {
-	Id          int            `json:"id"`
-	Name        string         `json:"name"`
-	Status      string         `json:"status"`
-	CreatedAt   string         `json:"createdAt"`
-	CompletedAt string         `json:"completedAt,omitempty"`
-	Items       []ShoppingItem `json:"items"`
+	Id           int            `json:"id"`
+	Name         string         `json:"name"`
+	Status       string         `json:"status"`
+	CreatedAt    string         `json:"createdAt"`
+	CompletedAt  string         `json:"completedAt,omitempty"`
+	Items        []ShoppingItem `json:"items"`
+	LanId        *int           `json:"lanId,omitempty"`
+	HideQuantity bool           `json:"hideQuantity"`
 }
 
 func nullableUserId(userId *int) sql.NullInt64 {
@@ -40,6 +44,21 @@ func nullableUserId(userId *int) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 	return sql.NullInt64{Int64: int64(*userId), Valid: true}
+}
+
+func nullableLanId(lanId *int) sql.NullInt64 {
+	if lanId == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: int64(*lanId), Valid: true}
+}
+
+func lanIdPtr(n sql.NullInt64) *int {
+	if !n.Valid {
+		return nil
+	}
+	v := int(n.Int64)
+	return &v
 }
 
 func GetUserByDiscordId(db *sql.DB, discordId string) (*UserResponse, error) {
@@ -66,7 +85,7 @@ func GetUserByDiscordId(db *sql.DB, discordId string) (*UserResponse, error) {
 
 func GetShoppingLists(db *sql.DB) ([]ShoppingListSummary, error) {
 	rows, err := db.Query(
-		`SELECT l.id, l.name, l.status, l.created_at, COALESCE(l.completed_at, ''),
+		`SELECT l.id, l.name, l.status, l.created_at, COALESCE(l.completed_at, ''), l.lan_id, l.hide_quantity,
 		        (SELECT COUNT(*) FROM shopping_item i WHERE i.list_id = l.id)
 		 FROM shopping_list l
 		 ORDER BY l.created_at DESC`,
@@ -79,9 +98,11 @@ func GetShoppingLists(db *sql.DB) ([]ShoppingListSummary, error) {
 	lists := []ShoppingListSummary{}
 	for rows.Next() {
 		var l ShoppingListSummary
-		if err := rows.Scan(&l.Id, &l.Name, &l.Status, &l.CreatedAt, &l.CompletedAt, &l.ItemCount); err != nil {
+		var lanId sql.NullInt64
+		if err := rows.Scan(&l.Id, &l.Name, &l.Status, &l.CreatedAt, &l.CompletedAt, &lanId, &l.HideQuantity, &l.ItemCount); err != nil {
 			return nil, err
 		}
+		l.LanId = lanIdPtr(lanId)
 		lists = append(lists, l)
 	}
 	return lists, rows.Err()
@@ -111,10 +132,11 @@ func getShoppingItems(db *sql.DB, listId int) ([]ShoppingItem, error) {
 func GetShoppingListById(db *sql.DB, id int) (*ShoppingListDetail, error) {
 	var l ShoppingListDetail
 	var completedAt sql.NullString
+	var lanId sql.NullInt64
 	err := db.QueryRow(
-		`SELECT id, name, status, created_at, completed_at FROM shopping_list WHERE id = ?`,
+		`SELECT id, name, status, created_at, completed_at, lan_id, hide_quantity FROM shopping_list WHERE id = ?`,
 		id,
-	).Scan(&l.Id, &l.Name, &l.Status, &l.CreatedAt, &completedAt)
+	).Scan(&l.Id, &l.Name, &l.Status, &l.CreatedAt, &completedAt, &lanId, &l.HideQuantity)
 	if err == sql.ErrNoRows {
 		return nil, ErrShoppingNotFound
 	}
@@ -124,6 +146,7 @@ func GetShoppingListById(db *sql.DB, id int) (*ShoppingListDetail, error) {
 	if completedAt.Valid {
 		l.CompletedAt = completedAt.String
 	}
+	l.LanId = lanIdPtr(lanId)
 
 	items, err := getShoppingItems(db, id)
 	if err != nil {
@@ -133,10 +156,10 @@ func GetShoppingListById(db *sql.DB, id int) (*ShoppingListDetail, error) {
 	return &l, nil
 }
 
-func CreateShoppingList(db *sql.DB, name string, createdBy *int) (*ShoppingListDetail, error) {
+func CreateShoppingList(db *sql.DB, name string, createdBy *int, lanId *int) (*ShoppingListDetail, error) {
 	res, err := db.Exec(
-		`INSERT INTO shopping_list(name, status, created_by) VALUES(?, 'active', ?)`,
-		name, nullableUserId(createdBy),
+		`INSERT INTO shopping_list(name, status, created_by, lan_id) VALUES(?, 'active', ?, ?)`,
+		name, nullableUserId(createdBy), nullableLanId(lanId),
 	)
 	if err != nil {
 		return nil, err
@@ -147,6 +170,20 @@ func CreateShoppingList(db *sql.DB, name string, createdBy *int) (*ShoppingListD
 
 func RenameShoppingList(db *sql.DB, id int, name string) (*ShoppingListDetail, error) {
 	if _, err := db.Exec(`UPDATE shopping_list SET name = ? WHERE id = ?`, name, id); err != nil {
+		return nil, err
+	}
+	return GetShoppingListById(db, id)
+}
+
+func SetShoppingListLan(db *sql.DB, id int, lanId *int) (*ShoppingListDetail, error) {
+	if _, err := db.Exec(`UPDATE shopping_list SET lan_id = ? WHERE id = ?`, nullableLanId(lanId), id); err != nil {
+		return nil, err
+	}
+	return GetShoppingListById(db, id)
+}
+
+func SetShoppingListHideQuantity(db *sql.DB, id int, hideQuantity bool) (*ShoppingListDetail, error) {
+	if _, err := db.Exec(`UPDATE shopping_list SET hide_quantity = ? WHERE id = ?`, hideQuantity, id); err != nil {
 		return nil, err
 	}
 	return GetShoppingListById(db, id)

@@ -67,13 +67,14 @@ func (h *ShoppingHandlers) CreateShoppingList(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body struct {
-		Name string `json:"name"`
+		Name  string `json:"name"`
+		LanId *int   `json:"lanId"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Name == "" {
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
-	list, err := database.CreateShoppingList(h.db, body.Name, createdByPtr(user))
+	list, err := database.CreateShoppingList(h.db, body.Name, createdByPtr(user), body.LanId)
 	if err != nil {
 		writeShoppingError(w, err)
 		return
@@ -111,8 +112,10 @@ func (h *ShoppingHandlers) PatchShoppingList(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var body struct {
-		Name   *string `json:"name"`
-		Status *string `json:"status"`
+		Name         *string `json:"name"`
+		Status       *string `json:"status"`
+		LanId        *int    `json:"lanId"`
+		HideQuantity *bool   `json:"hideQuantity"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -122,6 +125,24 @@ func (h *ShoppingHandlers) PatchShoppingList(w http.ResponseWriter, r *http.Requ
 	var list *database.ShoppingListDetail
 	if body.Name != nil && *body.Name != "" {
 		list, err = database.RenameShoppingList(h.db, id, *body.Name)
+		if err != nil {
+			writeShoppingError(w, err)
+			return
+		}
+	}
+	if body.LanId != nil {
+		lanId := body.LanId
+		if *lanId == 0 {
+			lanId = nil
+		}
+		list, err = database.SetShoppingListLan(h.db, id, lanId)
+		if err != nil {
+			writeShoppingError(w, err)
+			return
+		}
+	}
+	if body.HideQuantity != nil {
+		list, err = database.SetShoppingListHideQuantity(h.db, id, *body.HideQuantity)
 		if err != nil {
 			writeShoppingError(w, err)
 			return
