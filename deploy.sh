@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SERVER="fjogen@192.168.88.249"
+SERVER="fjogen@strim"
 REPO="$(cd "$(dirname "$0")" && pwd)"
 
 echo "==> Building frontend"
