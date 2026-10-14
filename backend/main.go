@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -190,7 +191,7 @@ func main() {
 	// Serve frontend static files (catch-all, must be registered last)
 	router.Handle("/", handlers.NoCacheMiddleware(handlers.LanGateMiddleware(db, gateTime, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath))))))
 
-	addr := ":" + envOr("PORT", "3000")
+	addr := net.JoinHostPort(envOr("HOST", "127.0.0.1"), envOr("PORT", "3000"))
 	log.Println("Server listening on", addr)
 	log.Fatal(http.ListenAndServe(addr, router))
 }

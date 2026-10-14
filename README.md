@@ -39,39 +39,10 @@ Frontend is served as static files by the Go backend at `/`. No separate dev ser
 
 `dist/` is gitignored — always run `npm run build` after pulling or changing any `.ts` file.
 
-### Docker (production)
+### Server settings
 
-Single container, SQLite on the host. Create a `.env` at the repo root (copy values from `backend/run.sh`):
-
-```
-DISCORD_CLIENT_ID=...
-DISCORD_CLIENT_SECRET=...
-DISCORD_REDIRECT_URI=https://yourdomain/api/auth/discord/callback/
-DISCORD_GUILD_ID=...
-FRONTEND_URL=https://yourdomain
-```
-
-Then:
-
-```bash
-docker compose up -d --build
-```
-
-Or without Compose:
-
-```bash
-docker build -t sommerlan .
-docker run -d --name sommerlan -p 8080:8080 \
-  --user "$(id -u):$(id -g)" \
-  -v ./data:/data \
-  -v ./uploads:/app/frontend/uploads \
-  --env-file .env \
-  sommerlan
-```
-
-Volumes:
-- `./data/` → SQLite DB (`sommerlan.db`)
-- `./uploads/` → user-uploaded images (per-LAN subdirs + thumbs)
+- `HOST` — listen address. Default `127.0.0.1` (localhost only, for running behind a reverse proxy such as nginx). Set `0.0.0.0` to listen on all interfaces.
+- `PORT` — listen port (default `3000`).
 
 ## Project structure
 
