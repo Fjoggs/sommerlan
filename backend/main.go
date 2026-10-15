@@ -50,6 +50,7 @@ func main() {
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
 	router.HandleFunc("GET /api/countdown/", handlers.EnableCORS(handlers.CountdownHandler(gateTime)))
+	router.HandleFunc("GET /api/next-lan/", handlers.EnableCORS(handlers.NextLanHandler(db, envOr("SHOPPING_SERVICE_TOKEN", ""))))
 
 	// Auth routes
 	router.HandleFunc("GET /api/auth/discord/", auth.DiscordLogin)
