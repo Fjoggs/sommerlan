@@ -234,6 +234,8 @@
   color: var(--success);
 }
 
+.rsvp-submit:disabled,
+.rsvp-submit.inactive,
 #rsvp-submit:disabled,
 #rsvp-submit.inactive {
   background-color: transparent;
@@ -241,6 +243,31 @@
   color: var(--text-muted);
   box-shadow: none;
   cursor: not-allowed;
+}
+
+/* ── RSVP section on the event page ───────────────────────── */
+#event-rsvp {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+#event-rsvp > :empty {
+  display: none;
+}
+
+#event-rsvp > .dinner-table-wrap {
+  margin-top: 0;
+}
+
+.rsvp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.rsvp-form > .rsvp-submit {
+  align-self: flex-start;
 }
 
 /* ── Responsive matrix switching ─────────────────────────── */

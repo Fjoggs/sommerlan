@@ -197,12 +197,13 @@ function buildRsvpSection(lan: LAN, rsvpEntries: RsvpEntry[], startCollapsed: bo
 
   // Initial sign-up form (hidden once RSVPed)
   const formWrap = createElement("div") as HTMLDivElement;
+  formWrap.className = "rsvp-form";
   const pickerContainer = createElement("div") as HTMLDivElement;
   formWrap.appendChild(pickerContainer);
   const submitBtn = createElement("button") as HTMLButtonElement;
   submitBtn.type = "button";
   submitBtn.disabled = true;
-  submitBtn.className = "inactive";
+  submitBtn.className = "rsvp-submit inactive";
   submitBtn.textContent = "Snakkes på LAN";
   formWrap.appendChild(submitBtn);
   section.appendChild(formWrap);
