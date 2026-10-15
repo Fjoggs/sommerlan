@@ -3,7 +3,7 @@ import { requireAuth, authHeaders } from "./auth.js";
 import { showError } from "./errorHandler.js";
 import { LAN, User, Game, Award, LanGuest, LanQuote, RsvpEntry } from "./types.js";
 import { createElement, createStarIcon, buildSommerlanLogo } from "./utils.js";
-import { BLOCKS, GAMES, RACES, renderCards, renderDinnerTable, buildPickerContent } from "./matrix.js";
+import { getMainDates, setLanBlocks, GAMES, RACES, renderCards, renderDinnerTable, buildPickerContent } from "./matrix.js";
 
 type Tag = { id: number; name: string };
 
@@ -156,7 +156,8 @@ function buildRsvpSection(lan: LAN, rsvpEntries: RsvpEntry[], startCollapsed: bo
   // State
   const selectedDates = new Set<string>();
   const dinnerDates = new Set<string>();
-  const mainDates = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
+  setLanBlocks(lan.startDate, lan.endDate);
+  const mainDates = getMainDates();
   let onDateToggle: (() => void) | null = null;
 
   function applyUserColor(btn: HTMLButtonElement) {

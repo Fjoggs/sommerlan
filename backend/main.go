@@ -34,11 +34,6 @@ func main() {
 
 	defer db.Close()
 
-	gateTime := handlers.ComputeLanGateTime(db)
-	if !gateTime.IsZero() {
-		log.Printf("Site gate opens at %s", gateTime.Format("2006-01-02 15:04:05"))
-	}
-
 	lan := handlers.NewLanHandlers(db, frontendPath)
 	game := handlers.NewGameHandlers(db)
 	award := handlers.NewAwardHandlers(db)
@@ -49,7 +44,6 @@ func main() {
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /api/health/", handlers.EnableCORS(handlers.HealthHandler))
-	router.HandleFunc("GET /api/countdown/", handlers.EnableCORS(handlers.CountdownHandler(gateTime)))
 	router.HandleFunc("GET /api/next-lan/", handlers.EnableCORS(handlers.NextLanHandler(db, envOr("SHOPPING_SERVICE_TOKEN", ""))))
 
 	// Auth routes
@@ -190,7 +184,7 @@ func main() {
 	})
 
 	// Serve frontend static files (catch-all, must be registered last)
-	router.Handle("/", handlers.NoCacheMiddleware(handlers.LanGateMiddleware(db, gateTime, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath))))))
+	router.Handle("/", handlers.NoCacheMiddleware(handlers.RequireLoginMiddleware(db, handlers.CleanURLHandler(http.FileServer(http.Dir(frontendPath))))))
 
 	addr := net.JoinHostPort(envOr("HOST", "127.0.0.1"), envOr("PORT", "3000"))
 	log.Println("Server listening on", addr)

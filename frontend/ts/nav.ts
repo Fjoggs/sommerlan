@@ -1,5 +1,4 @@
 import { getAuthUser, authHeaders } from "./auth.js";
-import { LAN_START } from "./config.js";
 
 
 const me = await getAuthUser();
@@ -67,24 +66,3 @@ if (nav) {
     }
   });
 }
-
-// Wire up RSVP/Påmeldte nav links to the next upcoming LAN
-try {
-  const res = await fetch("/api/lan/", { headers: authHeaders() });
-  if (res.ok) {
-    const lans: { lanId: number; startDate: string; endDate: string }[] = await res.json();
-    const today = new Date().toISOString().substring(0, 10);
-    const upcoming = lans
-      .filter((l) => l.endDate >= today)
-      .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
-    document.querySelectorAll<HTMLAnchorElement>("a.nav-pre-lan").forEach((el) => {
-      if (upcoming) {
-        const url = new URL(el.href, location.href);
-        url.searchParams.set("lan", String(upcoming.lanId));
-        el.href = url.toString();
-      } else {
-        el.hidden = true;
-      }
-    });
-  }
-} catch { /* ignore */ }

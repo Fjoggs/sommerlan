@@ -1,4 +1,4 @@
-import { BLOCKS, renderMatrix } from "./matrix.js";
+import { BLOCKS, renderMatrix, setLanBlocks } from "./matrix.js";
 import type { RsvpEntry } from "./types.js";
 
 const SAMPLE: RsvpEntry[] = [
@@ -9,6 +9,9 @@ const SAMPLE: RsvpEntry[] = [
   { userId: 5, name: "Sindre", color: "#FF6E6E", dates: ["2026-07-18","2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-24"] },
   { userId: 6, name: "Aleksander", nickname: "Sander", color: "#C8A2FF", dates: ["2026-07-14","2026-07-15","2026-07-16","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-24","2026-07-25","2026-07-26"] },
 ];
+
+// Mock data below is for the 2026 event.
+setLanBlocks("2026-07-14", "2026-07-26");
 
 const allDates = BLOCKS.flatMap(b => b.dates as readonly string[]);
 

@@ -56,8 +56,8 @@ backend/
       setup.go                     — InitDB, schema, migrations (ALTER TABLE ... ADD COLUMN)
     handlers/
       auth.go                      — Discord OAuth flow, /api/auth/me/, UpdateMe
-      countdown.go                 — /api/countdown/ (serves lanStart date); LanGateMiddleware
-                                     gates all HTML to countdown.html before LAN starts
+      nextlan.go                   — /api/next-lan/ (next LAN name/start/end; user or bot token)
+      pages.go                     — NoCache, CleanURL and RequireLoginMiddleware (HTML → /login)
       lan.go                       — LAN CRUD + attend/unattend + images
       game.go                      — game CRUD + GetGameById
       user.go                      — user CRUD
@@ -68,14 +68,12 @@ frontend/
   index.html                       — main page (timeline of LAN events)
   lan-event.html                   — LAN event subpage (images, participants, quotes, games)
   game.html                        — game detail page
-  profile.html / rsvp.html / etc.
-  countdown.html                   — shown to unauthenticated/pre-LAN visitors
+  profile.html / etc.
   ts/
-    config.ts                      — fetches LAN_START from /api/countdown/ (single source of truth)
     frontpage.ts                   — LAN timeline, edit mode, attend/unattend, lifecycle phases
     lan-event.ts                   — event subpage: images, participants, quotes, lightbox
     game-detail.ts                 — game detail page
-    nav.ts                         — nav init, client-side gate (redirects to countdown pre-LAN)
+    nav.ts                         — nav init (avatar, hamburger, impersonation banner)
     auth.ts                        — requireAuth(), authHeaders(), token helpers
     crud.ts                        — fetchAll() / fetchById() helpers
     types.ts                       — LAN, User, Game, RsvpEntry types
@@ -110,6 +108,4 @@ Migrations are done inline in `setup.go` via `_, _ = db.Exec("ALTER TABLE ...")`
 - To promote a user: `UPDATE user SET role = 'admin' WHERE id = ?`
 - Frontend: `.nav-admin` elements hidden for non-admins, edit button hidden on frontpage
 
-The countdown target is derived at startup from the DB — no hardcoded date. To change it, update `start_date` on the relevant LAN row and restart the server.
-
-See `CLAUDE.md` for coding patterns, gotchas, and the go-live checklist.
+See `CLAUDE.md` for coding patterns and gotchas.

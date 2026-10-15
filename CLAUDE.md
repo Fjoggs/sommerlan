@@ -1,18 +1,14 @@
 # SommerLAN — Claude context
 
-## Go-live checklist
-
-- **Gate is enabled**: `countdown.go` uses `if !gateTime.IsZero() ...`. To disable for dev, prepend `false &&`.
-
 ## Local dev
 
-- **Skip auth entirely**: set `DISABLE_AUTH=true` (e.g. exported in the shell or in `backend/run.sh`). `GetUserFromRequest` then returns the first user in the DB with `Role` forced to `"admin"`, no token/login needed anywhere — API calls, admin-only routes, and the countdown/LAN gate (which checks admin status) all pass. Logged loudly at startup as a warning. Never set this outside local dev.
+- **Skip auth entirely**: set `DISABLE_AUTH=true` (e.g. exported in the shell or in `backend/run.sh`). `GetUserFromRequest` then returns the first user in the DB with `Role` forced to `"admin"`, no token/login needed anywhere — API calls, admin-only routes and the login redirect for HTML pages all pass. Logged loudly at startup as a warning. Never set this outside local dev.
 
 ## Key patterns
 
 **Year extraction**: always use `lan.startDate.substring(0, 4)` — never `new Date().getFullYear()` (NaN risk with partial dates).
 
-**DB date fields**: `start_date`/`end_date` are real `YYYY-MM-DD` dates for all new/upcoming events — use them for any date logic (`/api/next-lan/`, the countdown gate). Only ancient events (~20 years back, dates guessed) use `YYYY-01-01`/`YYYY-12-31` year markers. `from_display`/`to_display` are free-form human strings (e.g. "juli") used only for those old events and can be NULL on new ones.
+**DB date fields**: `start_date`/`end_date` are real `YYYY-MM-DD` dates for all new/upcoming events — use them for any date logic (`/api/next-lan/`, RSVP day blocks). Only ancient events (~20 years back, dates guessed) use `YYYY-01-01`/`YYYY-12-31` year markers. `from_display`/`to_display` are free-form human strings (e.g. "juli") used only for those old events and can be NULL on new ones.
 
 **Migrations**: add new columns in `setup.go` with `_, _ = db.Exec("ALTER TABLE ...")` — idempotent, safe to re-run. Then apply the same statement against the live DB file with `sqlite3`.
 
@@ -26,7 +22,9 @@
 
 **API URLs are relative**: all `fetch()` calls use `/api/...` (no `localhost:8080`). Safe for both dev and prod.
 
-**Countdown gate**: `LanGateMiddleware` in `countdown.go` intercepts all HTML requests server-side and redirects to `countdown.html` until the gate time. Gate time is computed at startup by `ComputeLanGateTime` — queries the next upcoming LAN's `start_date` from the DB and returns the first Monday on or after that date at 13:37 local time. Client-side `nav.ts` does the same redirect for JS-loaded navigation.
+**Login redirect**: `RequireLoginMiddleware` in `pages.go` redirects unauthenticated HTML requests to `/login`. The pre-LAN countdown gate/page and the standalone `/rsvp` page were removed after the grand opening — RSVP lives on the event page (`lan-event.ts`).
+
+**RSVP day blocks**: `setLanBlocks(startDate, endDate)` in `matrix.ts` derives the pre-pre/pre/main blocks from the event's real dates (main = first Monday on/after start through end, pre = the 3 days before). Call it before rendering anything from `matrix.ts`. `GAMES`/`RACES` are keyed by date and need new entries per year.
 
 **Image performance**: the image grid can hold 70+ photos. Anything adding absolutely-positioned children inside `.image-card` (overflow:hidden + border-radius) causes scroll jank — the tag strip feature was removed for this reason.
 
@@ -56,4 +54,3 @@ The CSS class on `.timeline-event` (frontpage) and `#content` (subpage) drives c
 | Games wiped on LAN save | Forgot to send game IDs in PATCH | Include all checked game inputs |
 | LAN sort order changes | `forEach` async race | Use `for...of` + `await` |
 | Image section scroll jank | Positioned children inside overflow:hidden cards | Strip back to bare `<img>` and add back one-by-one to isolate |
-| Countdown redirect loop | `nav.ts` redirecting back to countdown after it hits zero | Both `countdown.ts` and `nav.ts` must read `LAN_START` from `config.ts`, not hardcode |

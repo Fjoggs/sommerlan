@@ -5,6 +5,11 @@ export const GAMES: Record<string, string> = {
   "2026-07-15": "Semi-finaler (21:00)",
   "2026-07-18": "Bronsefinale (23:00)",
   "2026-07-19": "Finale (21:00)",
+  // VM damer 2027 (kampstart ikke bekreftet)
+  "2027-07-20": "Semi-finale, VM damer",
+  "2027-07-21": "Semi-finale, VM damer",
+  "2027-07-24": "Bronsefinale, VM damer",
+  "2027-07-25": "Finale, VM damer",
 };
 
 export const RACES: Record<string, string> = {
@@ -12,23 +17,55 @@ export const RACES: Record<string, string> = {
   "2026-07-26": "Hungarian Grand Prix",
 };
 
-export const BLOCKS = [
-  {
-    key: "pre-pre",
-    label: "Pre-pre-LAN",
-    dates: ["2026-07-14", "2026-07-15", "2026-07-16"],
-  },
-  {
-    key: "pre",
-    label: "Pre-LAN",
-    dates: ["2026-07-17", "2026-07-18", "2026-07-19"],
-  },
-  {
-    key: "main",
-    label: "SommerLAN 2026",
-    dates: ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-25", "2026-07-26"],
-  },
-] as const;
+export type LanBlock = {
+  key: "pre-pre" | "pre" | "main";
+  label: string;
+  dates: string[];
+};
+
+// Day blocks of the LAN currently shown. Derived from the event's real start/end dates by
+// setLanBlocks — must be called before anything below renders.
+export let BLOCKS: LanBlock[] = [];
+
+function parseLocalDate(date: string): Date {
+  return new Date(date + "T00:00:00");
+}
+
+function formatLocalDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Splits startDate..endDate (YYYY-MM-DD) into blocks: "main" runs from the first Monday on or
+ * after the start through the end, "pre" is the (up to) three days before that (Fri–Sun), and
+ * "pre-pre" is anything earlier. Empty blocks are omitted.
+ */
+export function setLanBlocks(startDate: string, endDate: string): void {
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
+  const days: string[] = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    days.push(formatLocalDate(d));
+  }
+  if (days.length === 0) days.push(startDate);
+
+  let mainStart = days.findIndex((date) => parseLocalDate(date).getDay() === 1);
+  if (mainStart === -1) mainStart = 0;
+
+  const before = days.slice(0, mainStart);
+  const preStart = Math.max(0, before.length - 3);
+  const blocks: LanBlock[] = [
+    { key: "pre-pre", label: "Pre-pre-LAN", dates: before.slice(0, preStart) },
+    { key: "pre", label: "Pre-LAN", dates: before.slice(preStart) },
+    { key: "main", label: `SommerLAN ${startDate.substring(0, 4)}`, dates: days.slice(mainStart) },
+  ];
+  BLOCKS = blocks.filter((b) => b.dates.length > 0);
+}
+
+export function getMainDates(): Set<string> {
+  return new Set(BLOCKS.find((b) => b.key === "main")?.dates ?? []);
+}
 
 export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void {
   container.innerHTML = "";
@@ -97,8 +134,6 @@ export function renderMatrix(container: HTMLElement, entries: RsvpEntry[]): void
 
   container.appendChild(table);
 }
-
-const mainDatesSet = new Set<string>(BLOCKS.find(b => b.key === "main")?.dates ?? []);
 
 const BLOCK_SATURATION: Record<string, number> = {
   "pre-pre": 0.25,
