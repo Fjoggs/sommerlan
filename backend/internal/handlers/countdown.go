@@ -7,76 +7,27 @@ import (
 	"log"
 	"net/http"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 )
 
-var norwegianMonths = map[string]time.Month{
-	"januar":    time.January,
-	"februar":   time.February,
-	"mars":      time.March,
-	"april":     time.April,
-	"mai":       time.May,
-	"juni":      time.June,
-	"juli":      time.July,
-	"august":    time.August,
-	"september": time.September,
-	"oktober":   time.October,
-	"november":  time.November,
-	"desember":  time.December,
-}
-
-// parseNorwegianDisplayDate parses a free-form "D. month" string (e.g. "20. juli"),
-// as stored in from_display/to_display, into a concrete date in the given year.
-func parseNorwegianDisplayDate(display string, year int) (time.Time, error) {
-	fields := strings.Fields(display)
-	if len(fields) != 2 {
-		return time.Time{}, fmt.Errorf("expected \"D. month\", got %q", display)
-	}
-	day, err := strconv.Atoi(strings.TrimSuffix(fields[0], "."))
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid day in %q: %w", display, err)
-	}
-	month, ok := norwegianMonths[strings.ToLower(fields[1])]
-	if !ok {
-		return time.Time{}, fmt.Errorf("unknown month in %q", display)
-	}
-	return time.Date(year, month, day, 0, 0, 0, 0, time.Local), nil
-}
-
-// resolveLanDate returns the concrete date for a LAN boundary. Newer events store the real
-// date in start_date/end_date; old events only have a year marker (marker is the YYYY-01-01 /
-// YYYY-12-31 value) and the day lives in the free-form display string.
-func resolveLanDate(date, marker, display string) (time.Time, error) {
-	if !strings.HasSuffix(date, marker) {
-		if t, err := time.ParseInLocation("2006-01-02", date, time.Local); err == nil {
-			return t, nil
-		}
-	}
-	year, err := strconv.Atoi(date[:4])
-	if err != nil {
-		return time.Time{}, fmt.Errorf("unparseable date %q: %w", date, err)
-	}
-	return parseNorwegianDisplayDate(display, year)
-}
-
-// nextLan queries the next upcoming/ongoing LAN and returns its event name and its actual
-// start and end dates.
+// nextLan queries the next upcoming/ongoing LAN and returns its event name and its start and
+// end dates. Upcoming events always have real dates in start_date/end_date (only ancient
+// events use YYYY-01-01/YYYY-12-31 year markers), so the free-form from_display/to_display
+// strings are not consulted.
 func nextLan(db *sql.DB) (event string, start, end time.Time, err error) {
-	var startDate, endDate, fromDisplay, toDisplay string
-	err = db.QueryRow(`SELECT event, start_date, end_date, from_display, to_display FROM lan WHERE end_date >= date('now') ORDER BY start_date ASC LIMIT 1`).Scan(&event, &startDate, &endDate, &fromDisplay, &toDisplay)
+	var startDate, endDate string
+	err = db.QueryRow(`SELECT COALESCE(event, ''), start_date, end_date FROM lan WHERE end_date >= date('now') ORDER BY start_date ASC LIMIT 1`).Scan(&event, &startDate, &endDate)
 	if err != nil {
 		return "", time.Time{}, time.Time{}, err
 	}
-	start, err = resolveLanDate(startDate, "-01-01", fromDisplay)
+	start, err = time.ParseInLocation("2006-01-02", startDate, time.Local)
 	if err != nil {
-		return "", time.Time{}, time.Time{}, fmt.Errorf("lan start: %w", err)
+		return "", time.Time{}, time.Time{}, fmt.Errorf("unparseable start_date %q: %w", startDate, err)
 	}
-	end, err = resolveLanDate(endDate, "-12-31", toDisplay)
+	end, err = time.ParseInLocation("2006-01-02", endDate, time.Local)
 	if err != nil {
-		// End is best-effort; fall back to a single-day event.
-		end = start
+		return "", time.Time{}, time.Time{}, fmt.Errorf("unparseable end_date %q: %w", endDate, err)
 	}
 	return event, start, end, nil
 }

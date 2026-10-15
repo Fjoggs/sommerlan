@@ -12,7 +12,7 @@
 
 **Year extraction**: always use `lan.startDate.substring(0, 4)` — never `new Date().getFullYear()` (NaN risk with partial dates).
 
-**DB date fields**: `start_date`/`end_date` are always `YYYY-01-01`/`YYYY-12-31`. `from_display`/`to_display` are free-form human strings (e.g. "juli").
+**DB date fields**: `start_date`/`end_date` are real `YYYY-MM-DD` dates for all new/upcoming events — use them for any date logic (`/api/next-lan/`, the countdown gate). Only ancient events (~20 years back, dates guessed) use `YYYY-01-01`/`YYYY-12-31` year markers. `from_display`/`to_display` are free-form human strings (e.g. "juli") used only for those old events and can be NULL on new ones.
 
 **Migrations**: add new columns in `setup.go` with `_, _ = db.Exec("ALTER TABLE ...")` — idempotent, safe to re-run. Then apply the same statement against the live DB file with `sqlite3`.
 
