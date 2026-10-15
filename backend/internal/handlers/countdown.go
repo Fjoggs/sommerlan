@@ -45,24 +45,35 @@ func parseNorwegianDisplayDate(display string, year int) (time.Time, error) {
 	return time.Date(year, month, day, 0, 0, 0, 0, time.Local), nil
 }
 
+// resolveLanDate returns the concrete date for a LAN boundary. Newer events store the real
+// date in start_date/end_date; old events only have a year marker (marker is the YYYY-01-01 /
+// YYYY-12-31 value) and the day lives in the free-form display string.
+func resolveLanDate(date, marker, display string) (time.Time, error) {
+	if !strings.HasSuffix(date, marker) {
+		if t, err := time.ParseInLocation("2006-01-02", date, time.Local); err == nil {
+			return t, nil
+		}
+	}
+	year, err := strconv.Atoi(date[:4])
+	if err != nil {
+		return time.Time{}, fmt.Errorf("unparseable date %q: %w", date, err)
+	}
+	return parseNorwegianDisplayDate(display, year)
+}
+
 // nextLan queries the next upcoming/ongoing LAN and returns its event name and its actual
-// start and end dates (parsed from from_display/to_display, since start_date/end_date are
-// only YYYY-01-01/YYYY-12-31 year markers).
+// start and end dates.
 func nextLan(db *sql.DB) (event string, start, end time.Time, err error) {
 	var startDate, endDate, fromDisplay, toDisplay string
 	err = db.QueryRow(`SELECT event, start_date, end_date, from_display, to_display FROM lan WHERE end_date >= date('now') ORDER BY start_date ASC LIMIT 1`).Scan(&event, &startDate, &endDate, &fromDisplay, &toDisplay)
 	if err != nil {
 		return "", time.Time{}, time.Time{}, err
 	}
-	year, err := strconv.Atoi(startDate[:4])
+	start, err = resolveLanDate(startDate, "-01-01", fromDisplay)
 	if err != nil {
-		return "", time.Time{}, time.Time{}, fmt.Errorf("unparseable start_date %q: %w", startDate, err)
+		return "", time.Time{}, time.Time{}, fmt.Errorf("lan start: %w", err)
 	}
-	start, err = parseNorwegianDisplayDate(fromDisplay, year)
-	if err != nil {
-		return "", time.Time{}, time.Time{}, fmt.Errorf("unparseable from_display: %w", err)
-	}
-	end, err = parseNorwegianDisplayDate(toDisplay, year)
+	end, err = resolveLanDate(endDate, "-12-31", toDisplay)
 	if err != nil {
 		// End is best-effort; fall back to a single-day event.
 		end = start
